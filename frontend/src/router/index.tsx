@@ -2,28 +2,23 @@
 
 import { Routes, Route, Navigate } from "react-router-dom";
 import AppLayout from "../layouts/AppLayout";
-
-function TempHome() {
-  return (
-    <div style={{ padding: 24 }}>
-      <h1 style={{ margin: 0, fontSize: 24 }}>임시 홈</h1>
-      <p style={{ marginTop: 8, opacity: 0.8 }}>
-        HomePage.tsx 아직 없음. 라우터/레이아웃 연결 확인용 화면.
-      </p>
-    </div>
-  );
-}
+import HomePage from "../pages/HomePage";
 
 export default function AppRoutes() {
   return (
     <Routes>
       <Route element={<AppLayout />}>
-        <Route path="/" element={<TempHome />} />
+        <Route index element={<HomePage />} />
 
-        <Route path="/media" element={<Navigate to="/" replace />} />
-        <Route path="/inquiries" element={<Navigate to="/" replace />} />
-        <Route path="/auth" element={<Navigate to="/" replace />} />
-        <Route path="/admin" element={<Navigate to="/" replace />} />
+        {/* 아직 페이지 없으면 임시로 홈으로 리다이렉트 */}
+        <Route path="media" element={<Navigate to="/" replace />} />
+        <Route path="inquiries" element={<Navigate to="/" replace />} />
+
+        {/* 로그인/회원가입을 분리해서 받을 준비 */}
+        <Route path="auth/login" element={<Navigate to="/" replace />} />
+        <Route path="auth/signup" element={<Navigate to="/" replace />} />
+
+        <Route path="admin" element={<Navigate to="/" replace />} />
       </Route>
 
       <Route path="*" element={<Navigate to="/" replace />} />

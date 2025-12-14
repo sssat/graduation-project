@@ -1,0 +1,260 @@
+/* frontend/src/pages/HomePage.module.css */
+
+.page {
+  width: 100%;
+  min-height: 100vh;
+  background: none;
+}
+
+.hero {
+  position: relative;
+  overflow: hidden;
+  padding: 40px 32px 52px;
+  background: radial-gradient(circle at top, #1d4ed8 0, #020617 55%),
+    radial-gradient(circle at bottom, #22d3ee 0, #020617 55%);
+  color: #e5e7eb;
+}
+
+.hero::before,
+.hero::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  opacity: 0.26;
+  background-image: radial-gradient(circle at 10px 10px, #22d3ee 1px, transparent 0),
+    radial-gradient(circle at 30px 40px, #e5e7eb 1px, transparent 0),
+    linear-gradient(115deg, rgba(56, 189, 248, 0.3), transparent 40%),
+    linear-gradient(245deg, rgba(236, 72, 153, 0.25), transparent 52%);
+  background-size: 80px 80px, 120px 120px, 100% 100%, 100% 100%;
+  pointer-events: none;
+}
+
+.hero::after {
+  mix-blend-mode: screen;
+}
+
+.heroInner {
+  position: relative;
+  z-index: 1;
+  max-width: 960px;
+  margin: 0 auto;
+}
+
+.heroKicker {
+  font-size: 14px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: #cbd5f5;
+  margin: 0 0 6px;
+}
+
+.heroTitle {
+  font-size: 32px;
+  font-weight: 600;
+  line-height: 1.4;
+  margin: 0;
+}
+
+.highlight {
+  font-weight: 700;
+  color: #facc15;
+}
+
+.heroSub {
+  margin: 10px 0 0;
+  font-size: 15px;
+  color: #cbd5f5;
+}
+
+.heroCards {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 18px;
+  margin-top: 30px;
+}
+
+.heroCard {
+  flex: 1 1 180px;
+  min-width: 210px;
+  border-radius: 24px;
+  padding: 18px 22px;
+  background: linear-gradient(135deg, rgba(56, 189, 248, 0.11), rgba(129, 140, 248, 0.14));
+  border: 1px solid rgba(191, 219, 254, 0.4);
+  backdrop-filter: blur(12px);
+  box-shadow: 0 22px 40px rgba(15, 23, 42, 0.45);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.secondary {
+  background: linear-gradient(135deg, rgba(129, 140, 248, 0.18), rgba(236, 72, 153, 0.23));
+  border-color: rgba(196, 181, 253, 0.5);
+}
+
+.heroCardLabel {
+  font-size: 14px;
+  margin-bottom: 8px;
+}
+
+.heroCardCount {
+  font-size: 30px;
+  font-weight: 700;
+}
+
+.unit {
+  margin-left: 2px;
+  font-size: 18px;
+  font-weight: 500;
+  color: #cbd5f5;
+}
+
+.heroCardCaption {
+  margin-top: 4px;
+  font-size: 12px;
+  color: #cbd5f5;
+  opacity: 0.9;
+}
+
+.statsSection {
+  background: linear-gradient(to bottom, #0f172a, #111827);
+  padding: 26px 32px 40px;
+  color: #f9fafb;
+}
+
+.statsInner {
+  max-width: 960px;
+  margin: 0 auto;
+}
+
+.statsDate {
+  text-align: center;
+  font-size: 18px;
+  font-weight: 600;
+  margin-bottom: 20px;
+  letter-spacing: 0.02em;
+}
+
+.statsBoard {
+  border-radius: 24px;
+  background-color: rgba(15, 23, 42, 0.92);
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  padding: 20px 28px 24px;
+  box-shadow: 0 18px 40px rgba(15, 23, 42, 0.7);
+}
+
+.statsHeaderRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+  gap: 12px;
+}
+
+.statsTitle {
+  font-size: 14px;
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+  color: #9ca3af;
+}
+
+.statsTitleEm {
+  color: #f97373;
+  font-weight: 700;
+}
+
+.statsPill {
+  font-size: 12px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: rgba(148, 163, 184, 0.18);
+  color: #e5e7eb;
+  white-space: nowrap;
+}
+
+.statsGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0 34px;
+  font-size: 14px;
+}
+
+.statsCol {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.statItem {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  padding: 6px 0;
+  border-bottom: 1px dashed rgba(75, 85, 99, 0.6);
+}
+
+.statItem:last-child {
+  border-bottom: none;
+}
+
+.statLabel {
+  display: flex;
+  gap: 6px;
+  color: #e5e7eb;
+  min-width: 0;
+}
+
+.statIndex {
+  font-size: 12px;
+  color: #f97373;
+  font-weight: 700;
+}
+
+.statCount {
+  font-weight: 600;
+  color: #bfdbfe;
+  flex-shrink: 0;
+  margin-left: 12px;
+}
+
+.statUnit {
+  margin-left: 2px;
+  font-size: 12px;
+  font-weight: 400;
+  color: #9ca3af;
+}
+
+.statsFooterNote {
+  margin-top: 14px;
+  font-size: 11px;
+  color: #9ca3af;
+  display: flex;
+  justify-content: flex-end;
+}
+
+@media (max-width: 768px) {
+  .hero {
+    padding: 28px 18px 40px;
+  }
+
+  .heroTitle {
+    font-size: 24px;
+  }
+
+  .heroCards {
+    flex-direction: column;
+  }
+
+  .statsSection {
+    padding: 22px 18px 32px;
+  }
+
+  .statsBoard {
+    padding: 18px 18px 22px;
+  }
+
+  .statsGrid {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 10px 0;
+  }
+}
