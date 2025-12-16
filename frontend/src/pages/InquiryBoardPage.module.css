@@ -1,0 +1,376 @@
+/* frontend/src/pages/InquiryBoardPage.module.css */
+
+:global(:root) {
+  --ns-accent-yellow: #facc15;
+  --ns-accent-blue: #38bdf8;
+  --ns-accent-purple: #8b5cf6;
+  --ns-accent-pink: #f472b6;
+
+  --ns-border-soft: rgba(148, 163, 184, 0.35);
+  --ns-text-muted: #9ca3af;
+  --ns-text-main: #e5e7eb;
+}
+
+.pageRoot {
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 28px 32px 40px;
+  background: radial-gradient(circle at top left, #111827 0, #020617 60%);
+  animation: fadeSlideUp 0.5s ease-out;
+}
+
+@keyframes fadeSlideUp {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.breadcrumb {
+  font-size: 12px;
+  color: var(--ns-text-muted);
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.breadcrumb a {
+  color: var(--ns-text-muted);
+  text-decoration: none;
+}
+
+.breadcrumb a:hover {
+  text-decoration: underline;
+}
+
+.breadcrumbSep {
+  opacity: 0.9;
+}
+
+/* 상단 타이틀 + 필터 */
+
+.inquiryHero {
+  margin-bottom: 24px;
+}
+
+.inquiryTitle {
+  font-size: 26px;
+  font-weight: 700;
+  margin: 0 0 8px;
+}
+
+.inquiryFilterBar {
+  margin-top: 18px;
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.filterLeft {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.filterLabel {
+  font-size: 12px;
+  color: var(--ns-text-muted);
+}
+
+.categoryChips {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.categoryChip {
+  font-size: 12px;
+  padding: 7px 14px;
+  border-radius: 999px;
+  border: 1px solid rgba(148, 163, 184, 0.5);
+  background: rgba(15, 23, 42, 0.9);
+  color: #e5e7eb;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease, transform 0.1s ease,
+    box-shadow 0.15s ease;
+}
+
+.categoryChip:hover {
+  transform: translateY(-1px);
+  border-color: rgba(96, 165, 250, 0.9);
+  box-shadow: 0 6px 12px rgba(37, 99, 235, 0.4);
+}
+
+.activeChip {
+  background: linear-gradient(135deg, #0ea5e9, #6366f1);
+  border-color: transparent;
+  color: #ffffff;
+  box-shadow: 0 10px 22px rgba(37, 99, 235, 0.7);
+}
+
+.filterRightGroup {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.filterRight {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.statusFilter {
+  display: flex;
+  gap: 6px;
+  border-radius: 999px;
+  padding: 2px;
+  background: rgba(15, 23, 42, 0.95);
+  border: 1px solid rgba(148, 163, 184, 0.4);
+}
+
+.statusChip {
+  border: none;
+  background: transparent;
+  color: #e5e7eb;
+  font-size: 11px;
+  border-radius: 999px;
+  padding: 5px 10px;
+  cursor: pointer;
+}
+
+.activeStatusChip {
+  background: linear-gradient(135deg, rgba(56, 189, 248, 0.45), rgba(129, 140, 248, 0.7));
+}
+
+.inquiryOpenBtn {
+  border-radius: 999px;
+  border: none;
+  padding: 8px 18px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  background: linear-gradient(135deg, #0ea5e9, #6366f1);
+  color: #ffffff;
+  box-shadow: 0 10px 20px rgba(37, 99, 235, 0.65);
+  white-space: nowrap;
+}
+
+.inquiryOpenBtn:active {
+  transform: translateY(1px);
+  box-shadow: 0 6px 16px rgba(37, 99, 235, 0.6);
+}
+
+/* 게시판 카드 */
+
+.boardSection {
+  margin-top: 24px;
+}
+
+.card {
+  border-radius: 20px;
+  background: rgba(15, 23, 42, 0.96);
+  border: 1px solid rgba(31, 41, 55, 0.95);
+  box-shadow: 0 18px 40px rgba(15, 23, 42, 0.7);
+  padding: 18px 20px 20px;
+}
+
+.cardHeader {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  align-items: baseline;
+  margin-bottom: 12px;
+}
+
+.cardTitle {
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.badgeSoft {
+  font-size: 11px;
+  padding: 4px 9px;
+  border-radius: 999px;
+  background: rgba(148, 163, 184, 0.2);
+  color: #e5e7eb;
+  white-space: nowrap;
+}
+
+.inquiryListHeader,
+.inquiryRow {
+  display: grid;
+  grid-template-columns: 70px 110px minmax(0, 1fr) 110px 90px;
+  column-gap: 16px;
+  align-items: center;
+  padding: 9px 4px;
+}
+
+.inquiryListHeader {
+  font-size: 12px;
+  color: var(--ns-text-muted);
+  border-bottom: 1px solid rgba(31, 41, 55, 1);
+  margin-bottom: 4px;
+}
+
+.inquiryRow {
+  font-size: 13px;
+  border-top: 1px solid rgba(31, 41, 55, 0.85);
+}
+
+.inquiryIndex {
+  color: var(--ns-text-muted);
+}
+
+.inquiryTypePill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 3px 7px;
+  border-radius: 999px;
+  font-size: 11px;
+  background: rgba(56, 189, 248, 0.16);
+  color: #bae6fd;
+  white-space: nowrap;
+}
+
+.bug {
+  background: rgba(248, 113, 113, 0.18);
+  color: #fecaca;
+}
+
+.idea {
+  background: rgba(129, 140, 248, 0.18);
+  color: #c7d2fe;
+}
+
+.data {
+  background: rgba(52, 211, 153, 0.16);
+  color: #a7f3d0;
+}
+
+.etc {
+  background: rgba(244, 114, 182, 0.16);
+  color: #fbcfe8;
+}
+
+.admin {
+  background: rgba(250, 204, 21, 0.18);
+  color: #facc15;
+}
+
+.inquiryTitleCell {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.inquiryTitleLink {
+  color: var(--ns-text-main);
+  text-decoration: none;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.inquiryTitleLink:hover {
+  text-decoration: underline;
+}
+
+.lockPill {
+  font-size: 10px;
+  padding: 2px 6px;
+  border-radius: 999px;
+  background: rgba(15, 23, 42, 0.9);
+  border: 1px solid rgba(148, 163, 184, 0.6);
+  color: var(--ns-text-muted);
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  white-space: nowrap;
+}
+
+.inquiryDate {
+  font-size: 12px;
+  color: var(--ns-text-muted);
+}
+
+.statusBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  padding: 4px 8px;
+  border-radius: 999px;
+  border: 1px solid rgba(148, 163, 184, 0.5);
+  background: rgba(15, 23, 42, 0.9);
+  color: var(--ns-text-muted);
+}
+
+.statusDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+}
+
+.processing {
+  background: #f97316;
+}
+
+.done {
+  background: #22c55e;
+}
+
+/* 페이지네이션 */
+
+.inquiryPagination {
+  margin-top: 12px;
+  display: flex;
+  justify-content: center;
+  gap: 4px;
+  font-size: 12px;
+  flex-wrap: wrap;
+}
+
+.pageBtn {
+  min-width: 28px;
+  height: 26px;
+  border-radius: 999px;
+  border: 1px solid rgba(148, 163, 184, 0.5);
+  background: rgba(15, 23, 42, 0.9);
+  color: #e5e7eb;
+  cursor: pointer;
+}
+
+.pageActive {
+  background: linear-gradient(135deg, #0ea5e9, #6366f1);
+  border-color: transparent;
+}
+
+.pageBtn:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+@media (max-width: 900px) {
+  .pageRoot {
+    padding: 22px 18px 32px;
+  }
+
+  .inquiryListHeader,
+  .inquiryRow {
+    grid-template-columns: 60px 95px minmax(0, 1fr) 90px 80px;
+    padding: 8px 0;
+  }
+}

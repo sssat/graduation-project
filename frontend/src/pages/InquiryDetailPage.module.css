@@ -1,0 +1,291 @@
+/* frontend/src/pages/InquiryDetailPage.module.css */
+
+:global(:root) {
+  --ns-accent-yellow: #facc15;
+  --ns-accent-blue: #38bdf8;
+  --ns-accent-purple: #8b5cf6;
+  --ns-accent-pink: #f472b6;
+
+  --ns-border-soft: rgba(148, 163, 184, 0.35);
+  --ns-text-muted: #9ca3af;
+  --ns-text-main: #e5e7eb;
+}
+
+.pageRoot {
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 28px 32px 40px;
+  background: radial-gradient(circle at top left, #111827 0, #020617 60%);
+  animation: fadeSlideUp 0.5s ease-out;
+}
+
+@keyframes fadeSlideUp {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.breadcrumb {
+  font-size: 12px;
+  color: var(--ns-text-muted);
+  margin-bottom: 10px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.breadcrumb a {
+  color: var(--ns-text-muted);
+  text-decoration: none;
+}
+
+.breadcrumb a:hover {
+  text-decoration: underline;
+}
+
+.breadcrumbSep {
+  opacity: 0.9;
+}
+
+.backLink {
+  margin-top: 4px;
+  font-size: 12px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: #bfdbfe;
+  text-decoration: none;
+}
+
+.arrow {
+  font-size: 13px;
+}
+
+.backLink:hover {
+  text-decoration: underline;
+}
+
+.detailHero {
+  margin-top: 10px;
+  margin-bottom: 20px;
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  align-items: flex-end;
+}
+
+.detailTitleBlock {
+  max-width: 680px;
+}
+
+.detailTitle {
+  margin: 0;
+  font-size: 28px;
+  font-weight: 700;
+}
+
+/* 레이아웃 */
+.detailLayout {
+  width: 100%;
+  max-width: 100%;
+  margin-top: 4px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* 카드 */
+.card {
+  border-radius: 20px;
+  background: rgba(15, 23, 42, 0.96);
+  border: 1px solid rgba(31, 41, 55, 0.95);
+  box-shadow: 0 18px 40px rgba(15, 23, 42, 0.7);
+  padding: 18px 20px 20px;
+}
+
+.cardHeader {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  align-items: flex-start;
+  margin-bottom: 12px;
+}
+
+.cardTitle {
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.badgeSoft {
+  font-size: 11px;
+  padding: 4px 9px;
+  border-radius: 999px;
+  background: rgba(148, 163, 184, 0.2);
+  color: #e5e7eb;
+  white-space: nowrap;
+}
+
+/* 상단 메타 */
+.metaRowTop {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.inquiryTypePill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px 9px;
+  border-radius: 999px;
+  font-size: 11px;
+  background: rgba(56, 189, 248, 0.16);
+  color: #bae6fd;
+}
+
+.bug {
+  background: rgba(248, 113, 113, 0.18);
+  color: #fecaca;
+}
+
+.idea {
+  background: rgba(129, 140, 248, 0.18);
+  color: #c7d2fe;
+}
+
+.data {
+  background: rgba(34, 211, 238, 0.16);
+  color: #a5f3fc;
+}
+
+.account {
+  background: rgba(250, 204, 21, 0.18);
+  color: #facc15;
+}
+
+.etc {
+  background: rgba(148, 163, 184, 0.18);
+  color: #e5e7eb;
+}
+
+.lockPill {
+  font-size: 10px;
+  padding: 3px 7px;
+  border-radius: 999px;
+  background: rgba(15, 23, 42, 0.9);
+  border: 1px solid rgba(148, 163, 184, 0.6);
+  color: var(--ns-text-muted);
+  display: inline-flex;
+  align-items: center;
+  white-space: nowrap;
+}
+
+.statusBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  padding: 4px 8px;
+  border-radius: 999px;
+  border: 1px solid rgba(148, 163, 184, 0.5);
+  background: rgba(15, 23, 42, 0.9);
+  color: var(--ns-text-muted);
+}
+
+.statusDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+}
+
+.dotProcessing {
+  background: #f97316;
+}
+
+.dotDone {
+  background: #22c55e;
+}
+
+.metaRowBottom {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  margin-bottom: 12px;
+  font-size: 12px;
+  color: var(--ns-text-muted);
+}
+
+.metaItemLabel {
+  color: #9ca3af;
+}
+
+.metaItemValue {
+  color: #e5e7eb;
+  margin-left: 6px;
+}
+
+.dividerLine {
+  border-top: 1px solid rgba(31, 41, 55, 0.9);
+  margin: 10px 0 16px;
+}
+
+/* 본문 */
+.inquiryBody {
+  font-size: 13px;
+  color: #d1d5db;
+  line-height: 1.8;
+}
+
+.inquiryBody p {
+  margin: 0 0 10px;
+}
+
+.inquiryBody p:last-child {
+  margin-bottom: 0;
+}
+
+/* 답변 */
+.answerMeta {
+  font-size: 11px;
+  color: var(--ns-text-muted);
+  margin-bottom: 10px;
+}
+
+.answerBody {
+  font-size: 13px;
+  line-height: 1.7;
+  color: #e5e7eb;
+}
+
+.answerBody p {
+  margin: 0 0 10px;
+}
+
+.answerBody p:last-child {
+  margin-bottom: 0;
+}
+
+.bodyText {
+  font-size: 13px;
+  color: #d1d5db;
+  line-height: 1.8;
+}
+
+@media (max-width: 900px) {
+  .pageRoot {
+    padding: 22px 18px 32px;
+  }
+
+  .detailTitle {
+    font-size: 24px;
+  }
+}
