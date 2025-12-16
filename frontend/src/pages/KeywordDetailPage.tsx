@@ -7,11 +7,20 @@ import cloud from "d3-cloud";
 import styles from "./KeywordDetailPage.module.css";
 import {
   getKeywordDetailMock,
+  MEDIA_LABEL_MAP,
   type KeywordPeriod,
   type MediaKey,
   type WordItem,
   type BiasItem,
 } from "../mocks/keywordMockData";
+
+function safeDecode(s: string) {
+  try {
+    return decodeURIComponent(s);
+  } catch {
+    return s;
+  }
+}
 
 function renderSummaryWithHighlight(summary: string, keyword: string) {
   const k = (keyword ?? "").trim();
@@ -200,29 +209,33 @@ function WordCloudD3({
   );
 }
 
-const MEDIA_OPTIONS: { value: MediaKey; label: string }[] = [
-  { value: "all", label: "전체 언론사" },
-  { value: "chosun", label: "조선일보" },
-  { value: "joongang", label: "중앙일보" },
-  { value: "hani", label: "한겨레" },
-  { value: "kbs", label: "KBS" },
-  { value: "mbc", label: "MBC" },
-  { value: "sbs", label: "SBS" },
-  { value: "jtbc", label: "JTBC" },
-  { value: "ytn", label: "YTN" },
-  { value: "yonhap", label: "연합" },
-  { value: "hankyung", label: "한경" },
+const MEDIA_ORDER: MediaKey[] = [
+  "all",
+  "chosun",
+  "joongang",
+  "hani",
+  "kbs",
+  "mbc",
+  "sbs",
+  "jtbc",
+  "ytn",
+  "yonhap",
+  "hankyung",
 ];
+
+const MEDIA_OPTIONS: { value: MediaKey; label: string }[] = MEDIA_ORDER.map((value) => ({
+  value,
+  label: MEDIA_LABEL_MAP[value],
+}));
 
 export default function KeywordDetailPage() {
   const params = useParams();
   const [searchParams] = useSearchParams();
 
-  const keyword =
-    params.keyword ??
-    searchParams.get("keyword") ??
-    searchParams.get("q") ??
-    "쿠팡";
+  const rawKeyword =
+    params.keyword ?? searchParams.get("keyword") ?? searchParams.get("q") ?? "쿠팡";
+
+  const keyword = useMemo(() => safeDecode(rawKeyword), [rawKeyword]);
 
   const [period, setPeriod] = useState<KeywordPeriod>("today");
   const [media, setMedia] = useState<MediaKey>("all");
@@ -418,9 +431,7 @@ export default function KeywordDetailPage() {
             <span className={styles.badgeSoft}>요약 리포트</span>
           </div>
 
-          <div className={styles.summaryText}>
-            {renderSummaryWithHighlight(detail.summary, keyword)}
-          </div>
+          <div className={styles.summaryText}>{renderSummaryWithHighlight(detail.summary, keyword)}</div>
         </article>
       </section>
 
@@ -477,8 +488,8 @@ export default function KeywordDetailPage() {
             <div>
               <div className={styles.cardTitle}>언론사별 편향도 지수</div>
               <div className={styles.cardSub}>
-                선택 키워드 기사들의 제목 톤을 기반으로 산출한 편향도 지수입니다 (0에
-                가까울수록 중립).
+                선택 키워드 기사들의 제목 톤을 기반으로 산출한 편향도 지수입니다 (0에 가까울수록
+                중립).
               </div>
             </div>
             <span className={styles.badgeSoft}>편향 분석</span>
@@ -522,18 +533,12 @@ export default function KeywordDetailPage() {
           <div className={styles.cardHeader}>
             <div>
               <div className={styles.cardTitle}>독자 반응 워드 클라우드</div>
-              <div className={styles.cardSub}>
-                뉴스 댓글에서 자주 등장한 단어를 시각화한 결과입니다.
-              </div>
+              <div className={styles.cardSub}>뉴스 댓글에서 자주 등장한 단어를 시각화한 결과입니다.</div>
             </div>
             <span className={styles.badgeSoft}>댓글 기반</span>
           </div>
 
-          <WordCloudD3
-            items={reactionWordCloud}
-            height={220}
-            seed={`${keyword}-${period}-${media}-reaction`}
-          />
+          <WordCloudD3 items={reactionWordCloud} height={220} seed={`${keyword}-${period}-${media}-reaction`} />
         </article>
       </section>
     </main>
