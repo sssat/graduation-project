@@ -186,11 +186,28 @@
 }
 
 .statItem {
+  text-decoration: none;
+  color: inherit;
   display: flex;
+  align-items: center;
   justify-content: space-between;
-  align-items: baseline;
-  padding: 6px 0;
-  border-bottom: 1px dashed rgba(75, 85, 99, 0.6);
+  gap: 14px;
+  padding: 12px 12px;
+  border-radius: 12px;
+  border: 1px solid rgba(148, 163, 184, 0.14);
+  background: rgba(15, 23, 42, 0.22);
+  transition: transform 0.15s ease, border-color 0.15s ease, background 0.15s ease;
+}
+
+.statItem:hover {
+  transform: translateY(-1px);
+  border-color: rgba(226, 232, 240, 0.35);
+  background: rgba(15, 23, 42, 0.35);
+}
+
+.statItem:focus-visible {
+  outline: 2px solid rgba(56, 189, 248, 0.55);
+  outline-offset: 2px;
 }
 
 .statItem:last-child {

@@ -1,29 +1,13 @@
 // frontend/src/pages/HomePage.tsx
+import { Link } from "react-router-dom";
 import styles from "./HomePage.module.css";
-
-type KeywordItem = {
-  rank: number;
-  label: string;
-  count: number;
-};
+import { getTopKeywords, type TopKeywordItem } from "../mocks/keywordMockData";
 
 export default function HomePage() {
   const collectedNewsCount = 12300;
   const keywordCount = 10;
 
-  const topKeywords: KeywordItem[] = [
-    { rank: 1, label: "쿠팡", count: 104 },
-    { rank: 2, label: "문재인", count: 94 },
-    { rank: 3, label: "윤석열", count: 87 },
-    { rank: 4, label: "데이터", count: 65 },
-    { rank: 5, label: "개인정보 유출", count: 54 },
-    { rank: 6, label: "경제", count: 47 },
-    { rank: 7, label: "부동산", count: 41 },
-    { rank: 8, label: "증시", count: 35 },
-    { rank: 9, label: "AI", count: 28 },
-    { rank: 10, label: "환율", count: 12 },
-  ];
-
+  const topKeywords: TopKeywordItem[] = getTopKeywords();
   const left = topKeywords.slice(0, 5);
   const right = topKeywords.slice(5, 10);
 
@@ -57,6 +41,24 @@ export default function HomePage() {
     .replace(/- /g, "-")
     .replace(/: /g, ":");
 
+  const renderItem = (item: TopKeywordItem) => (
+    <Link
+      key={item.rank}
+      to={`/keywords/${encodeURIComponent(item.label)}`}
+      className={styles.statItem}
+      aria-label={`${item.label} 키워드 상세 보기`}
+    >
+      <div className={styles.statLabel}>
+        <span className={styles.statIndex}>{item.rank}</span>
+        {item.label}
+      </div>
+      <div className={styles.statCount}>
+        {item.count.toLocaleString("ko-KR")}
+        <span className={styles.statUnit}>건</span>
+      </div>
+    </Link>
+  );
+
   return (
     <div className={styles.page}>
       <section className={styles.hero} aria-label="대시보드 소개">
@@ -70,8 +72,8 @@ export default function HomePage() {
           </h1>
 
           <p className={styles.heroSub}>
-            오늘의 실시간 키워드와 개별 이슈량까지 한 화면에서 정리해서 보여주는
-            인사이트 대시보드입니다.
+            오늘의 실시간 키워드와 개별 이슈량까지 한 화면에서 정리해서 보여주는 인사이트
+            대시보드입니다.
           </p>
 
           <div className={styles.heroCards}>
@@ -93,8 +95,8 @@ export default function HomePage() {
                 <span className={styles.unit}>개</span>
               </div>
               <div className={styles.heroCardCaption}>
-                오늘 수집된 뉴스에서 선정한 상위 키워드 10개에 대해 기사량·편향도·감성
-                분석을 수행합니다.
+                오늘 수집된 뉴스에서 선정한 상위 키워드 10개에 대해 기사량·편향도·감성 분석을
+                수행합니다.
               </div>
             </article>
           </div>
@@ -114,40 +116,11 @@ export default function HomePage() {
             </div>
 
             <div className={styles.statsGrid}>
-              <div className={styles.statsCol}>
-                {left.map((item) => (
-                  <div key={item.rank} className={styles.statItem}>
-                    <div className={styles.statLabel}>
-                      <span className={styles.statIndex}>{item.rank}</span>
-                      {item.label}
-                    </div>
-                    <div className={styles.statCount}>
-                      {item.count.toLocaleString("ko-KR")}
-                      <span className={styles.statUnit}>건</span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-
-              <div className={styles.statsCol}>
-                {right.map((item) => (
-                  <div key={item.rank} className={styles.statItem}>
-                    <div className={styles.statLabel}>
-                      <span className={styles.statIndex}>{item.rank}</span>
-                      {item.label}
-                    </div>
-                    <div className={styles.statCount}>
-                      {item.count.toLocaleString("ko-KR")}
-                      <span className={styles.statUnit}>건</span>
-                    </div>
-                  </div>
-                ))}
-              </div>
+              <div className={styles.statsCol}>{left.map(renderItem)}</div>
+              <div className={styles.statsCol}>{right.map(renderItem)}</div>
             </div>
 
-            <div className={styles.statsFooterNote}>
-              데이터 기준 시각: {updatedAtText} KST
-            </div>
+            <div className={styles.statsFooterNote}>데이터 기준 시각: {updatedAtText} KST</div>
           </div>
         </div>
       </section>

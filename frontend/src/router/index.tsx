@@ -1,8 +1,8 @@
 // frontend/src/router/index.tsx
-
 import { Routes, Route, Navigate } from "react-router-dom";
 import AppLayout from "../layouts/AppLayout";
 import HomePage from "../pages/HomePage";
+import KeywordDetailPage from "../pages/KeywordDetailPage";
 
 export default function AppRoutes() {
   return (
@@ -10,11 +10,14 @@ export default function AppRoutes() {
       <Route element={<AppLayout />}>
         <Route index element={<HomePage />} />
 
-        {/* 아직 페이지 없으면 임시로 홈으로 리다이렉트 */}
+        {/* params 방식: /keywords/쿠팡 */}
+        <Route path="keywords/:keyword" element={<KeywordDetailPage />} />
+        {/* query 방식도 허용: /keywords?keyword=쿠팡 or /keywords?q=쿠팡 */}
+        <Route path="keywords" element={<KeywordDetailPage />} />
+
         <Route path="media" element={<Navigate to="/" replace />} />
         <Route path="inquiries" element={<Navigate to="/" replace />} />
 
-        {/* 로그인/회원가입을 분리해서 받을 준비 */}
         <Route path="auth/login" element={<Navigate to="/" replace />} />
         <Route path="auth/signup" element={<Navigate to="/" replace />} />
 
