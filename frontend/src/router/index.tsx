@@ -1,5 +1,4 @@
 // frontend/src/router/index.tsx
-// (상세 라우트 추가 + import 추가)
 
 import { Routes, Route, Navigate } from "react-router-dom";
 import AppLayout from "../layouts/AppLayout";
@@ -8,6 +7,11 @@ import KeywordDetailPage from "../pages/KeywordDetailPage";
 import MediaComparePage from "../pages/MediaComparePage";
 import InquiryBoardPage from "../pages/InquiryBoardPage";
 import InquiryDetailPage from "../pages/InquiryDetailPage";
+
+// ✅ 추가
+import LoginPage from "../pages/AuthPage/LoginPage/LoginPage";
+import SignUpPage from "../pages/AuthPage/SignUpPage/SignUpPage";
+import SignUpSuccessPage from "../pages/AuthPage/SignUpPage/SignUpSuccessPage";
 
 export default function AppRoutes() {
   return (
@@ -23,9 +27,12 @@ export default function AppRoutes() {
         <Route path="inquiries" element={<InquiryBoardPage />} />
         <Route path="inquiries/:inquiryId" element={<InquiryDetailPage />} />
 
-        <Route path="auth/login" element={<Navigate to="/" replace />} />
-        <Route path="auth/signup" element={<Navigate to="/" replace />} />
+        {/* ✅ 여기부터 변경 */}
+        <Route path="auth/login" element={<LoginPage />} />
+        <Route path="auth/signup" element={<SignUpPage />} />
+        <Route path="auth/signup/success" element={<SignUpSuccessPage />} />
 
+        {/* admin은 아직 막아둬도 됨 */}
         <Route path="admin" element={<Navigate to="/" replace />} />
       </Route>
 

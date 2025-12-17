@@ -76,7 +76,7 @@
 
 .authGroup {
   display: flex;
-  align-items: baseline; /* 기존 center 대신 baseline으로 맞춤 */
+  align-items: center;
   gap: 8px;
 }
 
@@ -84,8 +84,112 @@
   color: #cbd5e1;
   font-size: 12px;
   line-height: 1;
+}
+
+/* 로그인 상태 드롭다운 */
+
+.userMenu {
   position: relative;
-  top: -1px; /* 살짝 위로 올려 정렬 */
+}
+
+.userButton {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  border-radius: 999px;
+  border: 1px solid #e5e7eb;
+  background: #ffffff;
+  color: #111827;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+  transition: box-shadow 0.15s ease, transform 0.08s ease, border-color 0.15s ease;
+}
+
+.userButton:hover {
+  border-color: rgba(56, 189, 248, 0.55);
+  box-shadow: 0 10px 20px rgba(15, 23, 42, 0.12);
+}
+
+.userButton:active {
+  transform: translateY(1px);
+}
+
+.userButton:focus-visible {
+  outline: 2px solid rgba(56, 189, 248, 0.7);
+  outline-offset: 2px;
+}
+
+.userNameText {
+  white-space: nowrap;
+}
+
+.caretDown,
+.caretUp {
+  width: 0;
+  height: 0;
+  border-left: 5px solid transparent;
+  border-right: 5px solid transparent;
+}
+
+.caretDown {
+  border-top: 6px solid #94a3b8;
+}
+
+.caretUp {
+  border-bottom: 6px solid #94a3b8;
+}
+
+.dropdown {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 10px);
+  min-width: 180px;
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 14px;
+  box-shadow: 0 18px 40px rgba(15, 23, 42, 0.18);
+  padding: 8px;
+  z-index: 50;
+}
+
+.dropdownItem {
+  display: block;
+  width: 100%;
+  text-decoration: none;
+  color: #111827;
+  font-size: 13px;
+  font-weight: 600;
+  padding: 10px 10px;
+  border-radius: 10px;
+}
+
+.dropdownItem:hover {
+  background: rgba(2, 6, 23, 0.04);
+}
+
+.dropdownButton {
+  width: 100%;
+  border: none;
+  background: transparent;
+  text-align: left;
+  color: #111827;
+  font-size: 13px;
+  font-weight: 600;
+  padding: 10px 10px;
+  border-radius: 10px;
+  cursor: pointer;
+}
+
+.dropdownButton:hover {
+  background: rgba(2, 6, 23, 0.04);
+}
+
+.dropdownDivider {
+  height: 1px;
+  background: #e5e7eb;
+  margin: 6px 2px;
 }
 
 @media (max-width: 768px) {
