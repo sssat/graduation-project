@@ -45,6 +45,9 @@ export default function InquiryDetailPage() {
     return <Navigate to="/auth/login" replace state={{ from: location.pathname }} />;
   }
 
+  // 추가: 관리자 여부
+  const isAdmin = auth.role === "ADMIN";
+
   if (!inquiry) {
     return (
       <main className={styles.pageRoot}>
@@ -83,8 +86,8 @@ export default function InquiryDetailPage() {
   const statusLabel = inquiry.status === "processing" ? "처리 중" : "답변 완료";
   const isMine = myAuthorTokens.has((inquiry.author ?? "").trim());
 
-  // (선택) 비공개 글인데 내 글이 아니면 차단
-  if (inquiry.isPrivate && !isMine) {
+  // 수정: 비공개 글은 "작성자 또는 관리자"만 허용
+  if (inquiry.isPrivate && !isMine && !isAdmin) {
     return (
       <main className={styles.pageRoot}>
         <div className={styles.breadcrumb}>

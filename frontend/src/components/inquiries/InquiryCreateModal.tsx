@@ -1,6 +1,6 @@
 // frontend/src/components/inquiries/InquiryCreateModal.tsx
 
-import { useMemo, useRef, useState, type ChangeEvent } from "react";
+import { useRef, useState, type ChangeEvent } from "react";
 import styles from "./InquiryCreateModal.module.css";
 import type { InquiryItem } from "../../mocks/inquiryMockData";
 
@@ -35,6 +35,12 @@ function parseInquiryTypeKey(value: string): InquiryItem["typeKey"] | "" {
   }
 }
 
+type FieldErrors = {
+  typeKey?: string;
+  title?: string;
+  body?: string;
+};
+
 export default function InquiryCreateModal({ onClose, onSubmit }: Props) {
   const dialogRef = useRef<HTMLDivElement | null>(null);
 
@@ -43,28 +49,78 @@ export default function InquiryCreateModal({ onClose, onSubmit }: Props) {
   const [body, setBody] = useState("");
   const [isPrivate, setIsPrivate] = useState(false);
 
-  const canSubmit = useMemo(() => {
-    return Boolean(typeKey) && title.trim().length > 0 && body.trim().length > 0;
-  }, [typeKey, title, body]);
+  const [errors, setErrors] = useState<FieldErrors>({});
 
   const onBackdropClick = (e: React.MouseEvent<HTMLDivElement>) => {
     if (!dialogRef.current) return;
     if (!dialogRef.current.contains(e.target as Node)) onClose();
   };
 
+  const validate = (): FieldErrors => {
+    const next: FieldErrors = {};
+    const titleTrim = title.trim();
+    const bodyTrim = body.trim();
+
+    if (!typeKey) next.typeKey = "문의 유형을 선택해주세요.";
+    if (!titleTrim) next.title = "제목을 입력해주세요.";
+
+    if (!bodyTrim) next.body = "문의 내용을 입력해주세요.";
+    else if (bodyTrim.length < 50) next.body = "문의 내용은 최소 50자 이상 입력해주세요.";
+
+    return next;
+  };
+
   const onTypeChange = (e: ChangeEvent<HTMLSelectElement>) => {
-    setTypeKey(parseInquiryTypeKey(e.target.value));
+    const next = parseInquiryTypeKey(e.target.value);
+    setTypeKey(next);
+
+    if (errors.typeKey) {
+      setErrors((prev) => {
+        const copied = { ...prev };
+        if (next) delete copied.typeKey;
+        return copied;
+      });
+    }
+  };
+
+  const onTitleChange = (e: ChangeEvent<HTMLInputElement>) => {
+    const v = e.target.value;
+    setTitle(v);
+
+    if (errors.title) {
+      const ok = v.trim().length > 0;
+      if (ok) {
+        setErrors((prev) => {
+          const copied = { ...prev };
+          delete copied.title;
+          return copied;
+        });
+      }
+    }
+  };
+
+  const onBodyChange = (e: ChangeEvent<HTMLTextAreaElement>) => {
+    const v = e.target.value;
+    setBody(v);
+
+    if (errors.body) {
+      const trim = v.trim();
+      const ok = trim.length >= 50;
+      if (ok) {
+        setErrors((prev) => {
+          const copied = { ...prev };
+          delete copied.body;
+          return copied;
+        });
+      }
+    }
   };
 
   const handleSubmit = () => {
-    if (!canSubmit) {
-      alert("문의 유형, 제목, 문의 내용을 입력해주세요.");
-      return;
-    }
-    if (body.trim().length < 50) {
-      const ok = window.confirm("문의 내용은 최소 50자 이상을 권장합니다. 그래도 등록할까요?");
-      if (!ok) return;
-    }
+    const nextErrors = validate();
+    setErrors(nextErrors);
+
+    if (Object.keys(nextErrors).length > 0) return;
 
     onSubmit({
       typeKey: typeKey as InquiryItem["typeKey"],
@@ -85,9 +141,7 @@ export default function InquiryCreateModal({ onClose, onSubmit }: Props) {
           </button>
         </div>
 
-        <p className={styles.modalDesc}>
-          제목과 문의 내용을 작성해 주세요. 문의 내용은 최소 50자 이상 입력하는 것을 권장합니다.
-        </p>
+        <p className={styles.modalDesc}>제목과 문의 내용을 작성해 주세요. 문의 내용은 최소 50자 이상 입력해 주세요.</p>
 
         <form onSubmit={(e) => e.preventDefault()}>
           <div className={styles.formGrid}>
@@ -95,7 +149,13 @@ export default function InquiryCreateModal({ onClose, onSubmit }: Props) {
               <label className={styles.fieldLabel}>
                 문의 유형<span className={styles.required}>*</span>
               </label>
-              <select className={styles.textInput} value={typeKey} onChange={onTypeChange}>
+              <select
+                className={`${styles.textInput} ${errors.typeKey ? styles.inputError : ""}`}
+                value={typeKey}
+                onChange={onTypeChange}
+                aria-invalid={Boolean(errors.typeKey)}
+                aria-describedby={errors.typeKey ? "inquiry-type-error" : undefined}
+              >
                 <option value="">문의 유형을 선택해주세요</option>
                 {TYPE_OPTIONS.map((t) => (
                   <option key={t.key} value={t.key}>
@@ -103,6 +163,11 @@ export default function InquiryCreateModal({ onClose, onSubmit }: Props) {
                   </option>
                 ))}
               </select>
+              {errors.typeKey && (
+                <div id="inquiry-type-error" className={styles.errorText} role="alert">
+                  {errors.typeKey}
+                </div>
+              )}
             </div>
 
             <div className={styles.formField}>
@@ -111,11 +176,18 @@ export default function InquiryCreateModal({ onClose, onSubmit }: Props) {
               </label>
               <input
                 type="text"
-                className={styles.textInput}
+                className={`${styles.textInput} ${errors.title ? styles.inputError : ""}`}
                 value={title}
-                onChange={(e) => setTitle(e.target.value)}
+                onChange={onTitleChange}
                 placeholder="문의 제목을 간단히 입력해주세요"
+                aria-invalid={Boolean(errors.title)}
+                aria-describedby={errors.title ? "inquiry-title-error" : undefined}
               />
+              {errors.title && (
+                <div id="inquiry-title-error" className={styles.errorText} role="alert">
+                  {errors.title}
+                </div>
+              )}
             </div>
 
             <div className={styles.formField}>
@@ -123,11 +195,18 @@ export default function InquiryCreateModal({ onClose, onSubmit }: Props) {
                 문의 내용<span className={styles.required}>*</span>
               </label>
               <textarea
-                className={styles.textareaInput}
+                className={`${styles.textareaInput} ${errors.body ? styles.inputError : ""}`}
                 value={body}
-                onChange={(e) => setBody(e.target.value)}
+                onChange={onBodyChange}
                 placeholder="서비스 이용 중 궁금한 점, 오류 제보, 기능 제안 등을 자세히 작성해 주세요."
+                aria-invalid={Boolean(errors.body)}
+                aria-describedby={errors.body ? "inquiry-body-error" : undefined}
               />
+              {errors.body && (
+                <div id="inquiry-body-error" className={styles.errorText} role="alert">
+                  {errors.body}
+                </div>
+              )}
             </div>
           </div>
 

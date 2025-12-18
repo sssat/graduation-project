@@ -100,6 +100,17 @@
   line-height: 1.6;
 }
 
+.inputError {
+  border-color: rgba(248, 113, 113, 0.95);
+  box-shadow: 0 0 0 3px rgba(248, 113, 113, 0.16);
+}
+
+.errorText {
+  margin-top: 4px;
+  font-size: 11px;
+  color: #f87171;
+}
+
 .formFooter {
   margin-top: 4px;
   display: flex;

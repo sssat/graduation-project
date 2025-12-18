@@ -1,6 +1,6 @@
 // frontend/src/pages/InquiryBoardPage.tsx
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, Navigate, useLocation } from "react-router-dom";
 import styles from "./InquiryBoardPage.module.css";
 import {
@@ -39,7 +39,6 @@ const TYPE_LABEL: Record<InquiryItem["typeKey"], string> = {
 };
 
 export default function InquiryBoardPage() {
-  // Hook은 항상 최상단에서 동일한 순서로 호출되어야 함
   const { auth } = useAuth();
   const location = useLocation();
 
@@ -51,11 +50,14 @@ export default function InquiryBoardPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [items, setItems] = useState<InquiryItem[]>(() => getAllInquiries());
 
+  // 내 문의만 켤 때, 기존에 선택했던 유형을 기억해뒀다가 끌 때 복원
+  const lastTypeBeforeMineRef = useRef<InquiryTypeKey>("all");
+
   const myAuthorTokens = useMemo(() => {
     const set = new Set<string>();
     if (auth.userId?.trim()) set.add(auth.userId.trim());
     if (auth.userName?.trim()) set.add(auth.userName.trim());
-    set.add("newsight_user_me"); // 기존 목데이터 호환
+    set.add("newsight_user_me");
     return set;
   }, [auth.userId, auth.userName]);
 
@@ -114,6 +116,7 @@ export default function InquiryBoardPage() {
   };
 
   const applyTypeFilter = (next: InquiryTypeKey) => {
+    if (mineOnly) setMineOnly(false);
     setTypeFilter(next);
     setPage(1);
   };
@@ -126,19 +129,20 @@ export default function InquiryBoardPage() {
   const openModal = () => setIsModalOpen(true);
   const closeModal = () => setIsModalOpen(false);
 
-  const mineToggleToneClass = useMemo(() => {
-    if (statusFilter === "processing") return styles.mineToggleProcessing;
-    if (statusFilter === "done") return styles.mineToggleDone;
-    return styles.mineToggleAll;
-  }, [statusFilter]);
+  const handleMineOnlyChipClick = () => {
+    if (mineOnly) {
+      setMineOnly(false);
+      setTypeFilter(lastTypeBeforeMineRef.current ?? "all");
+      setPage(1);
+      return;
+    }
 
-  const mineToggleActiveToneClass = useMemo(() => {
-    if (statusFilter === "processing") return styles.mineToggleActiveProcessing;
-    if (statusFilter === "done") return styles.mineToggleActiveDone;
-    return styles.mineToggleActiveAll;
-  }, [statusFilter]);
+    lastTypeBeforeMineRef.current = typeFilter;
+    setTypeFilter("all");
+    setMineOnly(true);
+    setPage(1);
+  };
 
-  // 2) 내가 작성한 문의글 확인: 작성자(auth.userId/userName)를 저장 + "내 문의만" 토글 제공
   const handleCreateInquiry = (payload: {
     typeKey: InquiryItem["typeKey"];
     title: string;
@@ -165,12 +169,10 @@ export default function InquiryBoardPage() {
 
     addInquiryToStorage(newItem);
 
-    // 저장소 기준으로 즉시 동기화
     setItems(getAllInquiries());
     setPage(1);
   };
 
-  // 1) 로그인한 사용자만 접속 가능 (Hook 이후에 처리해야 rules-of-hooks 위반이 안 남)
   if (!auth.isAuthed) {
     return <Navigate to="/auth/login" replace state={{ from: location.pathname }} />;
   }
@@ -189,17 +191,31 @@ export default function InquiryBoardPage() {
         <div className={styles.inquiryFilterBar}>
           <div className={styles.filterLeft}>
             <span className={styles.filterLabel}>문의 유형</span>
+
             <div className={styles.categoryChips}>
               {INQUIRY_TYPE_FILTERS.map((t) => (
                 <button
                   key={t.key}
                   type="button"
-                  className={`${styles.categoryChip} ${typeFilter === t.key ? styles.activeChip : ""}`}
+                  className={[
+                    styles.categoryChip,
+                    !mineOnly && typeFilter === t.key ? styles.activeChip : "",
+                  ].join(" ")}
                   onClick={() => applyTypeFilter(t.key)}
                 >
                   {t.label}
                 </button>
               ))}
+
+              <button
+                type="button"
+                className={[styles.categoryChip, mineOnly ? styles.activeChip : ""].join(" ")}
+                onClick={handleMineOnlyChipClick}
+                aria-pressed={mineOnly}
+                title="내가 작성한 문의만 보기"
+              >
+                내 문의만
+              </button>
             </div>
           </div>
 
@@ -219,24 +235,6 @@ export default function InquiryBoardPage() {
                 ))}
               </div>
             </div>
-
-            <button
-              type="button"
-              className={[
-                styles.mineToggle,
-                mineToggleToneClass,
-                mineOnly ? styles.mineToggleActive : "",
-                mineOnly ? mineToggleActiveToneClass : "",
-              ].join(" ")}
-              onClick={() => {
-                setMineOnly((v) => !v);
-                setPage(1);
-              }}
-              aria-pressed={mineOnly}
-              title="내가 작성한 문의만 보기"
-            >
-              내 문의만
-            </button>
 
             <button type="button" className={styles.inquiryOpenBtn} onClick={openModal}>
               문의하기
@@ -260,37 +258,43 @@ export default function InquiryBoardPage() {
             <div>처리 상태</div>
           </div>
 
-          {pagedItems.map((row) => (
+          {pagedItems.map((row, idx) => {
+          // 필터링된 전체 결과(filtered) 기준으로 내림차순 번호 표시
+          // 예: filtered.length=14이면 첫 행 14, 다음 13 ... (페이지 이동도 반영)
+          const displayNo = filtered.length - ((safePage - 1) * PAGE_SIZE + idx);
+
+          return (
             <div key={row.id} className={styles.inquiryRow}>
-              <div className={styles.inquiryIndex}>{row.id}</div>
+              <div className={styles.inquiryIndex}>{displayNo}</div>
 
-              <div>
-                <span className={pillClassByType(row.typeKey)}>{row.typeLabel}</span>
+                <div>
+                  <span className={pillClassByType(row.typeKey)}>{row.typeLabel}</span>
+                </div>
+
+                <div className={styles.inquiryTitleCell}>
+                  {isMine(row) ? <span className={styles.myPill}>MY</span> : null}
+                  {row.isPrivate ? <span className={styles.lockPill}>🔒비공개</span> : null}
+
+                  <Link to={`/inquiries/${row.id}`} className={styles.inquiryTitleLink}>
+                    {row.title}
+                  </Link>
+                </div>
+
+                <div className={styles.inquiryDate}>{row.date}</div>
+
+                <div>
+                  <span className={styles.statusBadge}>
+                    <span
+                      className={`${styles.statusDot} ${
+                        row.status === "processing" ? styles.processing : styles.done
+                      }`}
+                    />
+                    {row.status === "processing" ? "처리 중" : "답변 완료"}
+                  </span>
+                </div>
               </div>
-
-              <div className={styles.inquiryTitleCell}>
-                {isMine(row) ? <span className={styles.myPill}>MY</span> : null}
-                {row.isPrivate ? <span className={styles.lockPill}>🔒비공개</span> : null}
-
-                <Link to={`/inquiries/${row.id}`} className={styles.inquiryTitleLink}>
-                  {row.title}
-                </Link>
-              </div>
-
-              <div className={styles.inquiryDate}>{row.date}</div>
-
-              <div>
-                <span className={styles.statusBadge}>
-                  <span
-                    className={`${styles.statusDot} ${
-                      row.status === "processing" ? styles.processing : styles.done
-                    }`}
-                  />
-                  {row.status === "processing" ? "처리 중" : "답변 완료"}
-                </span>
-              </div>
-            </div>
-          ))}
+            );
+          })}
 
           <div className={styles.inquiryPagination}>
             <button

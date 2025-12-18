@@ -75,6 +75,22 @@ function formatNowYYYYMMDDHHmm(d = new Date()) {
   return `${yyyy}-${mm}-${dd} ${hh}:${mi}`;
 }
 
+/** 매일 04:00(KST) 기준 다음 자동 실행 예정 시각 */
+function getNextAutoRunAt0400KstLabel(now = new Date()) {
+  const next = new Date(now);
+  next.setHours(4, 0, 0, 0);
+
+  // 지금 시각이 오늘 04:00 이상이면 다음날 04:00
+  if (now.getTime() >= next.getTime()) {
+    next.setDate(next.getDate() + 1);
+  }
+
+  const yyyy = next.getFullYear();
+  const mm = pad2(next.getMonth() + 1);
+  const dd = pad2(next.getDate());
+  return `${yyyy}-${mm}-${dd} 04:00 KST`;
+}
+
 export default function AdminDashboardPage() {
   const viewPanelRef = useRef<HTMLDivElement | null>(null);
   const answerPanelRef = useRef<HTMLDivElement | null>(null);
@@ -352,6 +368,9 @@ export default function AdminDashboardPage() {
     return arr;
   }, [activePageSafe, totalPages]);
 
+  // ✅ 하드코딩 제거: "매일 04:00 KST" 기준 다음 자동 실행 시각 계산
+  const nextAutoRunLabel = useMemo(() => getNextAutoRunAt0400KstLabel(), []);
+
   return (
     <main className={styles.pageRoot}>
       <section className={styles.adminHero}>
@@ -359,7 +378,7 @@ export default function AdminDashboardPage() {
           <div className={styles.heroKicker}>Admin Console</div>
           <h1 className={styles.heroTitle}>관리자 대시보드</h1>
           <p className={styles.heroSub}>
-            오늘 가입한 회원, 수집된 기사 수, 문의 처리 현황과 수집·분석 로그를 한 번에 확인하고
+            오늘 가입한 회원 수, 수집된 기사 수, 문의 처리 현황과 데이터 수집·분석 로그를 한 번에 확인하고
             크롤링을 수동으로 실행할 수 있는 화면입니다.
           </p>
         </div>
@@ -483,7 +502,7 @@ export default function AdminDashboardPage() {
             <div className={styles.cardHeaderMain}>
               <div className={styles.cardTitle}>수동 크롤링 실행</div>
               <div className={styles.cardSub}>
-                기본적으로 매일 새벽 자동 크롤링이 수행되며, 필요 시 여기에서 수동으로 즉시 실행할 수
+                기본적으로 매일 특정 시각에 자동 크롤링이 수행되며, 필요 시 이곳에서 수동으로 즉시 실행할 수
                 있습니다.
               </div>
             </div>
@@ -495,7 +514,7 @@ export default function AdminDashboardPage() {
               <br />· 실행 대상: 등록된 모든 언론사 및 섹션
             </p>
 
-            <p className={styles.manualNext}>다음 자동 실행 예정 시각: 2025-12-18 04:00 KST</p>
+            <p className={styles.manualNext}>다음 자동 실행 예정 시각: {nextAutoRunLabel}</p>
 
             <p>즉시 데이터 갱신이 필요할 때만 수동 실행을 사용해 주세요.</p>
 
@@ -516,10 +535,6 @@ export default function AdminDashboardPage() {
           <div className={styles.cardHeader}>
             <div className={styles.cardHeaderMain}>
               <div className={styles.cardTitle}>문의 게시글 관리</div>
-              <div className={styles.cardSub}>
-                문의 데이터는 <strong>inquiryMockData.ts</strong> 기반이며, 목록은{" "}
-                <strong>페이지당 10개</strong>씩 표시됩니다.
-              </div>
             </div>
           </div>
 

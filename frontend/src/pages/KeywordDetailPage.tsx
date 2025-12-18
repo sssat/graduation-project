@@ -839,7 +839,7 @@ export default function KeywordDetailPage() {
             <div>
               <div className={styles.cardTitle}>관계도 분석</div>
               <div className={styles.cardSub}>
-                {keyword}와 함께 언급되는 인물·조직을 공동 언급 관계로 연결해 시각화했습니다.
+                {keyword}과(와) 함께 언급되는 인물·조직을 공동 언급 관계로 연결해 시각화했습니다.
               </div>
             </div>
             <span className={styles.badgeSoft}>공동 언급 네트워크</span>

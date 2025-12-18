@@ -479,13 +479,13 @@ select:focus {
 }
 
 .inquiryTypePillData {
-  background: rgba(34, 197, 94, 0.16);
-  color: #bbf7d0;
+  background: rgba(34, 211, 238, 0.16);
+  color: #a5f3fc;
 }
 
 .inquiryTypePillAccount {
   background: rgba(250, 204, 21, 0.18);
-  color: #fde68a;
+  color: #facc15;
 }
 
 .inquiryTypePillEtc {

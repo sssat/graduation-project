@@ -397,7 +397,7 @@ export default function MediaComparePage() {
         <article className={styles.card}>
           <div className={styles.cardHeader}>
             <div>
-              <div className={styles.cardTitle}>선택 키워드 언론사 비교 요약</div>
+              <div className={styles.cardTitle}>오늘의 키워드 분석 요약</div>
               <div className={styles.cardSub}>
                 수집된 데이터와 다양한 분석 지표를 종합해 생성된 ai 요약입니다.
               </div>
@@ -430,7 +430,7 @@ export default function MediaComparePage() {
           </div>
 
           <div className={styles.biasCaption}>
-            막대가 길수록 {rangeLabel} 선택 키워드에 대해 더 많은 기사를 송고한 언론사입니다.
+            막대가 길수록 {rangeLabel} 선택 키워드에 대해 더 많은 기사를 보도한 언론사입니다.
           </div>
         </article>
 
@@ -439,7 +439,7 @@ export default function MediaComparePage() {
             <div>
               <div className={styles.cardTitle}>언론사별 편향도 지수</div>
               <div className={styles.cardSub}>
-                선택 키워드 기사들의 제목 톤을 기반으로 산출한 편향도 지수입니다 (0에 가까울수록 중립).
+                선택 키워드 기사들의 제목 톤을 기반으로 산출한 지표입니다 (0에 가까울수록 중립).
               </div>
             </div>
             <span className={styles.badgeSoft}>편향 분석</span>
