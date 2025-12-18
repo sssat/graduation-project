@@ -9,15 +9,15 @@
 
 .footerInner {
   width: 100%;
-  max-width: none;              /* 좌/우로 더 퍼지게 */
+  max-width: none;
   margin: 0;
-  padding: 76px 56px 20px;      /* 좌우 패딩 줄여서 더 끝으로 */
+  padding: 46px 46px 20px; /* 76px -> 46px (위 여백 줄이기) */
 }
 
 .footerTop {
   display: flex;
   justify-content: space-between;
-  gap: 28px;
+  gap: 20px;
   align-items: flex-start;
 }
 

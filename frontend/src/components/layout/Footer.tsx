@@ -12,8 +12,7 @@ export default function Footer() {
           <div className={styles.brandBlock}>
             <div className={styles.brandTitle}>Newsight</div>
             <p className={styles.brandDesc}>
-              실시간 뉴스 데이터를 수집·분석하여 키워드, 언론사 비교, 감성 정보를 한
-              화면에서 확인하는 인사이트 대시보드입니다.
+              실시간 뉴스 데이터를 수집·분석해 주요 이슈와 흐름을 다양한 지표로 정리하고, 한 화면에서 빠르게 인사이트를 확인할 수 있는 대시보드입니다.
             </p>
             <p className={styles.meta}>
               대진대학교 AI빅데이터 · 4학년 20201108 이호균

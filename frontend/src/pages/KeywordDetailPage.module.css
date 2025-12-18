@@ -139,14 +139,16 @@
   outline: none;
 }
 
+/* 1) 카드 좌우 패딩 값을 변수로 빼서(= 20px) 내부 시각화가 카드 폭을 꽉 쓰게 만들기 */
 .card {
+  --card-pad-x: 20px;
+
   border-radius: 20px;
   background: radial-gradient(circle at top left, #111827 0, #020617 60%);
   border: 1px solid var(--ns-border-soft);
-  padding: 18px 20px 18px;
+  padding: 18px var(--card-pad-x) 18px;
   box-shadow: 0 14px 32px rgba(15, 23, 42, 0.6);
 }
-
 .cardHeader {
   display: flex;
   justify-content: space-between;
@@ -202,23 +204,21 @@
   color: #e5e7eb;
 }
 
-.summaryHighlight {
-  color: var(--ns-accent-yellow);
-  font-weight: 600;
-}
-
-/* 워드클라우드 (d3-cloud, 회전 없음 + 겹침 방지) */
-
+/* 2) 워드클라우드: 내부 프레임 제거 + 카드 패딩을 먹고 “엣지-투-엣지”로 확장 */
 .wordcloudClassic {
   height: 220px;
-  width: 100%;
+  width: calc(100% + (var(--card-pad-x) * 2));
+  margin: 10px calc(var(--card-pad-x) * -1) 0;
+
+  border: none;
+  background: transparent;
   border-radius: 16px;
-  border: 1px solid rgba(148, 163, 184, 0.22);
-  background: rgba(2, 6, 23, 0.55);
+
   display: flex;
   align-items: center;
   justify-content: center;
-  overflow: hidden;
+
+  overflow: visible; /* 박스에 갇힌 느낌 완화 */
 }
 
 .wordcloudSvg {
@@ -276,28 +276,66 @@
   margin-top: 8px;
 }
 
-.entityGraph {
-  min-height: 220px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+/* 3) 관계도: 내부 프레임 제거 + 카드 폭을 꽉 쓰게 확장 */
+.networkWrap {
+  width: calc(100% + (var(--card-pad-x) * 2));
+  margin: 10px calc(var(--card-pad-x) * -1) 0;
+
+  border: none;
+  background: transparent;
+  border-radius: 16px;
+
+  overflow: visible;
+  padding: 0;
 }
 
-.entityCloud {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  justify-content: center;
-  max-width: 320px;
+.networkSvg {
+  width: 100%;
+  height: auto;
+  display: block;
+  touch-action: none;
+  user-select: none;
 }
 
-.entityChip {
+.networkLinks {
+  pointer-events: none;
+}
+
+.networkLink {
+  stroke: rgba(148, 163, 184, 0.55);
+}
+
+.networkNodes {
+  cursor: grab;
+}
+
+.networkNode:active {
+  cursor: grabbing;
+}
+
+.networkCircle {
+  filter: drop-shadow(0 10px 18px rgba(2, 6, 23, 0.6));
+}
+
+.networkLabel {
+  fill: #e5e7eb;
   font-size: 12px;
-  padding: 6px 10px;
-  border-radius: 999px;
-  border: 1px solid rgba(148, 163, 184, 0.5);
-  background: rgba(15, 23, 42, 0.9);
+  font-weight: 700;
+  paint-order: stroke;
+  stroke: rgba(2, 6, 23, 0.85);
+  stroke-width: 3px;
+  letter-spacing: -0.02em;
 }
+
+/* 힌트 텍스트는 카드 안쪽 정렬 유지 */
+.networkHint {
+  margin-top: 8px;
+  padding: 0 var(--card-pad-x);
+  font-size: 11px;
+  color: var(--ns-text-muted);
+  text-align: left; /* 왼쪽 정렬 */
+}
+
 
 @media (max-width: 900px) {
   .pageRoot {

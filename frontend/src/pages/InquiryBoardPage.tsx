@@ -126,6 +126,18 @@ export default function InquiryBoardPage() {
   const openModal = () => setIsModalOpen(true);
   const closeModal = () => setIsModalOpen(false);
 
+  const mineToggleToneClass = useMemo(() => {
+    if (statusFilter === "processing") return styles.mineToggleProcessing;
+    if (statusFilter === "done") return styles.mineToggleDone;
+    return styles.mineToggleAll;
+  }, [statusFilter]);
+
+  const mineToggleActiveToneClass = useMemo(() => {
+    if (statusFilter === "processing") return styles.mineToggleActiveProcessing;
+    if (statusFilter === "done") return styles.mineToggleActiveDone;
+    return styles.mineToggleActiveAll;
+  }, [statusFilter]);
+
   // 2) 내가 작성한 문의글 확인: 작성자(auth.userId/userName)를 저장 + "내 문의만" 토글 제공
   const handleCreateInquiry = (payload: {
     typeKey: InquiryItem["typeKey"];
@@ -210,7 +222,12 @@ export default function InquiryBoardPage() {
 
             <button
               type="button"
-              className={`${styles.mineToggle} ${mineOnly ? styles.mineToggleActive : ""}`}
+              className={[
+                styles.mineToggle,
+                mineToggleToneClass,
+                mineOnly ? styles.mineToggleActive : "",
+                mineOnly ? mineToggleActiveToneClass : "",
+              ].join(" ")}
               onClick={() => {
                 setMineOnly((v) => !v);
                 setPage(1);

@@ -27,19 +27,15 @@ export default function HomePage() {
 
   const dateText = `${year}년 ${month} ${day}일 (${weekday})`;
 
-  const updatedAtText = new Intl.DateTimeFormat("ko-KR", {
+  // KST 기준 "오늘 날짜"를 YYYY-MM-DD로 뽑아서, 04:00으로 고정 표기
+  const kstDateYmd = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Seoul",
     year: "numeric",
     month: "2-digit",
     day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-    hour12: false,
-  })
-    .format(now)
-    .replace(/\./g, "-")
-    .replace(/\s/g, " ")
-    .replace(/- /g, "-")
-    .replace(/: /g, ":");
+  }).format(now); // 예: 2025-12-18
+
+  const updatedAtText = `${kstDateYmd}-04:00`;
 
   const renderItem = (item: TopKeywordItem) => (
     <Link
@@ -95,8 +91,7 @@ export default function HomePage() {
                 <span className={styles.unit}>개</span>
               </div>
               <div className={styles.heroCardCaption}>
-                오늘 수집된 뉴스에서 선정한 상위 키워드 10개에 대해 기사량·편향도·감성 분석을
-                수행합니다.
+                오늘의 상위 키워드 10개 기준으로 수집된 뉴스 데이터를 바탕으로 다양한 지표 분석과 인사이트를 제공합니다.
               </div>
             </article>
           </div>

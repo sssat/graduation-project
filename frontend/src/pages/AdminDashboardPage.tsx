@@ -646,16 +646,19 @@ export default function AdminDashboardPage() {
               type="button"
               onClick={() => canPrev && setActivePage(1)}
               disabled={!canPrev}
+              aria-label="첫 페이지"
             >
-              &laquo;
+              {"<<"}
             </button>
+
             <button
               className={styles.pageBtn}
               type="button"
               onClick={() => canPrev && setActivePage((p) => Math.max(1, p - 1))}
               disabled={!canPrev}
+              aria-label="이전 페이지"
             >
-              &lsaquo;
+              {"<"}
             </button>
 
             {pageButtons.map((p) => (
@@ -674,16 +677,19 @@ export default function AdminDashboardPage() {
               type="button"
               onClick={() => canNext && setActivePage((p) => Math.min(totalPages, p + 1))}
               disabled={!canNext}
+              aria-label="다음 페이지"
             >
-              &rsaquo;
+              {">"}
             </button>
+
             <button
               className={styles.pageBtn}
               type="button"
               onClick={() => canNext && setActivePage(totalPages)}
               disabled={!canNext}
+              aria-label="마지막 페이지"
             >
-              &raquo;
+              {">>"}
             </button>
           </div>
 

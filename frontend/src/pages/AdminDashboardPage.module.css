@@ -207,6 +207,23 @@
   color: #fecaca;
 }
 
+/* 로그 테이블 영역: 내용이 많아지면 내부 스크롤 */
+.logTableScroll {
+  max-height: 320px; /* 원하는 높이로 조절 */
+  overflow-y: auto;
+  overflow-x: auto; /* 화면이 좁을 때 가로 스크롤 */
+  border: 1px solid rgba(148, 163, 184, 0.25);
+  border-radius: 14px;
+}
+
+/* 스크롤 시 헤더 고정 (선택이지만 UX 좋아짐) */
+.logTable thead th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: #0b1220; /* 카드/페이지 배경에 맞게 필요하면 값만 조정 */
+}
+
 /* 수동 크롤링 실행 카드 */
 .manualBody {
   font-size: 12px;

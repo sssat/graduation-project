@@ -399,18 +399,16 @@ export default function MediaComparePage() {
             <div>
               <div className={styles.cardTitle}>선택 키워드 언론사 비교 요약</div>
               <div className={styles.cardSub}>
-                기사량·편향도·감성 비율·대표 단어를 통합적으로 비교해 생성한 ai 요약입니다.
+                수집된 데이터와 다양한 분석 지표를 종합해 생성된 ai 요약입니다.
               </div>
             </div>
             <span className={styles.badgeSoft}>요약 리포트</span>
           </div>
 
           <div className={styles.summaryText}>
-            {rangeLabel} 기준 <span className={styles.summaryHighlight}>{summary.mediaCount}개 언론사</span>가
-            키워드 <span className={styles.summaryHighlight}>{keyword}</span>을(를) 다룬 기사량은 총{" "}
-            <span className={styles.summaryHighlight}>{summary.totalArticles}건</span>입니다. 기사량 상위 언론사는{" "}
-            <span className={styles.summaryHighlight}>{summary.topVol}</span>이며, 편향도 절댓값 기준으로 변동 폭이
-            큰 언론사는 <span className={styles.summaryHighlight}>{summary.mostBiased}</span>입니다.
+            {rangeLabel} 기준 {summary.mediaCount}개 언론사가 키워드 {keyword}을(를) 다룬 기사량은 총{" "}
+            {summary.totalArticles}건입니다. 기사량 상위 언론사는 {summary.topVol}이며, 편향도 절댓값 기준으로 변동 폭이
+            큰 언론사는 {summary.mostBiased}입니다.
           </div>
         </article>
       </section>

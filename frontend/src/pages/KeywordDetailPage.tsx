@@ -4,6 +4,16 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useParams, useSearchParams } from "react-router-dom";
 import Chart from "chart.js/auto";
 import cloud from "d3-cloud";
+import {
+  forceCenter,
+  forceCollide,
+  forceLink,
+  forceManyBody,
+  forceSimulation,
+  type Simulation,
+  type SimulationLinkDatum,
+  type SimulationNodeDatum,
+} from "d3-force";
 import styles from "./KeywordDetailPage.module.css";
 import {
   getKeywordDetailMock,
@@ -20,31 +30,6 @@ function safeDecode(s: string) {
   } catch {
     return s;
   }
-}
-
-function renderSummaryWithHighlight(summary: string, keyword: string) {
-  const k = (keyword ?? "").trim();
-  if (!k) return summary;
-
-  const idx = summary.indexOf(k);
-  if (idx < 0) {
-    return (
-      <>
-        <span className={styles.summaryHighlight}>{keyword}</span> {summary}
-      </>
-    );
-  }
-
-  const before = summary.slice(0, idx);
-  const after = summary.slice(idx + k.length);
-
-  return (
-    <>
-      {before}
-      <span className={styles.summaryHighlight}>{keyword}</span>
-      {after}
-    </>
-  );
 }
 
 function hashInt(text: string) {
@@ -68,6 +53,8 @@ function mulberry32(seed: number) {
 function clamp(n: number, min: number, max: number) {
   return Math.max(min, Math.min(max, n));
 }
+
+/* ---------- 워드클라우드 ---------- */
 
 type CloudWord = {
   text: string;
@@ -209,6 +196,360 @@ function WordCloudD3({
   );
 }
 
+/* ---------- 네트워크(관계도) 그래프 ---------- */
+
+type GraphNode = SimulationNodeDatum & {
+  id: string;
+  label: string;
+  group: number;
+  value: number;
+  pinned?: boolean;
+};
+
+type GraphLink = SimulationLinkDatum<GraphNode> & {
+  value: number;
+  source: string | GraphNode;
+  target: string | GraphNode;
+};
+
+function buildMockCoMentionGraph(keyword: string, entities: string[], seed: string): {
+  nodes: GraphNode[];
+  links: GraphLink[];
+  kwId: string;
+} {
+  const seedValue = hashInt(`graph-${seed}-${keyword}-${entities.join("|")}`);
+  const rand = mulberry32(seedValue);
+
+  const kwId = `kw:${keyword}`;
+  const kwNode: GraphNode = {
+    id: kwId,
+    label: keyword,
+    group: 0,
+    value: 10,
+    x: 0,
+    y: 0,
+  };
+
+  const uniq = Array.from(new Set(entities)).filter(Boolean).slice(0, 18);
+
+  const nodes: GraphNode[] = [
+    kwNode,
+    ...uniq.map((name) => {
+      const h = hashInt(name);
+      const v = 3 + Math.floor(rand() * 6);
+      return {
+        id: `ent:${name}`,
+        label: name,
+        group: 1 + (h % 3),
+        value: v,
+        x: (rand() - 0.5) * 80,
+        y: (rand() - 0.5) * 80,
+      };
+    }),
+  ];
+
+  const links: GraphLink[] = [];
+  for (const n of nodes) {
+    if (n.id === kwId) continue;
+    links.push({
+      source: kwId,
+      target: n.id,
+      value: clamp(0.8 + rand() * 2.2, 0.8, 3.0),
+    });
+  }
+
+  const entityNodes = nodes.filter((n) => n.id !== kwId);
+  const extraEdges = Math.min(12, Math.floor(entityNodes.length * 1.2));
+  const used = new Set<string>();
+
+  const keyOf = (a: string, b: string) => (a < b ? `${a}::${b}` : `${b}::${a}`);
+
+  let guard = 0;
+  while (used.size < extraEdges && guard < 2000) {
+    guard += 1;
+    const a = entityNodes[Math.floor(rand() * entityNodes.length)];
+    const b = entityNodes[Math.floor(rand() * entityNodes.length)];
+    if (!a || !b || a.id === b.id) continue;
+
+    const k = keyOf(a.id, b.id);
+    if (used.has(k)) continue;
+
+    const sameGroup = a.group === b.group;
+    const p = sameGroup ? 0.55 : 0.22;
+    if (rand() > p) continue;
+
+    used.add(k);
+    links.push({
+      source: a.id,
+      target: b.id,
+      value: clamp(0.6 + rand() * 2.0, 0.6, 2.6),
+    });
+  }
+
+  return { nodes, links, kwId };
+}
+
+function NetworkGraph({
+  keyword,
+  entities,
+  height = 260,
+  seed = "default",
+}: {
+  keyword: string;
+  entities: string[];
+  height?: number;
+  seed?: string;
+}) {
+  const wrapRef = useRef<HTMLDivElement | null>(null);
+  const svgRef = useRef<SVGSVGElement | null>(null);
+
+  const [width, setWidth] = useState(520);
+  const [tick, setTick] = useState(0);
+
+  const simRef = useRef<Simulation<GraphNode, GraphLink> | null>(null);
+  const draggingRef = useRef<{ node: GraphNode | null; pointerId: number | null }>({
+    node: null,
+    pointerId: null,
+  });
+
+  const palette = useMemo(
+    () => [
+      { fill: "#1e293b", stroke: "rgba(148,163,184,0.55)" },
+      { fill: "#2563eb", stroke: "rgba(147,197,253,0.8)" },
+      { fill: "#f59e0b", stroke: "rgba(253,230,138,0.85)" },
+      { fill: "#dc2626", stroke: "rgba(254,202,202,0.85)" },
+    ],
+    []
+  );
+
+  useEffect(() => {
+    if (!wrapRef.current) return;
+
+    const el = wrapRef.current;
+    const ro = new ResizeObserver(() => {
+      const next = Math.max(280, Math.floor(el.clientWidth));
+      setWidth(next);
+    });
+
+    ro.observe(el);
+    setWidth(Math.max(280, Math.floor(el.clientWidth)));
+
+    return () => ro.disconnect();
+  }, []);
+
+  // ✅ 렌더에서 쓸 nodes/links는 useMemo로 “결정적으로” 생성 (setState 필요 없음)
+  const simData = useMemo(() => {
+    const baseGraph = buildMockCoMentionGraph(keyword, entities, seed);
+
+    const nodes: GraphNode[] = baseGraph.nodes.map((n) => ({ ...n }));
+    const links: GraphLink[] = baseGraph.links.map((l) => ({ ...l }));
+
+    // Math.random 금지 대응: 결정적 랜덤
+    const posSeed = hashInt(`pos-${seed}-${keyword}-${width}-${height}`);
+    const randPos = mulberry32(posSeed);
+
+    for (const n of nodes) {
+      if (typeof n.x !== "number") n.x = width / 2 + (randPos() - 0.5) * 40;
+      if (typeof n.y !== "number") n.y = height / 2 + (randPos() - 0.5) * 40;
+    }
+
+    const nodeMap = new Map(nodes.map((n) => [n.id, n] as const));
+    return { nodes, links, nodeMap };
+  }, [keyword, entities, seed, width, height]);
+
+  const resolveNode = (x: string | GraphNode) => {
+    if (typeof x === "string") return simData.nodeMap.get(x) ?? null;
+    return x;
+  };
+
+  const pointerToSvg = (e: React.PointerEvent) => {
+    const svg = svgRef.current;
+    if (!svg) return { x: e.clientX, y: e.clientY };
+    const rect = svg.getBoundingClientRect();
+    return { x: e.clientX - rect.left, y: e.clientY - rect.top };
+  };
+
+  const onNodePointerDown = (e: React.PointerEvent, node: GraphNode) => {
+    const sim = simRef.current;
+    const svg = svgRef.current;
+    if (!sim || !svg) return;
+
+    svg.setPointerCapture(e.pointerId);
+
+    draggingRef.current.node = node;
+    draggingRef.current.pointerId = e.pointerId;
+
+    const p = pointerToSvg(e);
+    node.fx = p.x;
+    node.fy = p.y;
+
+    sim.alphaTarget(0.25).restart();
+  };
+
+  const onSvgPointerMove = (e: React.PointerEvent) => {
+    const sim = simRef.current;
+    if (!sim) return;
+
+    const d = draggingRef.current;
+    if (!d.node) return;
+
+    const p = pointerToSvg(e);
+    d.node.fx = p.x;
+    d.node.fy = p.y;
+  };
+
+  const onSvgPointerUp = (e: React.PointerEvent) => {
+    const sim = simRef.current;
+    if (!sim) return;
+
+    const d = draggingRef.current;
+    if (!d.node) return;
+
+    if (d.pointerId === e.pointerId) {
+      const n = d.node;
+      if (n.pinned) {
+        n.pinned = false;
+        n.fx = null;
+        n.fy = null;
+      } else {
+        n.pinned = true;
+      }
+    }
+
+    draggingRef.current.node = null;
+    draggingRef.current.pointerId = null;
+    sim.alphaTarget(0);
+  };
+
+  useEffect(() => {
+    if (simRef.current) {
+      simRef.current.stop();
+      simRef.current = null;
+    }
+
+    const sim = forceSimulation<GraphNode>(simData.nodes)
+      .force(
+        "link",
+        forceLink<GraphNode, GraphLink>(simData.links)
+          .id((d: GraphNode) => d.id)
+          .distance((l: GraphLink) => {
+            const v = l.value ?? 1;
+            return clamp(140 - v * 30, 70, 160);
+          })
+          .strength((l: GraphLink) => {
+            const v = l.value ?? 1;
+            return clamp(0.25 + v * 0.08, 0.2, 0.6);
+          })
+      )
+      .force("charge", forceManyBody().strength(-240))
+      .force("center", forceCenter(width / 2, height / 2))
+      .force(
+        "collide",
+        forceCollide<GraphNode>().radius((d: GraphNode) => clamp(10 + d.value * 1.8, 14, 34) + 6)
+      );
+
+    let raf = 0;
+    sim.on("tick", () => {
+      if (raf) return;
+      raf = window.requestAnimationFrame(() => {
+        raf = 0;
+        setTick((t) => (t + 1) % 100000);
+      });
+    });
+
+    simRef.current = sim;
+
+    return () => {
+      if (raf) window.cancelAnimationFrame(raf);
+      sim.stop();
+    };
+  }, [simData, width, height]);
+
+  // tick은 렌더 트리거 역할
+  void tick;
+
+  return (
+    <div ref={wrapRef} className={styles.networkWrap} aria-label="관계도 네트워크">
+      <svg
+        ref={svgRef}
+        className={styles.networkSvg}
+        width={width}
+        height={height}
+        viewBox={`0 0 ${width} ${height}`}
+        role="img"
+        aria-label="공동 언급 네트워크"
+        onPointerMove={onSvgPointerMove}
+        onPointerUp={onSvgPointerUp}
+      >
+        <g className={styles.networkLinks}>
+          {simData.links.map((l, idx) => {
+            const s = resolveNode(l.source);
+            const t = resolveNode(l.target);
+            if (!s || !t) return null;
+
+            const w = clamp(l.value ?? 1, 0.6, 3.0);
+            const strokeW = clamp(1.4 + w * 0.9, 1.4, 4.2);
+            const opacity = clamp(0.18 + w * 0.18, 0.2, 0.75);
+
+            return (
+              <line
+                key={`link-${idx}`}
+                x1={s.x ?? 0}
+                y1={s.y ?? 0}
+                x2={t.x ?? 0}
+                y2={t.y ?? 0}
+                className={styles.networkLink}
+                style={{ strokeWidth: strokeW, opacity }}
+              />
+            );
+          })}
+        </g>
+
+        <g className={styles.networkNodes}>
+          {simData.nodes.map((n) => {
+            const idx = n.id.startsWith("kw:") ? 0 : n.group;
+            const c = palette[idx % palette.length];
+
+            const r = clamp(10 + n.value * 2.0, 14, 34);
+            const x = n.x ?? width / 2;
+            const y = n.y ?? height / 2;
+
+            return (
+              <g
+                key={n.id}
+                transform={`translate(${x}, ${y})`}
+                className={styles.networkNode}
+                onPointerDown={(e) => onNodePointerDown(e, n)}
+                role="button"
+                aria-label={`${n.label} 노드`}
+              >
+                <circle
+                  r={r}
+                  className={styles.networkCircle}
+                  style={{
+                    fill: c.fill,
+                    stroke: c.stroke,
+                    strokeWidth: n.id.startsWith("kw:") ? 2.2 : 1.6,
+                  }}
+                />
+                <text className={styles.networkLabel} textAnchor="middle" y={r + 16}>
+                  {n.label}
+                </text>
+              </g>
+            );
+          })}
+        </g>
+      </svg>
+
+      <div className={styles.networkHint}>
+        노드를 드래그해 배치할 수 있습니다. 놓으면 고정되고, 다시 누르면 고정이 해제됩니다.
+      </div>
+    </div>
+  );
+} 
+
+/* ---------- 페이지 ---------- */
+
 const MEDIA_ORDER: MediaKey[] = [
   "all",
   "chosun",
@@ -240,10 +581,7 @@ export default function KeywordDetailPage() {
   const [period, setPeriod] = useState<KeywordPeriod>("today");
   const [media, setMedia] = useState<MediaKey>("all");
 
-  const detail = useMemo(
-    () => getKeywordDetailMock(keyword, period, media),
-    [keyword, period, media]
-  );
+  const detail = useMemo(() => getKeywordDetailMock(keyword, period, media), [keyword, period, media]);
 
   const meta = useMemo(
     () => ({
@@ -424,14 +762,11 @@ export default function KeywordDetailPage() {
           <div className={styles.cardHeader}>
             <div>
               <div className={styles.cardTitle}>오늘의 키워드 분석 요약</div>
-              <div className={styles.cardSub}>
-                기사량·감성·편향도를 함께 고려해 ai로 생성된 요약입니다.
-              </div>
+              <div className={styles.cardSub}>수집된 데이터와 다양한 분석 지표를 종합해 생성된 ai 요약입니다.</div>
             </div>
             <span className={styles.badgeSoft}>요약 리포트</span>
           </div>
-
-          <div className={styles.summaryText}>{renderSummaryWithHighlight(detail.summary, keyword)}</div>
+          <div className={styles.summaryText}>{detail.summary}</div>
         </article>
       </section>
 
@@ -440,9 +775,7 @@ export default function KeywordDetailPage() {
           <div className={styles.cardHeader}>
             <div>
               <div className={styles.cardTitle}>제목 워드 클라우드</div>
-              <div className={styles.cardSub}>
-                오늘 수집된 기사 제목에서 자주 등장한 단어를 시각화한 결과입니다.
-              </div>
+              <div className={styles.cardSub}>수집된 기사 제목에서 자주 등장한 단어를 시각화한 결과입니다.</div>
             </div>
             <span className={styles.badgeSoft}>제목 기반</span>
           </div>
@@ -454,9 +787,7 @@ export default function KeywordDetailPage() {
           <div className={styles.cardHeader}>
             <div>
               <div className={styles.cardTitle}>감성 분석 결과</div>
-              <div className={styles.cardSub}>
-                제목 텍스트를 기반으로 긍정/중립/부정 비율을 집계했습니다.
-              </div>
+              <div className={styles.cardSub}>제목 텍스트를 기반으로 긍정/중립/부정 비율을 집계했습니다.</div>
             </div>
             <span className={styles.badgeSoft}>텍스트 감성</span>
           </div>
@@ -488,8 +819,7 @@ export default function KeywordDetailPage() {
             <div>
               <div className={styles.cardTitle}>언론사별 편향도 지수</div>
               <div className={styles.cardSub}>
-                선택 키워드 기사들의 제목 톤을 기반으로 산출한 편향도 지수입니다 (0에 가까울수록
-                중립).
+                선택 키워드 기사들의 제목 톤을 기반으로 산출한 지표입니다 (0에 가까울수록 중립).
               </div>
             </div>
             <span className={styles.badgeSoft}>편향 분석</span>
@@ -500,31 +830,22 @@ export default function KeywordDetailPage() {
           </div>
 
           <div className={styles.biasCaption}>
-            <strong>양수</strong>일수록 긍정적인 톤, <strong>음수</strong>일수록 비판적인 톤이 강한
-            언론사입니다.
+            <strong>양수</strong>일수록 긍정적인 톤, <strong>음수</strong>일수록 비판적인 톤이 강한 언론사입니다.
           </div>
         </article>
 
         <article className={styles.card}>
           <div className={styles.cardHeader}>
             <div>
-              <div className={styles.cardTitle}>관련 인물 관계도</div>
+              <div className={styles.cardTitle}>관계도 분석</div>
               <div className={styles.cardSub}>
-                {keyword}과 함께 자주 언급되는 인물·조직을 연결한 네트워크입니다.
+                {keyword}와 함께 언급되는 인물·조직을 공동 언급 관계로 연결해 시각화했습니다.
               </div>
             </div>
             <span className={styles.badgeSoft}>공동 언급 네트워크</span>
           </div>
 
-          <div className={styles.entityGraph}>
-            <div className={styles.entityCloud} aria-label="관련 인물/조직 칩">
-              {entities.map((e) => (
-                <span key={e} className={styles.entityChip}>
-                  {e}
-                </span>
-              ))}
-            </div>
-          </div>
+          <NetworkGraph keyword={keyword} entities={entities} height={260} seed={`${keyword}-${period}-${media}`} />
         </article>
       </section>
 

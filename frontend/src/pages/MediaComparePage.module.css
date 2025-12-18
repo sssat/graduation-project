@@ -217,11 +217,6 @@
   color: #e5e7eb;
 }
 
-.summaryHighlight {
-  color: var(--ns-accent-yellow);
-  font-weight: 600;
-}
-
 /* 차트 */
 
 .chartWrapper {

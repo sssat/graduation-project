@@ -2,8 +2,24 @@
 
 .page {
   width: 100%;
-  min-height: 100vh;
   background: none;
+
+  /* 새로고침/첫 접속 시 화면 전체 페이드 + 위로 슬라이드 */
+  animation: fadeSlideIn 0.55s ease-out both;
+  will-change: transform, opacity;
+}
+
+/* 화면 전체가 스르륵 올라오는 효과 */
+@keyframes fadeSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .hero {
@@ -210,10 +226,6 @@
   outline-offset: 2px;
 }
 
-.statItem:last-child {
-  border-bottom: none;
-}
-
 .statLabel {
   display: flex;
   gap: 6px;
@@ -247,6 +259,17 @@
   color: #9ca3af;
   display: flex;
   justify-content: flex-end;
+}
+
+/* 모션 최소화 설정 */
+@media (prefers-reduced-motion: reduce) {
+  .page {
+    animation: none;
+  }
+
+  .statItem {
+    transition: none;
+  }
 }
 
 @media (max-width: 768px) {
