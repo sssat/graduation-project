@@ -1,7 +1,7 @@
 // frontend/src/pages/InquiryBoardPage.tsx
 
-import { useEffect, useMemo, useState } from "react";
-import { Link } from "react-router-dom";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { Link, Navigate, useLocation } from "react-router-dom";
 import styles from "./InquiryBoardPage.module.css";
 import {
   INQUIRY_STATUS_FILTERS,
@@ -14,6 +14,7 @@ import {
   type StatusKey,
 } from "../mocks/inquiryMockData";
 import InquiryCreateModal from "../components/inquiries/InquiryCreateModal";
+import { useAuth } from "../hooks/useAuth";
 
 const PAGE_SIZE = 10;
 
@@ -38,13 +39,33 @@ const TYPE_LABEL: Record<InquiryItem["typeKey"], string> = {
 };
 
 export default function InquiryBoardPage() {
+  // Hook은 항상 최상단에서 동일한 순서로 호출되어야 함
+  const { auth } = useAuth();
+  const location = useLocation();
+
   const [typeFilter, setTypeFilter] = useState<InquiryTypeKey>("all");
   const [statusFilter, setStatusFilter] = useState<StatusKey>("all");
+  const [mineOnly, setMineOnly] = useState(false);
   const [page, setPage] = useState(1);
 
   const [isModalOpen, setIsModalOpen] = useState(false);
-
   const [items, setItems] = useState<InquiryItem[]>(() => getAllInquiries());
+
+  const myAuthorTokens = useMemo(() => {
+    const set = new Set<string>();
+    if (auth.userId?.trim()) set.add(auth.userId.trim());
+    if (auth.userName?.trim()) set.add(auth.userName.trim());
+    set.add("newsight_user_me"); // 기존 목데이터 호환
+    return set;
+  }, [auth.userId, auth.userName]);
+
+  const isMine = useCallback(
+    (item: InquiryItem) => {
+      const a = (item.author ?? "").trim();
+      return a !== "" && myAuthorTokens.has(a);
+    },
+    [myAuthorTokens]
+  );
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -58,11 +79,15 @@ export default function InquiryBoardPage() {
     return items.filter((item) => {
       const typeOk = typeFilter === "all" ? true : item.typeKey === typeFilter;
       const statusOk = statusFilter === "all" ? true : item.status === statusFilter;
-      return typeOk && statusOk;
+      const mineOk = !mineOnly ? true : isMine(item);
+      return typeOk && statusOk && mineOk;
     });
-  }, [items, typeFilter, statusFilter]);
+  }, [items, typeFilter, statusFilter, mineOnly, isMine]);
 
-  const totalPages = useMemo(() => Math.max(1, Math.ceil(filtered.length / PAGE_SIZE)), [filtered.length]);
+  const totalPages = useMemo(
+    () => Math.max(1, Math.ceil(filtered.length / PAGE_SIZE)),
+    [filtered.length]
+  );
 
   const safePage = Math.min(Math.max(1, page), totalPages);
 
@@ -75,9 +100,9 @@ export default function InquiryBoardPage() {
     const maxButtons = 5;
     const count = Math.min(totalPages, maxButtons);
     return Array.from({ length: count }, (_, i) => i + 1);
-    }, [totalPages]);
+  }, [totalPages]);
 
-    const showEllipsis = totalPages > 5;
+  const showEllipsis = totalPages > 5;
 
   const pillClassByType = (typeKey: InquiryItem["typeKey"]) => {
     if (typeKey === "bug") return `${styles.inquiryTypePill} ${styles.bug}`;
@@ -101,6 +126,7 @@ export default function InquiryBoardPage() {
   const openModal = () => setIsModalOpen(true);
   const closeModal = () => setIsModalOpen(false);
 
+  // 2) 내가 작성한 문의글 확인: 작성자(auth.userId/userName)를 저장 + "내 문의만" 토글 제공
   const handleCreateInquiry = (payload: {
     typeKey: InquiryItem["typeKey"];
     title: string;
@@ -110,6 +136,8 @@ export default function InquiryBoardPage() {
     const now = new Date();
     const newId = getNextInquiryId();
 
+    const author = (auth.userId?.trim() || auth.userName?.trim() || "newsight_user_me").trim();
+
     const newItem: InquiryItem = {
       id: newId,
       typeKey: payload.typeKey,
@@ -118,18 +146,22 @@ export default function InquiryBoardPage() {
       date: formatDate(now),
       status: "processing",
       isPrivate: payload.isPrivate,
-      author: "newsight_user_me",
+      author,
       createdAt: formatDateTime(now),
       body: payload.body,
     };
 
     addInquiryToStorage(newItem);
-    setItems(getAllInquiries());
 
-    const nextTotalPages = Math.max(1, Math.ceil((filtered.length + 1) / PAGE_SIZE));
+    // 저장소 기준으로 즉시 동기화
+    setItems(getAllInquiries());
     setPage(1);
-    if (safePage > nextTotalPages) setPage(nextTotalPages);
   };
+
+  // 1) 로그인한 사용자만 접속 가능 (Hook 이후에 처리해야 rules-of-hooks 위반이 안 남)
+  if (!auth.isAuthed) {
+    return <Navigate to="/auth/login" replace state={{ from: location.pathname }} />;
+  }
 
   return (
     <main className={styles.pageRoot}>
@@ -176,6 +208,19 @@ export default function InquiryBoardPage() {
               </div>
             </div>
 
+            <button
+              type="button"
+              className={`${styles.mineToggle} ${mineOnly ? styles.mineToggleActive : ""}`}
+              onClick={() => {
+                setMineOnly((v) => !v);
+                setPage(1);
+              }}
+              aria-pressed={mineOnly}
+              title="내가 작성한 문의만 보기"
+            >
+              내 문의만
+            </button>
+
             <button type="button" className={styles.inquiryOpenBtn} onClick={openModal}>
               문의하기
             </button>
@@ -207,6 +252,7 @@ export default function InquiryBoardPage() {
               </div>
 
               <div className={styles.inquiryTitleCell}>
+                {isMine(row) ? <span className={styles.myPill}>MY</span> : null}
                 {row.isPrivate ? <span className={styles.lockPill}>🔒비공개</span> : null}
 
                 <Link to={`/inquiries/${row.id}`} className={styles.inquiryTitleLink}>
@@ -250,20 +296,20 @@ export default function InquiryBoardPage() {
 
             {pageNumbers.map((p) => (
               <button
-                  key={p}
-                  className={`${styles.pageBtn} ${safePage === p ? styles.pageActive : ""}`}
-                  onClick={() => setPage(p)}
-                  aria-current={safePage === p ? "page" : undefined}
+                key={p}
+                className={`${styles.pageBtn} ${safePage === p ? styles.pageActive : ""}`}
+                onClick={() => setPage(p)}
+                aria-current={safePage === p ? "page" : undefined}
               >
-                  {p}
+                {p}
               </button>
-              ))}
-  
-              {showEllipsis ? (
+            ))}
+
+            {showEllipsis ? (
               <button className={styles.pageBtn} disabled aria-hidden="true">
-                  …
+                …
               </button>
-              ) : null}
+            ) : null}
 
             <button
               className={styles.pageBtn}
@@ -286,9 +332,7 @@ export default function InquiryBoardPage() {
         </article>
       </section>
 
-      {isModalOpen ? (
-        <InquiryCreateModal onClose={closeModal} onSubmit={handleCreateInquiry} />
-      ) : null}
+      {isModalOpen ? <InquiryCreateModal onClose={closeModal} onSubmit={handleCreateInquiry} /> : null}
     </main>
   );
 }

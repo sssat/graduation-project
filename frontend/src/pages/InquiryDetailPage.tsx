@@ -1,9 +1,10 @@
 // frontend/src/pages/InquiryDetailPage.tsx
 
 import { useMemo } from "react";
-import { Link, useParams } from "react-router-dom";
+import { Link, Navigate, useLocation, useParams } from "react-router-dom";
 import styles from "./InquiryDetailPage.module.css";
 import { getInquiryById } from "../mocks/inquiryMockData";
+import { useAuth } from "../hooks/useAuth";
 
 function toNumberSafe(v: string | undefined) {
   const n = Number(v);
@@ -18,13 +19,31 @@ function splitParagraphs(text: string) {
 }
 
 export default function InquiryDetailPage() {
+  // Hook은 항상 최상단에서 동일한 순서로 호출되어야 함
+  const { auth } = useAuth();
+  const location = useLocation();
   const params = useParams();
+
   const inquiryId = toNumberSafe(params.inquiryId);
+
+  // 로그인 여부와 상관없이 Hook은 "항상" 실행되도록 위로 올림 (rules-of-hooks 대응)
+  const myAuthorTokens = useMemo(() => {
+    const set = new Set<string>();
+    if (auth.userId?.trim()) set.add(auth.userId.trim());
+    if (auth.userName?.trim()) set.add(auth.userName.trim());
+    set.add("newsight_user_me");
+    return set;
+  }, [auth.userId, auth.userName]);
 
   const inquiry = useMemo(() => {
     if (!Number.isFinite(inquiryId)) return undefined;
     return getInquiryById(inquiryId);
   }, [inquiryId]);
+
+  // 1) 로그인한 사용자만 접속 가능 (Hook 아래에서 처리)
+  if (!auth.isAuthed) {
+    return <Navigate to="/auth/login" replace state={{ from: location.pathname }} />;
+  }
 
   if (!inquiry) {
     return (
@@ -62,6 +81,43 @@ export default function InquiryDetailPage() {
   }
 
   const statusLabel = inquiry.status === "processing" ? "처리 중" : "답변 완료";
+  const isMine = myAuthorTokens.has((inquiry.author ?? "").trim());
+
+  // (선택) 비공개 글인데 내 글이 아니면 차단
+  if (inquiry.isPrivate && !isMine) {
+    return (
+      <main className={styles.pageRoot}>
+        <div className={styles.breadcrumb}>
+          <Link to="/">메인</Link>
+          <span className={styles.breadcrumbSep}>›</span>
+          <Link to="/inquiries">문의 게시판</Link>
+          <span className={styles.breadcrumbSep}>›</span>
+          <span>문의 상세</span>
+        </div>
+
+        <Link to="/inquiries" className={styles.backLink}>
+          <span className={styles.arrow}>←</span> 목록으로 돌아가기
+        </Link>
+
+        <section className={styles.detailHero}>
+          <div className={styles.detailTitleBlock}>
+            <h1 className={styles.detailTitle}>문의 상세</h1>
+          </div>
+        </section>
+
+        <article className={styles.card}>
+          <div className={styles.cardHeader}>
+            <div>
+              <div className={styles.cardTitle}>비공개 문의입니다.</div>
+            </div>
+            <span className={styles.badgeSoft}>접근 제한</span>
+          </div>
+
+          <div className={styles.bodyText}>작성자 본인만 확인할 수 있습니다.</div>
+        </article>
+      </main>
+    );
+  }
 
   return (
     <main className={styles.pageRoot}>
@@ -84,7 +140,6 @@ export default function InquiryDetailPage() {
       </section>
 
       <section className={styles.detailLayout}>
-        {/* 카드 1: 문의 글 */}
         <article className={styles.card}>
           <div className={styles.cardHeader}>
             <div>
@@ -98,6 +153,7 @@ export default function InquiryDetailPage() {
               {inquiry.typeLabel}
             </span>
 
+            {isMine ? <span className={styles.myPill}>MY</span> : null}
             {inquiry.isPrivate ? <span className={styles.lockPill}>🔒비공개</span> : null}
 
             <span className={styles.statusBadge}>
@@ -130,7 +186,6 @@ export default function InquiryDetailPage() {
           </div>
         </article>
 
-        {/* 카드 2: 관리자 답변 (있을 때만) */}
         {inquiry.answer ? (
           <article className={styles.card}>
             <div className={styles.cardHeader}>

@@ -121,8 +121,42 @@
   outline-offset: 2px;
 }
 
+.userNameWrap {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
 .userNameText {
   white-space: nowrap;
+}
+
+/* ADMIN 배지 */
+
+.adminBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 10px;
+  border-radius: 999px;
+  background: rgba(56, 189, 248, 0.14);
+  border: 1px solid rgba(56, 189, 248, 0.35);
+  color: #0284c7;
+  box-shadow: 0 0 14px rgba(56, 189, 248, 0.22);
+  white-space: nowrap;
+}
+
+.adminShield {
+  width: 14px;
+  height: 14px;
+  flex: 0 0 14px;
+}
+
+.adminBadgeText {
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.4px;
 }
 
 .caretDown,

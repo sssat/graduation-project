@@ -6,6 +6,32 @@ import styles from "./Header.module.css";
 import logo from "../../assets/logo.png";
 import { useAuth } from "../../hooks/useAuth";
 
+function AdminShieldIcon(props: { className?: string }) {
+  return (
+    <svg
+      className={props.className}
+      viewBox="0 0 24 24"
+      fill="none"
+      aria-hidden="true"
+      focusable="false"
+    >
+      <path
+        d="M12 2.5c3.2 2.2 6.3 3 8.8 3.5v7.1c0 5.4-3.6 9.1-8.8 10.9C6.8 22.2 3.2 18.5 3.2 13.1V6c2.5-.5 5.6-1.3 8.8-3.5Z"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M8.2 12.2l2.6 2.6 5-5"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
 export default function Header() {
   const nav = useNavigate();
   const { auth, logout } = useAuth();
@@ -78,12 +104,36 @@ export default function Header() {
                   aria-haspopup="menu"
                   aria-expanded={menuOpen}
                 >
-                  <span className={styles.userNameText}>{displayName}님</span>
+                  <span className={styles.userNameWrap}>
+                    {auth.role === "ADMIN" ? (
+                      <span className={styles.adminBadge}>
+                        <AdminShieldIcon className={styles.adminShield} />
+                        <span className={styles.adminBadgeText}>ADMIN</span>
+                      </span>
+                    ) : null}
+
+                    <span className={styles.userNameText}>{displayName}님</span>
+                  </span>
+
                   <span className={menuOpen ? styles.caretUp : styles.caretDown} aria-hidden="true" />
                 </button>
 
                 {menuOpen ? (
                   <div className={styles.dropdown} role="menu">
+                    {auth.role === "ADMIN" ? (
+                      <>
+                        <NavLink
+                          to="/admin"
+                          className={styles.dropdownItem}
+                          role="menuitem"
+                          onClick={closeMenu}
+                        >
+                          관리자 페이지
+                        </NavLink>
+                        <div className={styles.dropdownDivider} />
+                      </>
+                    ) : null}
+
                     <NavLink
                       to="/auth/change-password"
                       className={styles.dropdownItem}

@@ -73,10 +73,12 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
     // 퍼블리싱 단계 mock: 약간의 딜레이 후 성공 처리
     await new Promise((r) => setTimeout(r, 300));
 
+    const isAdmin = userId.toLowerCase().includes("admin");
+
     const next: Auth = {
       isAuthed: true,
-      role: "USER",
-      userSeq: 1,
+      role: isAdmin ? "ADMIN" : "USER",
+      userSeq: isAdmin ? 999 : 1,
       userId,
       userName: userId,
     };
