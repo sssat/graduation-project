@@ -92,9 +92,10 @@ function getNextAutoRunAt0400KstLabel(now = new Date()) {
   return `${yyyy}-${mm}-${dd} 04:00 KST`;
 }
 
+type InquiryPanelMode = "view" | "edit";
+
 export default function AdminDashboardPage() {
-  const viewPanelRef = useRef<HTMLDivElement | null>(null);
-  const answerPanelRef = useRef<HTMLDivElement | null>(null);
+  const inquiryPanelRef = useRef<HTMLDivElement | null>(null);
 
   const [crawlLogs, setCrawlLogs] = useState<CrawlLog[]>([
     {
@@ -149,9 +150,9 @@ export default function AdminDashboardPage() {
   const [activePage, setActivePage] = useState(1);
   const [loginPage, setLoginPage] = useState(1);
 
-  const [viewOpen, setViewOpen] = useState(false);
-  const [answerOpen, setAnswerOpen] = useState(false);
   const [selectedInquiryId, setSelectedInquiryId] = useState<number | null>(null);
+  const [inquiryPanelOpen, setInquiryPanelOpen] = useState(false);
+  const [inquiryPanelMode, setInquiryPanelMode] = useState<InquiryPanelMode>("view");
 
   const [adminStore, setAdminStore] = useState<AdminStore>(() => readAdminStore());
 
@@ -211,16 +212,10 @@ export default function AdminDashboardPage() {
   }, [inquiriesAll]);
 
   useEffect(() => {
-    if (!viewOpen) return;
-    if (!viewPanelRef.current) return;
-    viewPanelRef.current.scrollIntoView({ behavior: "smooth", block: "start" });
-  }, [viewOpen]);
-
-  useEffect(() => {
-    if (!answerOpen) return;
-    if (!answerPanelRef.current) return;
-    answerPanelRef.current.scrollIntoView({ behavior: "smooth", block: "start" });
-  }, [answerOpen]);
+    if (!inquiryPanelOpen) return;
+    if (!inquiryPanelRef.current) return;
+    inquiryPanelRef.current.scrollIntoView({ behavior: "smooth", block: "start" });
+  }, [inquiryPanelOpen]);
 
   function typePillClass(typeKey: InquiryTypeKey) {
     if (typeKey === "bug") return `${styles.inquiryTypePill} ${styles.inquiryTypePillBug}`;
@@ -241,29 +236,31 @@ export default function AdminDashboardPage() {
     return `${styles.statusPill} ${styles.statusPillProcessing}`;
   }
 
-  function closeView() {
-    setViewOpen(false);
+  function closeInquiryPanel() {
+    setInquiryPanelOpen(false);
+    setInquiryPanelMode("view");
+    setSelectedInquiryId(null);
+    setAnswerText("");
+    setAnswerStatus("done");
   }
 
-  function openView(id: number) {
-    setSelectedInquiryId(id);
-    setViewOpen(true);
-  }
-
-  function openAnswer(id: number) {
+  function openInquiryPanel(id: number) {
     const target = inquiriesAll.find((x) => x.id === id);
     if (!target) return;
 
     setSelectedInquiryId(id);
-    setAnswerText("");
-    setAnswerStatus("done");
-    setAnswerOpen(true);
-  }
 
-  function cancelAnswer() {
-    setAnswerText("");
-    setAnswerStatus("done");
-    setAnswerOpen(false);
+    if (target.status === "processing") {
+      setInquiryPanelMode("edit");
+      setAnswerText("");
+      setAnswerStatus("done");
+    } else {
+      setInquiryPanelMode("view");
+      setAnswerText("");
+      setAnswerStatus("done");
+    }
+
+    setInquiryPanelOpen(true);
   }
 
   function persistOverride(id: number, patch: AdminOverride) {
@@ -291,6 +288,7 @@ export default function AdminDashboardPage() {
   function submitAnswer(e: FormEvent) {
     e.preventDefault();
     if (!selectedInquiry) return;
+    if (selectedInquiry.status !== "processing") return;
 
     const body = answerText.trim();
     if (!body) {
@@ -307,28 +305,41 @@ export default function AdminDashboardPage() {
     });
 
     setAnswerText("");
-    setAnswerOpen(false);
+    setInquiryPanelOpen(false);
+    setInquiryPanelMode("view");
+    setSelectedInquiryId(null);
   }
 
   function onDelete(id: number) {
     const ok = window.confirm("정말 삭제하시겠습니까?");
     if (!ok) return;
     persistDelete(id);
+
     if (selectedInquiryId === id) {
-      setSelectedInquiryId(null);
-      setViewOpen(false);
-      setAnswerOpen(false);
+      closeInquiryPanel();
     }
   }
 
   function refreshLogsDemo() {
     const now = formatNowYYYYMMDDHHmm();
     setCrawlLogs((prev) => [
-      { startedAt: now, endedAt: now, articleCount: "—", message: "LOG_REFRESH: crawlers fetched latest entries", status: "success" },
+      {
+        startedAt: now,
+        endedAt: now,
+        articleCount: "—",
+        message: "LOG_REFRESH: crawlers fetched latest entries",
+        status: "success",
+      },
       ...prev,
     ]);
     setAnalyzeLogs((prev) => [
-      { startedAt: now, endedAt: now, keywordCount: "—", message: "LOG_REFRESH: analyzers fetched latest entries", status: "success" },
+      {
+        startedAt: now,
+        endedAt: now,
+        keywordCount: "—",
+        message: "LOG_REFRESH: analyzers fetched latest entries",
+        status: "success",
+      },
       ...prev,
     ]);
   }
@@ -697,60 +708,6 @@ export default function AdminDashboardPage() {
             </div>
           </div>
 
-          {viewOpen && selectedInquiry && (
-            <div ref={viewPanelRef} className={styles.viewPanel}>
-              <div className={styles.viewHeader}>
-                <div>
-                  <div className={styles.viewTitle}>선택한 문의 상세</div>
-                </div>
-                <button type="button" className={styles.btnSecondary} onClick={closeView}>
-                  닫기
-                </button>
-              </div>
-
-              <div className={styles.formRow}>
-                <label>문의 유형</label>
-                <div>
-                  <span className={typePillClass(selectedInquiry.typeKey)}>{selectedInquiry.typeLabel}</span>
-                </div>
-              </div>
-
-              <div className={styles.formRow}>
-                <label>문의 제목</label>
-                <div className={styles.formReadonly}>{selectedInquiry.title}</div>
-              </div>
-
-              <div className={styles.formRow}>
-                <label>작성자</label>
-                <div className={styles.formReadonly}>{selectedInquiry.author}</div>
-              </div>
-
-              <div className={styles.formRow}>
-                <label>등록일</label>
-                <div className={styles.formReadonly}>{selectedInquiry.createdAt}</div>
-              </div>
-
-              <div className={styles.formRow}>
-                <label>문의 내용</label>
-                <textarea readOnly value={selectedInquiry.body} />
-              </div>
-
-              {selectedInquiry.answer ? (
-                <div className={styles.answerViewBox} aria-label="관리자 답변">
-                  <div className={styles.answerViewHead}>
-                    <div className={styles.answerTeam}>{selectedInquiry.answer.teamLabel}</div>
-                    <div className={styles.answerAt}>{selectedInquiry.answer.answeredAt}</div>
-                  </div>
-                  <div className={styles.answerBody}>
-                    {selectedInquiry.answer.body.split("\n\n").map((p, i) => (
-                      <p key={i}>{p}</p>
-                    ))}
-                  </div>
-                </div>
-              ) : null}
-            </div>
-          )}
-
           <table className={styles.inquiryTable}>
             <thead>
               <tr>
@@ -758,9 +715,10 @@ export default function AdminDashboardPage() {
                 <th style={{ width: 120 }}>문의 유형</th>
                 <th>제목</th>
                 <th style={{ width: 120 }}>작성자</th>
-                <th style={{ width: 100 }}>상태</th>
                 <th style={{ width: 110 }}>등록일</th>
-                <th style={{ width: 220 }}>관리</th>
+                <th style={{ width: 100 }}>상태</th>
+                <th style={{ width: 120 }}>답변</th>
+                <th style={{ width: 90 }}>삭제</th>
               </tr>
             </thead>
             <tbody>
@@ -772,36 +730,29 @@ export default function AdminDashboardPage() {
                   </td>
                   <td className={styles.cellWrap}>{row.title}</td>
                   <td>{row.author}</td>
+                  <td>{row.date}</td>
                   <td>
                     <span className={statusPillClass(row.status)}>{row.status === "done" ? "답변 완료" : "처리 중"}</span>
                   </td>
-                  <td>{row.date}</td>
                   <td>
-                    <div className={styles.actionButtons}>
-                      <button type="button" className={styles.btnTable} onClick={() => openView(row.id)}>
-                        답변 보기
-                      </button>
-
-                      {row.status === "processing" ? (
-                        <button type="button" className={styles.btnTable} onClick={() => openAnswer(row.id)}>
-                          답변 하기
-                        </button>
-                      ) : null}
-
-                      <button
-                        type="button"
-                        className={`${styles.btnTable} ${styles.btnDelete}`}
-                        onClick={() => onDelete(row.id)}
-                      >
-                        삭제
-                      </button>
-                    </div>
+                    <button type="button" className={styles.btnTable} onClick={() => openInquiryPanel(row.id)}>
+                      답변 하기
+                    </button>
+                  </td>
+                  <td>
+                    <button
+                      type="button"
+                      className={`${styles.btnTable} ${styles.btnDelete}`}
+                      onClick={() => onDelete(row.id)}
+                    >
+                      삭제
+                    </button>
                   </td>
                 </tr>
               ))}
               {pageItems.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className={styles.emptyRow}>
+                  <td colSpan={8} className={styles.emptyRow}>
                     표시할 문의가 없습니다.
                   </td>
                 </tr>
@@ -862,52 +813,104 @@ export default function AdminDashboardPage() {
             </button>
           </div>
 
-          {answerOpen && selectedInquiry ? (
-            <div ref={answerPanelRef} className={styles.answerPanel}>
-              <div className={styles.answerHeader}>
-                <div className={styles.answerTitle}>선택한 문의에 답변 남기기</div>
+          {inquiryPanelOpen && selectedInquiry ? (
+            <div ref={inquiryPanelRef} className={styles.viewPanel}>
+              <div className={styles.viewHeader}>
+                <div>
+                  <div className={styles.viewTitle}>
+                    {inquiryPanelMode === "edit" ? "선택한 문의 답변 하기" : "선택한 문의 상세"}
+                  </div>
+                </div>
+                <button type="button" className={styles.btnSecondary} onClick={closeInquiryPanel}>
+                  닫기
+                </button>
               </div>
 
-              <form onSubmit={submitAnswer}>
-                <div className={styles.formRow}>
-                  <label>문의 제목</label>
-                  <div className={styles.formReadonly}>{selectedInquiry.title}</div>
-                </div>
+              <div className={styles.viewMetaInlineRow}>
+                <span className={styles.viewMetaLabel}>문의유형</span>
+                <span className={typePillClass(selectedInquiry.typeKey)}>{selectedInquiry.typeLabel}</span>
 
-                <div className={styles.formRow}>
-                  <label htmlFor="answer-content">관리자 답변</label>
-                  <textarea
-                    id="answer-content"
-                    placeholder="회원에게 전달할 답변 내용을 작성하세요. (문단은 빈 줄로 구분)"
-                    value={answerText}
-                    onChange={(e) => setAnswerText(e.target.value)}
-                  />
-                </div>
+                <span className={styles.viewMetaLabel}>작성자</span>
+                <span className={styles.viewMetaValue}>{selectedInquiry.author}</span>
 
-                <div className={`${styles.formRow} ${styles.formRowInline}`}>
-                  <label htmlFor="answer-status">처리 상태</label>
-                  <select
-                    id="answer-status"
-                    value={answerStatus}
-                    onChange={(e) => {
-                      const v = e.target.value;
-                      if (v === "done" || v === "processing") setAnswerStatus(v);
-                    }}
-                  >
-                    <option value="done">답변 완료</option>
-                    <option value="processing">처리 중</option>
-                  </select>
-                </div>
+                <span className={styles.viewMetaLabel}>등록일</span>
+                <span className={styles.viewMetaValue}>{selectedInquiry.createdAt}</span>
+              </div>
 
-                <div className={styles.answerActions}>
-                  <button type="button" className={styles.btnSecondary} onClick={cancelAnswer}>
-                    취소
-                  </button>
-                  <button type="submit" className={styles.btnPrimary}>
-                    답변 저장
-                  </button>
+              <div className={styles.formRow}>
+                <label>문의 제목</label>
+                <div className={styles.formReadonly}>{selectedInquiry.title}</div>
+              </div>
+
+              <div className={styles.formRow}>
+                <label>문의 내용</label>
+                <textarea readOnly value={selectedInquiry.body} className={styles.inquiryBodyTextarea} />
+              </div>
+
+              {inquiryPanelMode === "view" ? (
+                selectedInquiry.answer ? (
+                  <div className={styles.answerViewBox} aria-label="관리자 답변">
+                    <div className={styles.answerViewHead}>
+                      <div className={styles.answerTeam}>{selectedInquiry.answer.teamLabel}</div>
+                      <div className={styles.answerAt}>{selectedInquiry.answer.answeredAt}</div>
+                    </div>
+                    <div className={styles.answerBody}>
+                      {selectedInquiry.answer.body.split("\n\n").map((p, i) => (
+                        <p key={i}>{p}</p>
+                      ))}
+                    </div>
+                  </div>
+                ) : (
+                  <div className={styles.answerViewBox} aria-label="관리자 답변">
+                    <div className={styles.answerBody}>
+                      <p>아직 등록된 답변이 없습니다.</p>
+                    </div>
+                  </div>
+                )
+              ) : (
+                <div className={styles.answerPanel}>
+                  <div className={styles.answerHeader}>
+                    <div className={styles.answerTitle}>관리자 답변 작성</div>
+                  </div>
+
+                  <form onSubmit={submitAnswer}>
+                    <div className={styles.formRow}>
+                      <label htmlFor="answer-content">관리자 답변</label>
+                      <textarea
+                        id="answer-content"
+                        className={styles.answerTextarea}
+                        placeholder="회원에게 전달할 답변 내용을 작성하세요. (문단은 빈 줄로 구분)"
+                        value={answerText}
+                        onChange={(e) => setAnswerText(e.target.value)}
+                      />
+                    </div>
+
+                    <div className={`${styles.formRow} ${styles.formRowInline}`}>
+                      <label htmlFor="answer-status">처리 상태</label>
+                      <select
+                        id="answer-status"
+                        value={answerStatus}
+                        onChange={(e) => {
+                          const v = e.target.value;
+                          if (v === "done" || v === "processing") setAnswerStatus(v);
+                        }}
+                      >
+                        <option value="done">답변 완료</option>
+                        <option value="processing">처리 중</option>
+                      </select>
+                    </div>
+
+                    <div className={styles.answerActions}>
+                      <button type="button" className={styles.btnSecondary} onClick={closeInquiryPanel}>
+                        취소
+                      </button>
+                      <button type="submit" className={styles.btnPrimary}>
+                        답변 저장
+                      </button>
+                    </div>
+                  </form>
                 </div>
-              </form>
+              )}
             </div>
           ) : null}
         </article>

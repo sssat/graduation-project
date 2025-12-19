@@ -346,13 +346,6 @@
   color: #4ade80;
 }
 
-.actionButtons {
-  display: flex;
-  gap: 6px;
-  flex-wrap: wrap;
-  align-items: center;
-}
-
 .btnTable {
   display: inline-flex;
   align-items: center;
@@ -375,7 +368,7 @@
 
 /* 읽기용/답변용 패널 */
 .viewPanel {
-  margin-bottom: 14px;
+  margin-top: 14px;
   padding: 14px 16px 18px;
   border-radius: 14px;
   background: rgba(15, 23, 42, 0.98);
@@ -399,6 +392,32 @@
   font-size: 11px;
   color: var(--text-muted);
   margin-top: 2px;
+}
+
+.viewMetaInlineRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin: 2px 0 10px;
+}
+
+.viewMetaLabel {
+  color: var(--text-muted);
+  font-size: 12px;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
+.viewMetaValue {
+  color: #e5e7eb;
+  font-size: 12px;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
+.inquiryBodyTextarea {
+  min-height: 240px;
 }
 
 .answerPanel {
@@ -458,6 +477,10 @@ select {
 
 textarea {
   min-height: 96px;
+}
+
+.answerTextarea {
+  min-height: 180px;
 }
 
 textarea:focus,
