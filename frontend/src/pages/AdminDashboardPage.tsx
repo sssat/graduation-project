@@ -8,6 +8,7 @@ import {
   type InquiryTypeKey,
   type StatusKey,
 } from "../mocks/inquiryMockData";
+import { getAllLoginAttemptLogs, type LoginAttemptLogItem } from "../mocks/loginLogMockData";
 
 type LogStatus = "success" | "fail";
 
@@ -28,6 +29,7 @@ type AnalyzeLog = {
 };
 
 const PAGE_SIZE = 10;
+const LOGIN_PAGE_SIZE = 10;
 
 const ADMIN_OVERRIDE_KEY = "NS_INQUIRIES_ADMIN_OVERRIDE_V1";
 type AdminOverride = {
@@ -80,7 +82,6 @@ function getNextAutoRunAt0400KstLabel(now = new Date()) {
   const next = new Date(now);
   next.setHours(4, 0, 0, 0);
 
-  // 지금 시각이 오늘 04:00 이상이면 다음날 04:00
   if (now.getTime() >= next.getTime()) {
     next.setDate(next.getDate() + 1);
   }
@@ -143,7 +144,10 @@ export default function AdminDashboardPage() {
     },
   ]);
 
+  const [loginAttemptLogs, setLoginAttemptLogs] = useState<LoginAttemptLogItem[]>(() => getAllLoginAttemptLogs());
+
   const [activePage, setActivePage] = useState(1);
+  const [loginPage, setLoginPage] = useState(1);
 
   const [viewOpen, setViewOpen] = useState(false);
   const [answerOpen, setAnswerOpen] = useState(false);
@@ -176,9 +180,7 @@ export default function AdminDashboardPage() {
     return Math.max(1, n);
   }, [inquiriesAll.length]);
 
-  const activePageSafe = useMemo(() => {
-    return Math.min(Math.max(1, activePage), totalPages);
-  }, [activePage, totalPages]);
+  const activePageSafe = useMemo(() => Math.min(Math.max(1, activePage), totalPages), [activePage, totalPages]);
 
   const pageItems = useMemo(() => {
     const start = (activePageSafe - 1) * PAGE_SIZE;
@@ -254,7 +256,7 @@ export default function AdminDashboardPage() {
 
     setSelectedInquiryId(id);
     setAnswerText("");
-    setAnswerStatus(target.status === "done" ? "done" : "done");
+    setAnswerStatus("done");
     setAnswerOpen(true);
   }
 
@@ -297,11 +299,7 @@ export default function AdminDashboardPage() {
     }
 
     const answeredAt = formatNowYYYYMMDDHHmm();
-    const answer = {
-      teamLabel: "Newsight 운영팀",
-      answeredAt,
-      body,
-    };
+    const answer = { teamLabel: "Newsight 운영팀", answeredAt, body };
 
     persistOverride(selectedInquiry.id, {
       status: answerStatus,
@@ -326,25 +324,33 @@ export default function AdminDashboardPage() {
   function refreshLogsDemo() {
     const now = formatNowYYYYMMDDHHmm();
     setCrawlLogs((prev) => [
-      {
-        startedAt: now,
-        endedAt: now,
-        articleCount: "—",
-        message: "LOG_REFRESH: crawlers fetched latest entries",
-        status: "success",
-      },
+      { startedAt: now, endedAt: now, articleCount: "—", message: "LOG_REFRESH: crawlers fetched latest entries", status: "success" },
       ...prev,
     ]);
     setAnalyzeLogs((prev) => [
-      {
-        startedAt: now,
-        endedAt: now,
-        keywordCount: "—",
-        message: "LOG_REFRESH: analyzers fetched latest entries",
-        status: "success",
-      },
+      { startedAt: now, endedAt: now, keywordCount: "—", message: "LOG_REFRESH: analyzers fetched latest entries", status: "success" },
       ...prev,
     ]);
+  }
+
+  function refreshLoginLogsDemo() {
+    const now = formatNowYYYYMMDDHHmm();
+    setLoginAttemptLogs((prev) => {
+      const nextSeq = (prev[0]?.loginLogSeq ?? 0) + 1;
+      const row: LoginAttemptLogItem = {
+        loginLogSeq: nextSeq,
+        inputId: "admin",
+        attemptedAt: now,
+        isSuccess: true,
+        ipAddress: "203.0.113.10",
+        userAgent:
+          "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0 Safari/537.36",
+        inputPasswordHash: "LOG_REFRESH_DEMO_HASH_VALUE",
+        userSeq: 1,
+      };
+      return [row, ...prev];
+    });
+    setLoginPage(1);
   }
 
   function runCrawlingDemo() {
@@ -360,7 +366,6 @@ export default function AdminDashboardPage() {
 
     let start = Math.max(1, activePageSafe - half);
     const end = Math.min(totalPages, start + maxButtons - 1);
-
     start = Math.max(1, end - maxButtons + 1);
 
     const arr: number[] = [];
@@ -368,7 +373,40 @@ export default function AdminDashboardPage() {
     return arr;
   }, [activePageSafe, totalPages]);
 
-  // ✅ 하드코딩 제거: "매일 04:00 KST" 기준 다음 자동 실행 시각 계산
+  const loginLogsSorted = useMemo(() => {
+    const arr = [...loginAttemptLogs];
+    arr.sort((a, b) => b.loginLogSeq - a.loginLogSeq);
+    return arr;
+  }, [loginAttemptLogs]);
+
+  const loginTotalPages = useMemo(() => {
+    const n = Math.ceil(loginLogsSorted.length / LOGIN_PAGE_SIZE);
+    return Math.max(1, n);
+  }, [loginLogsSorted.length]);
+
+  const loginPageSafe = useMemo(() => Math.min(Math.max(1, loginPage), loginTotalPages), [loginPage, loginTotalPages]);
+
+  const loginPageItems = useMemo(() => {
+    const start = (loginPageSafe - 1) * LOGIN_PAGE_SIZE;
+    return loginLogsSorted.slice(start, start + LOGIN_PAGE_SIZE);
+  }, [loginLogsSorted, loginPageSafe]);
+
+  const loginCanPrev = loginPageSafe > 1;
+  const loginCanNext = loginPageSafe < loginTotalPages;
+
+  const loginPageButtons = useMemo(() => {
+    const maxButtons = 7;
+    const half = Math.floor(maxButtons / 2);
+
+    let start = Math.max(1, loginPageSafe - half);
+    const end = Math.min(loginTotalPages, start + maxButtons - 1);
+    start = Math.max(1, end - maxButtons + 1);
+
+    const arr: number[] = [];
+    for (let p = start; p <= end; p += 1) arr.push(p);
+    return arr;
+  }, [loginPageSafe, loginTotalPages]);
+
   const nextAutoRunLabel = useMemo(() => getNextAutoRunAt0400KstLabel(), []);
 
   return (
@@ -451,11 +489,9 @@ export default function AdminDashboardPage() {
                     <td>{row.startedAt}</td>
                     <td>{row.endedAt}</td>
                     <td>{row.articleCount}</td>
-                    <td>{row.message}</td>
+                    <td className={styles.cellWrap}>{row.message}</td>
                     <td>
-                      <span className={logStatusClass(row.status)}>
-                        {row.status === "success" ? "성공" : "실패"}
-                      </span>
+                      <span className={logStatusClass(row.status)}>{row.status === "success" ? "성공" : "실패"}</span>
                     </td>
                   </tr>
                 ))}
@@ -484,11 +520,9 @@ export default function AdminDashboardPage() {
                     <td>{row.startedAt}</td>
                     <td>{row.endedAt}</td>
                     <td>{row.keywordCount}</td>
-                    <td>{row.message}</td>
+                    <td className={styles.cellWrap}>{row.message}</td>
                     <td>
-                      <span className={logStatusClass(row.status)}>
-                        {row.status === "success" ? "성공" : "실패"}
-                      </span>
+                      <span className={logStatusClass(row.status)}>{row.status === "success" ? "성공" : "실패"}</span>
                     </td>
                   </tr>
                 ))}
@@ -534,7 +568,132 @@ export default function AdminDashboardPage() {
         <article className={styles.card}>
           <div className={styles.cardHeader}>
             <div className={styles.cardHeaderMain}>
+              <div className={styles.cardTitle}>로그인 시도 기록</div>
+              <div className={styles.cardSub}>
+                회원 로그인 시도 이력(시각, 성공 여부, IP, User-Agent, 입력 ID/회원번호 등)을 확인할 수
+                있습니다.
+              </div>
+            </div>
+
+            <div className={styles.cardHeaderRight}>
+              <div className={styles.tableMetaTop}>
+                전체 <strong>{loginLogsSorted.length}</strong>건
+              </div>
+              <button type="button" className={styles.btnSecondary} onClick={refreshLoginLogsDemo}>
+                로그 새로고침
+              </button>
+            </div>
+          </div>
+
+          <div className={styles.logTableScroll} aria-label="로그인 시도 로그 목록">
+            <table className={styles.logTable}>
+              <thead>
+                <tr>
+                  <th style={{ width: 90 }}>시도일련번호</th>
+                  <th style={{ width: 140 }}>입력 아이디</th>
+                  <th style={{ width: 140 }}>시도 시각</th>
+                  <th style={{ width: 86 }}>성공</th>
+                  <th style={{ width: 140 }}>IP</th>
+                  <th style={{ width: 90 }}>회원일련번호</th>
+                  <th style={{ width: 380 }}>User-Agent</th>
+                  <th style={{ width: 220 }}>입력 PW 해시</th>
+                </tr>
+              </thead>
+              <tbody>
+                {loginPageItems.map((row) => {
+                  const s: LogStatus = row.isSuccess ? "success" : "fail";
+                  return (
+                    <tr key={row.loginLogSeq}>
+                      <td>{row.loginLogSeq}</td>
+                      <td>{row.inputId}</td>
+                      <td>{row.attemptedAt}</td>
+                      <td>
+                        <span className={logStatusClass(s)}>{row.isSuccess ? "성공" : "실패"}</span>
+                      </td>
+                      <td>{row.ipAddress}</td>
+                      <td>{row.userSeq}</td>
+                      <td className={styles.cellWrap}>{row.userAgent ?? "—"}</td>
+                      <td className={styles.cellWrap}>{row.inputPasswordHash ?? "—"}</td>
+                    </tr>
+                  );
+                })}
+                {loginPageItems.length === 0 ? (
+                  <tr>
+                    <td colSpan={8} className={styles.emptyRow}>
+                      표시할 로그가 없습니다.
+                    </td>
+                  </tr>
+                ) : null}
+              </tbody>
+            </table>
+          </div>
+
+          <div className={styles.inquiryPagination} aria-label="로그인 시도 로그 페이지 이동">
+            <button
+              className={styles.pageBtn}
+              type="button"
+              onClick={() => loginCanPrev && setLoginPage(1)}
+              disabled={!loginCanPrev}
+              aria-label="첫 페이지"
+            >
+              {"<<"}
+            </button>
+
+            <button
+              className={styles.pageBtn}
+              type="button"
+              onClick={() => loginCanPrev && setLoginPage((p) => Math.max(1, p - 1))}
+              disabled={!loginCanPrev}
+              aria-label="이전 페이지"
+            >
+              {"<"}
+            </button>
+
+            {loginPageButtons.map((p) => (
+              <button
+                key={p}
+                className={`${styles.pageBtn} ${loginPageSafe === p ? styles.pageActive : ""}`}
+                type="button"
+                onClick={() => setLoginPage(p)}
+              >
+                {p}
+              </button>
+            ))}
+
+            <button
+              className={styles.pageBtn}
+              type="button"
+              onClick={() => loginCanNext && setLoginPage((p) => Math.min(loginTotalPages, p + 1))}
+              disabled={!loginCanNext}
+              aria-label="다음 페이지"
+            >
+              {">"}
+            </button>
+
+            <button
+              className={styles.pageBtn}
+              type="button"
+              onClick={() => loginCanNext && setLoginPage(loginTotalPages)}
+              disabled={!loginCanNext}
+              aria-label="마지막 페이지"
+            >
+              {">>"}
+            </button>
+          </div>
+        </article>
+      </section>
+
+      <section className={styles.sectionGap}>
+        <article className={styles.card}>
+          <div className={styles.cardHeader}>
+            <div className={styles.cardHeaderMain}>
               <div className={styles.cardTitle}>문의 게시글 관리</div>
+            </div>
+
+            <div className={styles.cardHeaderRight}>
+              <div className={styles.tableMetaTop}>
+                전체 <strong>{inquiriesAll.length}</strong>건
+              </div>
             </div>
           </div>
 
@@ -614,12 +773,10 @@ export default function AdminDashboardPage() {
                   <td>
                     <span className={typePillClass(row.typeKey)}>{row.typeLabel}</span>
                   </td>
-                  <td>{row.title}</td>
+                  <td className={styles.cellWrap}>{row.title}</td>
                   <td>{row.author}</td>
                   <td>
-                    <span className={statusPillClass(row.status)}>
-                      {row.status === "done" ? "답변 완료" : "처리 중"}
-                    </span>
+                    <span className={statusPillClass(row.status)}>{row.status === "done" ? "답변 완료" : "처리 중"}</span>
                   </td>
                   <td>{row.date}</td>
                   <td>
@@ -759,11 +916,6 @@ export default function AdminDashboardPage() {
               </form>
             </div>
           ) : null}
-
-          <div className={styles.tableFootnote}>
-            전체 <strong>{inquiriesAll.length}</strong>건 · 페이지 <strong>{activePageSafe}</strong> /{" "}
-            <strong>{totalPages}</strong> · 페이지당 <strong>{PAGE_SIZE}</strong>건
-          </div>
         </article>
       </section>
     </main>

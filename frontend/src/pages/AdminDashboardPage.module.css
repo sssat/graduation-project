@@ -62,6 +62,10 @@
   color: var(--text-muted);
 }
 
+.sectionGap {
+  margin-top: 18px;
+}
+
 /* 카드 공통 */
 .card {
   border-radius: 20px;
@@ -74,14 +78,21 @@
 .cardHeader {
   display: flex;
   justify-content: space-between;
-  gap: 10px;
-  align-items: center;
+  gap: 12px;
+  align-items: flex-start;
   margin-bottom: 14px;
 }
 
 .cardHeaderMain {
   display: flex;
   flex-direction: column;
+}
+
+.cardHeaderRight {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 10px;
 }
 
 .cardTitle {
@@ -94,6 +105,13 @@
   font-size: 12px;
   color: var(--text-muted);
   margin-top: 2px;
+}
+
+.tableMetaTop {
+  font-size: 11px;
+  color: var(--text-muted);
+  text-align: right;
+  line-height: 1.35;
 }
 
 /* 상단 요약 카드 */
@@ -175,17 +193,27 @@
   width: 100%;
   border-collapse: collapse;
   font-size: 12px;
+  table-layout: fixed;
 }
 
 .logTable th,
 .logTable td {
-  padding: 6px 4px;
+  padding: 8px 10px;
   border-bottom: 1px solid rgba(31, 41, 55, 0.85);
+  vertical-align: top;
+  text-align: left;
 }
 
 .logTable th {
   color: var(--text-muted);
   font-weight: 500;
+}
+
+.cellWrap {
+  white-space: normal;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+  line-height: 1.45;
 }
 
 .logStatus {
@@ -207,21 +235,20 @@
   color: #fecaca;
 }
 
-/* 로그 테이블 영역: 내용이 많아지면 내부 스크롤 */
+/* 로그 테이블 영역 */
 .logTableScroll {
-  max-height: 320px; /* 원하는 높이로 조절 */
+  max-height: 340px;
   overflow-y: auto;
-  overflow-x: auto; /* 화면이 좁을 때 가로 스크롤 */
+  overflow-x: auto;
   border: 1px solid rgba(148, 163, 184, 0.25);
   border-radius: 14px;
 }
 
-/* 스크롤 시 헤더 고정 (선택이지만 UX 좋아짐) */
 .logTable thead th {
   position: sticky;
   top: 0;
   z-index: 1;
-  background: #0b1220; /* 카드/페이지 배경에 맞게 필요하면 값만 조정 */
+  background: #0b1220;
 }
 
 /* 수동 크롤링 실행 카드 */
@@ -278,13 +305,15 @@
   width: 100%;
   border-collapse: collapse;
   font-size: 12px;
+  table-layout: fixed;
 }
 
 .inquiryTable th,
 .inquiryTable td {
-  padding: 8px 6px;
+  padding: 8px 10px;
   border-bottom: 1px solid rgba(31, 41, 55, 0.85);
   vertical-align: middle;
+  text-align: left;
 }
 
 .inquiryTable th {
@@ -342,12 +371,6 @@
 .btnDelete {
   border-color: rgba(248, 113, 113, 0.8);
   color: #fecaca;
-}
-
-.tableFootnote {
-  margin-top: 10px;
-  font-size: 11px;
-  color: var(--text-muted);
 }
 
 /* 읽기용/답변용 패널 */
@@ -534,8 +557,7 @@ select:focus {
   margin-bottom: 0;
 }
 
-/* 페이지네이션: InquiryBoardPage와 동일한 디자인 */
-
+/* 페이지네이션 */
 .inquiryPagination {
   margin-top: 12px;
   display: flex;
@@ -563,12 +585,6 @@ select:focus {
 .pageBtn:disabled {
   opacity: 0.4;
   cursor: default;
-}
-
-.tableFootnote {
-  margin-top: 10px;
-  font-size: 12px;
-  color: #9ca3af;
 }
 
 @media (max-width: 960px) {
