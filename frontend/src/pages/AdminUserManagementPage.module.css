@@ -1,0 +1,326 @@
+/* frontend/src/pages/AdminUserManagementPage.module.css */
+
+:global(:root) {
+  --bg-body: #020617;
+  --accent-yellow: #facc15;
+  --accent-blue: #38bdf8;
+  --accent-purple: #8b5cf6;
+  --accent-pink: #f472b6;
+  --border-soft: rgba(148, 163, 184, 0.35);
+  --text-muted: #9ca3af;
+}
+
+.pageRoot {
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 28px 32px 40px;
+  animation: fadeSlideUp 0.5s ease-out;
+}
+
+@keyframes fadeSlideUp {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.hero {
+  display: flex;
+  justify-content: space-between;
+  gap: 14px;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+}
+
+.heroMain {
+  max-width: 780px;
+}
+
+.heroKicker {
+  font-size: 11px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin-bottom: 4px;
+}
+
+.heroTitle {
+  margin: 0;
+  font-size: 26px;
+  font-weight: 700;
+  color: #f9fafb;
+}
+
+.heroSub {
+  margin-top: 6px;
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+/* card */
+.card {
+  border-radius: 20px;
+  background: radial-gradient(circle at top left, #111827 0, #020617 60%);
+  border: 1px solid var(--border-soft);
+  box-shadow: 0 18px 40px rgba(15, 23, 42, 0.7);
+  padding: 18px 20px 20px;
+}
+
+.cardHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.cardTitle {
+  font-size: 14px;
+  font-weight: 600;
+  color: #e5e7eb;
+}
+
+.cardMeta {
+  font-size: 11px;
+  color: var(--text-muted);
+  text-align: right;
+  line-height: 1.35;
+}
+
+.controls {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.ctrlLabel {
+  display: block;
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-bottom: 6px;
+}
+
+.searchBox {
+  flex: 1 1 420px;
+  min-width: 280px;
+}
+
+.filterBox {
+  width: 220px;
+}
+
+.input,
+.select {
+  width: 100%;
+  background: rgba(15, 23, 42, 0.95);
+  border: 1px solid rgba(55, 65, 81, 0.95);
+  border-radius: 12px;
+  padding: 10px 12px;
+  color: #e5e7eb;
+  font-family: inherit;
+  font-size: 12px;
+}
+
+.input:focus,
+.select:focus {
+  outline: none;
+  border-color: rgba(129, 140, 248, 0.9);
+  box-shadow: 0 0 0 1px rgba(129, 140, 248, 0.4);
+}
+
+/* table */
+.tableScroll {
+  max-height: 520px;
+  overflow: auto;
+  border: 1px solid rgba(148, 163, 184, 0.25);
+  border-radius: 14px;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+  table-layout: fixed;
+}
+
+.table th,
+.table td {
+  padding: 8px 10px;
+  border-bottom: 1px solid rgba(31, 41, 55, 0.85);
+  vertical-align: middle;
+  text-align: left;
+}
+
+.table th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: #0b1220;
+  color: var(--text-muted);
+  font-weight: 500;
+}
+
+.cellWrap {
+  white-space: normal;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+  line-height: 1.45;
+}
+
+.cellStrong {
+  font-weight: 600;
+  color: #e5e7eb;
+}
+
+.emptyRow {
+  padding: 18px 8px;
+  color: var(--text-muted);
+  text-align: center;
+}
+
+/* role pill */
+.rolePill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 11px;
+  border: 1px solid rgba(148, 163, 184, 0.45);
+  background: rgba(15, 23, 42, 0.95);
+  white-space: nowrap;
+}
+
+.roleUser {
+  border-color: rgba(148, 163, 184, 0.55);
+  color: #e5e7eb;
+}
+
+.roleAdmin {
+  border-color: rgba(56, 189, 248, 0.7);
+  color: #bae6fd;
+  background: rgba(56, 189, 248, 0.12);
+}
+
+.roleSuper {
+  border-color: rgba(139, 92, 246, 0.7);
+  color: #ddd6fe;
+  background: rgba(139, 92, 246, 0.12);
+}
+
+.btnTable {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(148, 163, 184, 0.7);
+  background: rgba(15, 23, 42, 0.95);
+  color: #e5e7eb;
+  font-size: 11px;
+  cursor: pointer;
+  line-height: 1;
+  white-space: nowrap;
+  width: 100%;
+  transition: transform 0.08s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+}
+
+.btnTable:hover:not(:disabled) {
+  border-color: rgba(129, 140, 248, 0.7);
+  box-shadow: 0 14px 28px rgba(2, 6, 23, 0.35);
+}
+
+.btnTable:active:not(:disabled) {
+  transform: translateY(1px);
+}
+
+.btnTable:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+/* 1) 승급/강등 버튼 디자인 분리 */
+.btnPromote {
+  border-color: rgba(34, 197, 94, 0.8);
+  color: #4ade80;
+  background: rgba(15, 23, 42, 0.95);
+  font-weight: 700;
+}
+
+.btnPromote:hover:not(:disabled) {
+  background: rgba(34, 197, 94, 0.08);
+  border-color: rgba(34, 197, 94, 0.95);
+  box-shadow: none;
+}
+
+
+.btnDemote {
+  border-color: rgba(250, 204, 21, 0.8);
+  color: #facc15;
+  background: rgba(15, 23, 42, 0.95);
+  font-weight: 700;
+}
+
+.btnDemote:hover:not(:disabled) {
+  background: rgba(250, 204, 21, 0.08);
+  border-color: rgba(250, 204, 21, 0.95);
+  box-shadow: none;
+}
+
+.btnDanger {
+  border-color: rgba(248, 113, 113, 0.8);
+  color: #fecaca;
+}
+
+/* pagination */
+.pagination {
+  margin-top: 12px;
+  display: flex;
+  justify-content: center;
+  gap: 4px;
+  font-size: 12px;
+  flex-wrap: wrap;
+}
+
+.pageBtn {
+  min-width: 28px;
+  height: 26px;
+  border-radius: 999px;
+  border: 1px solid rgba(148, 163, 184, 0.5);
+  background: rgba(15, 23, 42, 0.9);
+  color: #e5e7eb;
+  cursor: pointer;
+}
+
+.pageActive {
+  background: linear-gradient(135deg, #0ea5e9, #6366f1);
+  border-color: transparent;
+}
+
+.pageBtn:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+@media (max-width: 900px) {
+  .pageRoot {
+    padding: 22px 18px 32px;
+  }
+
+  .filterBox {
+    width: 100%;
+  }
+
+  .btnTable {
+    width: auto;
+  }
+}

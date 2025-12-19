@@ -46,6 +46,10 @@ export default function Header() {
     return auth.userName?.trim() || auth.userId?.trim() || "내 계정";
   }, [auth.userId, auth.userName]);
 
+  const isAdminLike = auth.role === "ADMIN" || auth.role === "SUPER_ADMIN";
+  const isSuperAdmin = auth.role === "SUPER_ADMIN";
+  const adminLabel = isSuperAdmin ? "SUPER ADMIN" : "ADMIN";
+
   const closeMenu = () => setMenuOpen(false);
   const toggleMenu = () => setMenuOpen((v) => !v);
 
@@ -105,10 +109,10 @@ export default function Header() {
                   aria-expanded={menuOpen}
                 >
                   <span className={styles.userNameWrap}>
-                    {auth.role === "ADMIN" ? (
-                      <span className={styles.adminBadge}>
+                    {isAdminLike ? (
+                      <span className={isSuperAdmin ? `${styles.adminBadge} ${styles.superBadge}` : styles.adminBadge}>
                         <AdminShieldIcon className={styles.adminShield} />
-                        <span className={styles.adminBadgeText}>ADMIN</span>
+                        <span className={styles.adminBadgeText}>{adminLabel}</span>
                       </span>
                     ) : null}
 
@@ -120,8 +124,21 @@ export default function Header() {
 
                 {menuOpen ? (
                   <div className={styles.dropdown} role="menu">
-                    {auth.role === "ADMIN" ? (
+                    {isAdminLike ? (
                       <>
+                        {isSuperAdmin ? (
+                          <NavLink
+                            to="/admin/users"
+                            className={styles.dropdownItem}
+                            role="menuitem"
+                            onClick={closeMenu}
+                          >
+                            회원 관리
+                          </NavLink>
+                        ) : null}
+
+                        {isSuperAdmin ? <div className={styles.dropdownDivider} /> : null}
+
                         <NavLink
                           to="/admin"
                           className={styles.dropdownItem}
@@ -130,6 +147,7 @@ export default function Header() {
                         >
                           관리자 페이지
                         </NavLink>
+
                         <div className={styles.dropdownDivider} />
                       </>
                     ) : null}

@@ -1,7 +1,7 @@
 // frontend/src/contexts/AuthContext.tsx
 import { createContext, useContext } from "react";
 
-export type Role = "USER" | "ADMIN";
+export type Role = "USER" | "ADMIN" | "SUPER_ADMIN";
 
 export type Auth = {
   isAuthed: boolean;

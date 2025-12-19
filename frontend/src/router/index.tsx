@@ -13,6 +13,7 @@ import SignUpPage from "../pages/AuthPage/SignUpPage/SignUpPage";
 import SignUpSuccessPage from "../pages/AuthPage/SignUpPage/SignUpSuccessPage";
 
 import AdminDashboardPage from "../pages/AdminDashboardPage";
+import AdminUserManagementPage from "../pages/AdminUserManagementPage";
 import { useAuth } from "../hooks/useAuth";
 
 function RequireAuth({ children }: { children: React.ReactNode }) {
@@ -32,7 +33,20 @@ function RequireAdmin({ children }: { children: React.ReactNode }) {
   if (!auth.isAuthed) {
     return <Navigate to="/auth/login" replace state={{ from: location.pathname }} />;
   }
-  if (auth.role !== "ADMIN") {
+  if (auth.role !== "ADMIN" && auth.role !== "SUPER_ADMIN") {
+    return <Navigate to="/" replace />;
+  }
+  return <>{children}</>;
+}
+
+function RequireSuperAdmin({ children }: { children: React.ReactNode }) {
+  const { auth } = useAuth();
+  const location = useLocation();
+
+  if (!auth.isAuthed) {
+    return <Navigate to="/auth/login" replace state={{ from: location.pathname }} />;
+  }
+  if (auth.role !== "SUPER_ADMIN") {
     return <Navigate to="/" replace />;
   }
   return <>{children}</>;
@@ -43,8 +57,8 @@ function ChangePasswordPlaceholder() {
     <main style={{ width: "100%", maxWidth: 720, margin: "0 auto", padding: "28px 18px" }}>
       <h1 style={{ margin: 0, fontSize: 22, fontWeight: 700 }}>비밀번호 변경</h1>
       <p style={{ marginTop: 10, color: "#9ca3af", fontSize: 13 }}>
-        이 페이지는 아직 연결만 해둔 상태입니다. ChangePasswordPage 컴포넌트가 준비되면
-        여기 대신 라우트 element를 교체하면 됩니다.
+        이 페이지는 아직 연결만 해둔 상태입니다. ChangePasswordPage 컴포넌트가 준비되면 여기 대신 라우트
+        element를 교체하면 됩니다.
       </p>
     </main>
   );
@@ -77,13 +91,22 @@ export default function AppRoutes() {
           }
         />
 
-        {/* 관리자도 AppLayout(기존 Header/Footer) 안에서 렌더링 */}
         <Route
           path="admin"
           element={
             <RequireAdmin>
               <AdminDashboardPage />
             </RequireAdmin>
+          }
+        />
+
+        {/* SUPER_ADMIN 전용: 회원 관리 */}
+        <Route
+          path="admin/users"
+          element={
+            <RequireSuperAdmin>
+              <AdminUserManagementPage />
+            </RequireSuperAdmin>
           }
         />
       </Route>

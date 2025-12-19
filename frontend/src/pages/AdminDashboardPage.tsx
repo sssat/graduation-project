@@ -702,9 +702,6 @@ export default function AdminDashboardPage() {
               <div className={styles.viewHeader}>
                 <div>
                   <div className={styles.viewTitle}>선택한 문의 상세</div>
-                  <div className={styles.viewSub}>
-                    작성자/등록일은 별도 행으로 구분했고, 답변이 있으면 아래에 함께 표시합니다.
-                  </div>
                 </div>
                 <button type="button" className={styles.btnSecondary} onClick={closeView}>
                   닫기
@@ -869,9 +866,6 @@ export default function AdminDashboardPage() {
             <div ref={answerPanelRef} className={styles.answerPanel}>
               <div className={styles.answerHeader}>
                 <div className={styles.answerTitle}>선택한 문의에 답변 남기기</div>
-                <div className={styles.answerSub}>
-                  저장 시 해당 문의는 <strong>답변 완료</strong>로 갱신됩니다. (목업 연동: 로컬 저장)
-                </div>
               </div>
 
               <form onSubmit={submitAnswer}>

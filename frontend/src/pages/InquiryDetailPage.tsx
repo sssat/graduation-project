@@ -46,7 +46,7 @@ export default function InquiryDetailPage() {
   }
 
   // 추가: 관리자 여부
-  const isAdmin = auth.role === "ADMIN";
+  const isAdmin = auth.role === "ADMIN" || auth.role === "SUPER_ADMIN";
 
   if (!inquiry) {
     return (

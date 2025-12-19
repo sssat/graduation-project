@@ -18,7 +18,8 @@ const DEFAULT_AUTH: Auth = {
 
 function loadAuthFromLS(): Auth {
   const roleRaw = localStorage.getItem(LS_ROLE);
-  const role: Role | null = roleRaw === "ADMIN" || roleRaw === "USER" ? roleRaw : null;
+  const role: Role | null =
+    roleRaw === "SUPER_ADMIN" || roleRaw === "ADMIN" || roleRaw === "USER" ? roleRaw : null;
 
   const userSeqRaw = localStorage.getItem(LS_USERSEQ);
   const userSeq = userSeqRaw ? Number(userSeqRaw) : null;
@@ -73,12 +74,14 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
     // 퍼블리싱 단계 mock: 약간의 딜레이 후 성공 처리
     await new Promise((r) => setTimeout(r, 300));
 
-    const isAdmin = userId.toLowerCase().includes("admin");
+    const lower = userId.toLowerCase();
+    const isSuperAdmin = lower.includes("super");
+    const isAdmin = !isSuperAdmin && lower.includes("admin");
 
     const next: Auth = {
       isAuthed: true,
-      role: isAdmin ? "ADMIN" : "USER",
-      userSeq: isAdmin ? 999 : 1,
+      role: isSuperAdmin ? "SUPER_ADMIN" : isAdmin ? "ADMIN" : "USER",
+      userSeq: isSuperAdmin ? 1000 : isAdmin ? 999 : 1,
       userId,
       userName: userId,
     };

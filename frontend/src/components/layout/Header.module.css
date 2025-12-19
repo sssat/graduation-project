@@ -147,6 +147,13 @@
   white-space: nowrap;
 }
 
+.superBadge {
+  background: rgba(139, 92, 246, 0.14);
+  border: 1px solid rgba(139, 92, 246, 0.35);
+  color: #6d28d9;
+  box-shadow: 0 0 14px rgba(139, 92, 246, 0.22);
+}
+
 .adminShield {
   width: 14px;
   height: 14px;
