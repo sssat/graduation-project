@@ -110,7 +110,16 @@ export default function AdminUserManagementPage() {
       if (roleFilter !== "ALL" && u.role !== roleFilter) return false;
       if (!query) return true;
 
-      const hay = [u.name, u.userId, u.email, u.role, String(u.userSeq), u.lastLoginAt, u.joinedAt]
+      const hay = [
+        u.name,
+        u.userId,
+        u.email,
+        u.birthDate,
+        u.role,
+        String(u.userSeq),
+        u.lastLoginAt,
+        u.joinedAt,
+      ]
         .join(" ")
         .toLowerCase();
 
@@ -229,7 +238,6 @@ export default function AdminUserManagementPage() {
       <section className={styles.card}>
         <div className={styles.cardHeader}>
           <div className={styles.cardTitle}>회원 목록</div>
-          {/* 3) 전체 oo명: 섹션 내부 우측 상단으로 이동 */}
           <div className={styles.cardMeta}>
             전체 <strong>{filtered.length}</strong>명
           </div>
@@ -243,7 +251,7 @@ export default function AdminUserManagementPage() {
             <input
               id="user-search"
               className={styles.input}
-              placeholder="이름 / 아이디 / 이메일 / 회원일련번호 검색"
+              placeholder="이름 / 아이디 / 이메일 / 생년월일 / 회원일련번호 검색"
               value={q}
               onChange={(e) => onQueryChange(e.target.value)}
             />
@@ -276,9 +284,10 @@ export default function AdminUserManagementPage() {
                 <th style={{ width: 140 }}>아이디</th>
                 <th style={{ width: 140 }}>역할</th>
                 <th style={{ width: 220 }}>이메일</th>
+                <th style={{ width: 120 }}>생년월일</th>
                 <th style={{ width: 80 }}>성별</th>
-                <th style={{ width: 150 }}>최종 접속 시간</th>
-                <th style={{ width: 150 }}>회원가입 일</th>
+                <th style={{ width: 150 }}>최근 로그인 시간</th>
+                <th style={{ width: 150 }}>회원가입 날짜</th>
                 <th style={{ width: 120 }}>회원일련번호</th>
                 <th style={{ width: 160 }}>관리자 등급 부여일시</th>
                 <th style={{ width: 160 }}>비밀번호 변경일시</th>
@@ -289,9 +298,7 @@ export default function AdminUserManagementPage() {
 
             <tbody>
               {pageItems.map((u, idx) => {
-                // 1) NO 내림차순
                 const no = filtered.length - ((pageSafe - 1) * PAGE_SIZE + idx);
-
                 const isSuper = u.role === "SUPER_ADMIN";
 
                 const rolePill =
@@ -304,7 +311,6 @@ export default function AdminUserManagementPage() {
                 const actionLabel =
                   u.role === "USER" ? "ADMIN 승급" : u.role === "ADMIN" ? "USER 강등" : "수정 불가";
 
-                // 1) 승급/강등 버튼 디자인 분리
                 const actionBtnClass =
                   u.role === "USER"
                     ? `${styles.btnTable} ${styles.btnPromote}`
@@ -321,6 +327,7 @@ export default function AdminUserManagementPage() {
                       <span className={rolePill}>{roleLabel(u.role)}</span>
                     </td>
                     <td className={styles.cellWrap}>{u.email}</td>
+                    <td>{u.birthDate}</td>
                     <td>{genderLabel(u.gender)}</td>
                     <td>{u.lastLoginAt}</td>
                     <td>{u.joinedAt}</td>
@@ -357,7 +364,7 @@ export default function AdminUserManagementPage() {
 
               {pageItems.length === 0 ? (
                 <tr>
-                  <td colSpan={13} className={styles.emptyRow}>
+                  <td colSpan={14} className={styles.emptyRow}>
                     표시할 회원이 없습니다.
                   </td>
                 </tr>

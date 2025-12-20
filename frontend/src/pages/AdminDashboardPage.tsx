@@ -356,7 +356,6 @@ export default function AdminDashboardPage() {
         ipAddress: "203.0.113.10",
         userAgent:
           "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0 Safari/537.36",
-        inputPasswordHash: "LOG_REFRESH_DEMO_HASH_VALUE",
         userSeq: 1,
       };
       return [row, ...prev];
@@ -596,47 +595,48 @@ export default function AdminDashboardPage() {
             </div>
           </div>
 
-          <div className={styles.logTableScroll} aria-label="로그인 시도 로그 목록">
-            <table className={styles.logTable}>
-              <thead>
-                <tr>
-                  <th style={{ width: 90 }}>시도일련번호</th>
-                  <th style={{ width: 140 }}>입력 아이디</th>
-                  <th style={{ width: 140 }}>시도 시각</th>
-                  <th style={{ width: 86 }}>성공</th>
-                  <th style={{ width: 140 }}>IP</th>
-                  <th style={{ width: 90 }}>회원일련번호</th>
-                  <th style={{ width: 380 }}>User-Agent</th>
-                  <th style={{ width: 220 }}>입력 PW 해시</th>
-                </tr>
-              </thead>
-              <tbody>
-                {loginPageItems.map((row) => {
-                  const s: LogStatus = row.isSuccess ? "success" : "fail";
-                  return (
-                    <tr key={row.loginLogSeq}>
-                      <td>{row.loginLogSeq}</td>
-                      <td>{row.inputId}</td>
-                      <td>{row.attemptedAt}</td>
-                      <td>
-                        <span className={logStatusClass(s)}>{row.isSuccess ? "성공" : "실패"}</span>
-                      </td>
-                      <td>{row.ipAddress}</td>
-                      <td>{row.userSeq}</td>
-                      <td className={styles.cellWrap}>{row.userAgent ?? "—"}</td>
-                      <td className={styles.cellWrap}>{row.inputPasswordHash ?? "—"}</td>
-                    </tr>
-                  );
-                })}
-                {loginPageItems.length === 0 ? (
+          {/* 둥근 모서리 클리핑을 위한 프레임 + 내부 스크롤 구조 */}
+          <div className={styles.logTableFrame} aria-label="로그인 시도 로그 목록">
+            <div className={styles.logTableScrollInner}>
+              <table className={styles.logTable}>
+                <thead>
                   <tr>
-                    <td colSpan={8} className={styles.emptyRow}>
-                      표시할 로그가 없습니다.
-                    </td>
+                    <th style={{ width: 90 }}>시도일련번호</th>
+                    <th style={{ width: 140 }}>입력 아이디</th>
+                    <th style={{ width: 140 }}>시도 시각</th>
+                    <th style={{ width: 140 }}>로그인 성공 여부</th>
+                    <th style={{ width: 140 }}>IP주소</th>
+                    <th style={{ width: 90 }}>회원일련번호</th>
+                    <th style={{ width: 520 }}>User-Agent</th>
                   </tr>
-                ) : null}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {loginPageItems.map((row) => {
+                    const s: LogStatus = row.isSuccess ? "success" : "fail";
+                    return (
+                      <tr key={row.loginLogSeq}>
+                        <td>{row.loginLogSeq}</td>
+                        <td>{row.inputId}</td>
+                        <td>{row.attemptedAt}</td>
+                        <td>
+                          <span className={logStatusClass(s)}>{row.isSuccess ? "성공" : "실패"}</span>
+                        </td>
+                        <td>{row.ipAddress}</td>
+                        <td>{row.userSeq}</td>
+                        <td className={styles.cellWrap}>{row.userAgent ?? "—"}</td>
+                      </tr>
+                    );
+                  })}
+                  {loginPageItems.length === 0 ? (
+                    <tr>
+                      <td colSpan={7} className={styles.emptyRow}>
+                        표시할 로그가 없습니다.
+                      </td>
+                    </tr>
+                  ) : null}
+                </tbody>
+              </table>
+            </div>
           </div>
 
           <div className={styles.inquiryPagination} aria-label="로그인 시도 로그 페이지 이동">

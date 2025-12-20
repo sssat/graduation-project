@@ -7,7 +7,6 @@ export type LoginAttemptLogItem = {
   isSuccess: boolean;
   ipAddress: string;
   userAgent?: string | null;
-  inputPasswordHash?: string | null;
   userSeq: number;
 };
 
@@ -51,10 +50,6 @@ export function getAllLoginAttemptLogs(): LoginAttemptLogItem[] {
 
     const userSeq = isSuccess ? (inputId === "admin" ? 1 : 40 + (i % 7)) : 0;
 
-    const inputPasswordHash = isSuccess
-      ? null
-      : `fail_hash_${loginLogSeq}_b10a8db164e0754105b7a99be72e3fe5e3b0c44298fc1c149afbf4c8996fb924`;
-
     rows.push({
       loginLogSeq,
       inputId,
@@ -62,7 +57,6 @@ export function getAllLoginAttemptLogs(): LoginAttemptLogItem[] {
       isSuccess,
       ipAddress,
       userAgent,
-      inputPasswordHash,
       userSeq,
     });
   }

@@ -38,6 +38,13 @@ function clamp(n: number, min: number, max: number) {
   return Math.max(min, Math.min(max, n));
 }
 
+function formatDateYYYYMMDD(d: Date) {
+  const yyyy = d.getFullYear();
+  const mm = String(d.getMonth() + 1).padStart(2, "0");
+  const dd = String(d.getDate()).padStart(2, "0");
+  return `${yyyy}-${mm}-${dd}`;
+}
+
 function pickTopWords(mediaKey: string, keyword: string, rand: () => number) {
   // "상위 단어 카운팅" 느낌의 목업(감성/긍부정 강조 없음)
   const pools: Record<string, string[]> = {
@@ -105,9 +112,11 @@ function buildMockRows(keyword: string, period: Period): MediaRow[] {
     const p = Math.floor(15 + rand() * 30); // 15~44
     const n = Math.floor(20 + rand() * 25); // 20~44
     let neg = 100 - (p + n);
+
     // 너무 튀면 보정
     if (neg < 10) neg = 10;
     if (neg > 70) neg = 70;
+
     const neutral = clamp(100 - (p + neg), 10, 60);
     const positive = clamp(p, 5, 70);
     const negative = clamp(neg, 5, 80);
@@ -149,9 +158,7 @@ export default function MediaComparePage() {
     const sortedByVol = [...rows].sort((a, b) => b.volume - a.volume);
     const topVol = sortedByVol.slice(0, 2).map((r) => r.label).join("·");
 
-    const sortedByAbsBias = [...rows].sort(
-      (a, b) => Math.abs(b.bias) - Math.abs(a.bias)
-    );
+    const sortedByAbsBias = [...rows].sort((a, b) => Math.abs(b.bias) - Math.abs(a.bias));
     const mostBiased = sortedByAbsBias[0]?.label ?? "-";
 
     return {
@@ -161,6 +168,21 @@ export default function MediaComparePage() {
       mostBiased,
     };
   }, [rows]);
+
+  // 상단 메타(키워드 상세 페이지처럼) 표시용 기간 문자열
+  const metaRangeLabel = useMemo(() => {
+    const end = new Date();
+    end.setHours(0, 0, 0, 0);
+
+    if (period === "today") {
+      return formatDateYYYYMMDD(end);
+    }
+
+    const start = new Date(end);
+    start.setDate(start.getDate() - 6);
+
+    return `${formatDateYYYYMMDD(start)} ~ ${formatDateYYYYMMDD(end)}`;
+  }, [period]);
 
   const volumeCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const biasCanvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -347,12 +369,30 @@ export default function MediaComparePage() {
         <div className={styles.compareTitleRow}>
           <div className={styles.compareTitleBlock}>
             <h1 className={styles.compareMainTitle}>언론사별 키워드 보도 비교 대시보드</h1>
+
             <p className={styles.compareSub}>
-              선택한 키워드를 기준으로 주요 언론사의 기사량·편향도·감성·대표 단어 차이를 한 화면에서 비교합니다.
+              분석 기간: {metaRangeLabel} · 기사 수: {summary.totalArticles}건 · 분석 언론사:{" "}
+              {summary.mediaCount}개
             </p>
           </div>
+        </div>
 
-          <div className={styles.filterBar}>
+        {/* 키워드 필터 라인과 "기간 필터"의 높이를 맞추기 위해, 기간 필터를 이 행으로 이동 */}
+        <div className={styles.keywordFilterRow}>
+          <div className={styles.keywordChipGroup} aria-label="TOP 키워드 선택">
+            {TOP_KEYWORDS.map((k) => (
+              <button
+                key={k}
+                type="button"
+                className={`${styles.keywordChip} ${keyword === k ? styles.keywordChipActive : ""}`}
+                onClick={() => setKeyword(k)}
+              >
+                {k}
+              </button>
+            ))}
+          </div>
+
+          <div className={styles.periodFilterInline}>
             <div className={styles.filterLabel}>기간</div>
             <div className={styles.filterChipGroup} role="tablist" aria-label="분석 기간 선택">
               <button
@@ -376,21 +416,6 @@ export default function MediaComparePage() {
             </div>
           </div>
         </div>
-
-        <div className={styles.keywordFilterRow}>
-          <div className={styles.keywordChipGroup} aria-label="TOP 키워드 선택">
-            {TOP_KEYWORDS.map((k) => (
-              <button
-                key={k}
-                type="button"
-                className={`${styles.keywordChip} ${keyword === k ? styles.keywordChipActive : ""}`}
-                onClick={() => setKeyword(k)}
-              >
-                {k}
-              </button>
-            ))}
-          </div>
-        </div>
       </section>
 
       <section className={styles.grid1}>
@@ -398,17 +423,15 @@ export default function MediaComparePage() {
           <div className={styles.cardHeader}>
             <div>
               <div className={styles.cardTitle}>오늘의 키워드 분석 요약</div>
-              <div className={styles.cardSub}>
-                수집된 데이터와 다양한 분석 지표를 종합해 생성된 ai 요약입니다.
-              </div>
+              <div className={styles.cardSub}>수집된 데이터와 다양한 분석 지표를 종합해 생성된 ai 요약입니다.</div>
             </div>
             <span className={styles.badgeSoft}>요약 리포트</span>
           </div>
 
           <div className={styles.summaryText}>
             {rangeLabel} 기준 {summary.mediaCount}개 언론사가 키워드 {keyword}을(를) 다룬 기사량은 총{" "}
-            {summary.totalArticles}건입니다. 기사량 상위 언론사는 {summary.topVol}이며, 편향도 절댓값 기준으로 변동 폭이
-            큰 언론사는 {summary.mostBiased}입니다.
+            {summary.totalArticles}건입니다. 기사량 상위 언론사는 {summary.topVol}이며, 편향도 절댓값 기준으로 변동 폭이 큰
+            언론사는 {summary.mostBiased}입니다.
           </div>
         </article>
       </section>
@@ -460,9 +483,7 @@ export default function MediaComparePage() {
           <div className={styles.cardHeader}>
             <div>
               <div className={styles.cardTitle}>언론사별 감성 비율 비교</div>
-              <div className={styles.cardSub}>
-                선택 키워드 기사 제목을 기반으로 긍정/중립/부정 비율을 비교한 결과입니다.
-              </div>
+              <div className={styles.cardSub}>선택 키워드 기사 제목을 기반으로 긍정/중립/부정 비율을 비교한 결과입니다.</div>
             </div>
             <span className={styles.badgeSoft}>감성 분석</span>
           </div>
@@ -505,7 +526,6 @@ export default function MediaComparePage() {
 
                 <div className={styles.framingKeywords} aria-label={`${r.label} 대표 단어`}>
                   {r.topWords.map((w, i) => (
-                    // 강조(alt) 완전 제거: 전부 동일 색상/스타일
                     <span key={`${r.key}-${w}-${i}`} className={styles.keywordTagNeutral}>
                       {w}
                     </span>

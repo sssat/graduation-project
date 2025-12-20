@@ -9,6 +9,7 @@ export type UserItem = {
   userId: string;
   role: UserRole;
   email: string;
+  birthDate: string; // "YYYY-MM-DD"
   gender: Gender;
   lastLoginAt: string; // "YYYY-MM-DD HH:mm" or "—"
   grantedAt: string; // ADMIN 등급 부여일시 (없으면 "—")
@@ -36,6 +37,14 @@ function daysAgoLabel(daysAgo: number, hh = 9, mi = 20) {
   return formatYYYYMMDDHHmm(d);
 }
 
+function defaultBirthDateBySeq(userSeq: number) {
+  // 목업용: userSeq로부터 일관된 생년월일 생성 (랜덤이지만 재현 가능)
+  const year = 1988 + (userSeq % 12); // 1988~1999
+  const month = (userSeq % 12) + 1; // 1~12
+  const day = ((userSeq * 7) % 28) + 1; // 1~28
+  return `${year}-${pad2(month)}-${pad2(day)}`;
+}
+
 function makeUser(
   userSeq: number,
   name: string,
@@ -43,7 +52,9 @@ function makeUser(
   role: UserRole,
   email: string,
   gender: Gender,
-  opts?: Partial<Pick<UserItem, "lastLoginAt" | "grantedAt" | "passwordChangedAt" | "joinedAt">>
+  opts?: Partial<
+    Pick<UserItem, "lastLoginAt" | "grantedAt" | "passwordChangedAt" | "joinedAt" | "birthDate">
+  >
 ): UserItem {
   return {
     userSeq,
@@ -51,6 +62,7 @@ function makeUser(
     userId,
     role,
     email,
+    birthDate: opts?.birthDate ?? defaultBirthDateBySeq(userSeq),
     gender,
     lastLoginAt: opts?.lastLoginAt ?? "—",
     grantedAt: opts?.grantedAt ?? "—",
@@ -73,17 +85,20 @@ export function getAllUsers(): UserItem[] {
       lastLoginAt: daysAgoLabel(0, 16, 40),
       passwordChangedAt: daysAgoLabel(30, 14, 10),
       grantedAt: daysAgoLabel(360, 9, 10),
+      birthDate: "1990-01-10",
     }),
     makeUser(50, "관리자", "admin_master", "ADMIN", "admin@newsight.io", "F", {
       joinedAt: daysAgoLabel(240, 10, 10),
       lastLoginAt: daysAgoLabel(1, 11, 35),
       grantedAt: daysAgoLabel(120, 9, 0),
       passwordChangedAt: daysAgoLabel(45, 10, 5),
+      birthDate: "1992-07-18",
     }),
     makeUser(120, "이호균", "newsight_user_me", "USER", "me@example.com", "M", {
       joinedAt: daysAgoLabel(140, 13, 15),
       lastLoginAt: daysAgoLabel(0, 17, 5),
       passwordChangedAt: daysAgoLabel(20, 9, 30),
+      birthDate: "1999-03-21",
     }),
   ];
 
@@ -137,11 +152,17 @@ export function getAllUsers(): UserItem[] {
     const passwordChangedAt = idx % 5 === 0 ? "—" : daysAgoLabel(5 + (idx % 40), 12, 0);
     const grantedAt = role === "ADMIN" ? daysAgoLabel(20 + (idx % 60), 9, 0) : "—";
 
+    const birthYear = 1989 + (idx % 10); // 1989~1998
+    const birthMonth = (idx % 12) + 1;
+    const birthDay = ((idx * 3) % 28) + 1;
+    const birthDate = `${birthYear}-${pad2(birthMonth)}-${pad2(birthDay)}`;
+
     return makeUser(userSeq, n, userId, role, email, gender, {
       joinedAt,
       lastLoginAt,
       passwordChangedAt,
       grantedAt,
+      birthDate,
     });
   });
 

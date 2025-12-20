@@ -251,6 +251,19 @@
   background: #0b1220;
 }
 
+/* 로그인 시도 기록: 둥근 모서리 클리핑 보장용 프레임/내부 스크롤 */
+.logTableFrame {
+  border: 1px solid rgba(148, 163, 184, 0.25);
+  border-radius: 14px;
+  overflow: hidden;
+}
+
+.logTableScrollInner {
+  max-height: 340px;
+  overflow-y: auto;
+  overflow-x: auto;
+}
+
 /* 수동 크롤링 실행 카드 */
 .manualBody {
   font-size: 12px;
