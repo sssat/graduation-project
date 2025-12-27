@@ -159,36 +159,7 @@
   color: #a5b4fc;
 }
 
-/* 그리드 레이아웃 (로그 + 수동 실행) */
-.grid2col {
-  display: grid;
-  grid-template-columns: 1.5fr 1.1fr;
-  gap: 16px;
-  margin-bottom: 16px;
-}
-
 /* 로그 테이블 */
-.logTabs {
-  display: flex;
-  gap: 8px;
-  font-size: 11px;
-  margin-bottom: 10px;
-}
-
-.logTab {
-  padding: 4px 8px;
-  border-radius: 999px;
-  border: 1px solid rgba(148, 163, 184, 0.4);
-  background: rgba(15, 23, 42, 0.9);
-  color: var(--text-muted);
-}
-
-.logTabActive {
-  border-color: rgba(129, 140, 248, 0.9);
-  color: #c7d2fe;
-  background: radial-gradient(circle at top left, #1d1b4b 0, #020617 80%);
-}
-
 .logTable {
   width: 100%;
   border-collapse: collapse;
@@ -235,15 +206,6 @@
   color: #fecaca;
 }
 
-/* 로그 테이블 영역 */
-.logTableScroll {
-  max-height: 340px;
-  overflow-y: auto;
-  overflow-x: auto;
-  border: 1px solid rgba(148, 163, 184, 0.25);
-  border-radius: 14px;
-}
-
 .logTable thead th {
   position: sticky;
   top: 0;
@@ -262,29 +224,6 @@
   max-height: 340px;
   overflow-y: auto;
   overflow-x: auto;
-}
-
-/* 수동 크롤링 실행 카드 */
-.manualBody {
-  font-size: 12px;
-  color: var(--text-muted);
-}
-
-.manualBody p {
-  margin: 0 0 8px;
-}
-
-.manualNext {
-  font-size: 11px;
-  margin-bottom: 10px;
-  color: #a5b4fc;
-}
-
-.manualActions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-  margin-top: 6px;
 }
 
 .btnPrimary,
@@ -379,6 +318,18 @@
   color: #fecaca;
 }
 
+/* 답변 완료 시 비활성 버튼(흐릿하게) */
+.btnDisabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  filter: grayscale(0.35);
+}
+
+.btnTable:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
 /* 읽기용/답변용 패널 */
 .viewPanel {
   margin-top: 14px;
@@ -447,12 +398,6 @@
   font-size: 13px;
   font-weight: 600;
   color: #e5e7eb;
-}
-
-.answerSub {
-  font-size: 11px;
-  color: var(--text-muted);
-  margin-top: 2px;
 }
 
 .formRow {
@@ -621,12 +566,6 @@ select:focus {
 .pageBtn:disabled {
   opacity: 0.4;
   cursor: default;
-}
-
-@media (max-width: 960px) {
-  .grid2col {
-    grid-template-columns: 1fr;
-  }
 }
 
 @media (max-width: 900px) {

@@ -10,32 +10,18 @@ import {
 } from "../mocks/inquiryMockData";
 import { getAllLoginAttemptLogs, type LoginAttemptLogItem } from "../mocks/loginLogMockData";
 
-type LogStatus = "success" | "fail";
-
-type CrawlLog = {
-  startedAt: string;
-  endedAt: string;
-  articleCount: string;
-  message: string;
-  status: LogStatus;
-};
-
-type AnalyzeLog = {
-  startedAt: string;
-  endedAt: string;
-  keywordCount: string;
-  message: string;
-  status: LogStatus;
-};
-
 const PAGE_SIZE = 10;
 const LOGIN_PAGE_SIZE = 10;
 
 const ADMIN_OVERRIDE_KEY = "NS_INQUIRIES_ADMIN_OVERRIDE_V1";
+
+type LogStatus = "success" | "fail";
+
 type AdminOverride = {
   status?: Exclude<StatusKey, "all">;
   answer?: InquiryDataItem["answer"];
 };
+
 type AdminStore = {
   overrides: Record<number, AdminOverride>;
   deletedIds: number[];
@@ -74,76 +60,14 @@ function formatNowYYYYMMDDHHmm(d = new Date()) {
   const dd = pad2(d.getDate());
   const hh = pad2(d.getHours());
   const mi = pad2(d.getMinutes());
-  return `${yyyy}-${mm}-${dd} ${hh}:${mi}`;
-}
-
-/** 매일 04:00(KST) 기준 다음 자동 실행 예정 시각 */
-function getNextAutoRunAt0400KstLabel(now = new Date()) {
-  const next = new Date(now);
-  next.setHours(4, 0, 0, 0);
-
-  if (now.getTime() >= next.getTime()) {
-    next.setDate(next.getDate() + 1);
-  }
-
-  const yyyy = next.getFullYear();
-  const mm = pad2(next.getMonth() + 1);
-  const dd = pad2(next.getDate());
-  return `${yyyy}-${mm}-${dd} 04:00 KST`;
+  const ss = pad2(d.getSeconds());
+  return `${yyyy}-${mm}-${dd} ${hh}:${mi}:${ss}`;
 }
 
 type InquiryPanelMode = "view" | "edit";
 
 export default function AdminDashboardPage() {
   const inquiryPanelRef = useRef<HTMLDivElement | null>(null);
-
-  const [crawlLogs, setCrawlLogs] = useState<CrawlLog[]>([
-    {
-      startedAt: "2025-12-16 04:00",
-      endedAt: "2025-12-16 04:18",
-      articleCount: "12,300",
-      message: "CRAWLER_DAILY[2025-12-16] completed successfully (12,300)",
-      status: "success",
-    },
-    {
-      startedAt: "2025-12-15 04:00",
-      endedAt: "2025-12-15 04:16",
-      articleCount: "11,800",
-      message: "CRAWLER_DAILY[2025-12-15] completed with retry (11,800)",
-      status: "success",
-    },
-    {
-      startedAt: "2025-12-14 04:00",
-      endedAt: "2025-12-14 04:03",
-      articleCount: "—",
-      message: "[ERR-CRAWLER-503] UpstreamTimeout: press-api.example.com",
-      status: "fail",
-    },
-  ]);
-
-  const [analyzeLogs, setAnalyzeLogs] = useState<AnalyzeLog[]>([
-    {
-      startedAt: "2025-12-16 04:20",
-      endedAt: "2025-12-16 04:27",
-      keywordCount: "10개",
-      message: "ANALYZER_JOB[2025-12-16] finished: 10 keywords processed",
-      status: "success",
-    },
-    {
-      startedAt: "2025-12-15 04:17",
-      endedAt: "2025-12-15 04:23",
-      keywordCount: "10개",
-      message: "ANALYZER_JOB[2025-12-15] finished: dictionary updated",
-      status: "success",
-    },
-    {
-      startedAt: "2025-12-14 04:05",
-      endedAt: "2025-12-14 04:07",
-      keywordCount: "5개",
-      message: "[ERR-ANALYZER-422] TokenizationError: invalid label index",
-      status: "fail",
-    },
-  ]);
 
   const [loginAttemptLogs, setLoginAttemptLogs] = useState<LoginAttemptLogItem[]>(() => getAllLoginAttemptLogs());
 
@@ -248,18 +172,13 @@ export default function AdminDashboardPage() {
     const target = inquiriesAll.find((x) => x.id === id);
     if (!target) return;
 
+    // 답변 완료(done)는 클릭 불가
+    if (target.status === "done") return;
+
     setSelectedInquiryId(id);
-
-    if (target.status === "processing") {
-      setInquiryPanelMode("edit");
-      setAnswerText("");
-      setAnswerStatus("done");
-    } else {
-      setInquiryPanelMode("view");
-      setAnswerText("");
-      setAnswerStatus("done");
-    }
-
+    setInquiryPanelMode("edit");
+    setAnswerText("");
+    setAnswerStatus("done");
     setInquiryPanelOpen(true);
   }
 
@@ -320,30 +239,6 @@ export default function AdminDashboardPage() {
     }
   }
 
-  function refreshLogsDemo() {
-    const now = formatNowYYYYMMDDHHmm();
-    setCrawlLogs((prev) => [
-      {
-        startedAt: now,
-        endedAt: now,
-        articleCount: "—",
-        message: "LOG_REFRESH: crawlers fetched latest entries",
-        status: "success",
-      },
-      ...prev,
-    ]);
-    setAnalyzeLogs((prev) => [
-      {
-        startedAt: now,
-        endedAt: now,
-        keywordCount: "—",
-        message: "LOG_REFRESH: analyzers fetched latest entries",
-        status: "success",
-      },
-      ...prev,
-    ]);
-  }
-
   function refreshLoginLogsDemo() {
     const now = formatNowYYYYMMDDHHmm();
     setLoginAttemptLogs((prev) => {
@@ -361,10 +256,6 @@ export default function AdminDashboardPage() {
       return [row, ...prev];
     });
     setLoginPage(1);
-  }
-
-  function runCrawlingDemo() {
-    alert("수동 크롤링 실행 요청을 보냈습니다. (UI 데모)");
   }
 
   const canPrev = activePageSafe > 1;
@@ -417,8 +308,6 @@ export default function AdminDashboardPage() {
     return arr;
   }, [loginPageSafe, loginTotalPages]);
 
-  const nextAutoRunLabel = useMemo(() => getNextAutoRunAt0400KstLabel(), []);
-
   return (
     <main className={styles.pageRoot}>
       <section className={styles.adminHero}>
@@ -426,8 +315,7 @@ export default function AdminDashboardPage() {
           <div className={styles.heroKicker}>Admin Console</div>
           <h1 className={styles.heroTitle}>관리자 대시보드</h1>
           <p className={styles.heroSub}>
-            오늘 가입한 회원 수, 수집된 기사 수, 문의 처리 현황과 데이터 수집·분석 로그를 한 번에 확인하고
-            크롤링을 수동으로 실행할 수 있는 화면입니다.
+            오늘 가입한 회원 수, 수집된 기사 수, 문의 처리 현황과 로그인 시도 기록을 한 번에 확인할 수 있는 화면입니다.
           </p>
         </div>
       </section>
@@ -467,121 +355,13 @@ export default function AdminDashboardPage() {
         </article>
       </section>
 
-      <section className={styles.grid2col}>
-        <article className={styles.card}>
-          <div className={styles.cardHeader}>
-            <div className={styles.cardHeaderMain}>
-              <div className={styles.cardTitle}>크롤링 · 분석 실행 로그</div>
-              <div className={styles.cardSub}>
-                작업 실행 이력과 시작/종료 시각, 성공/실패 여부 및 로그 메시지를 확인할 수 있습니다.
-              </div>
-            </div>
-          </div>
-
-          <div className={styles.logTabs}>
-            <span className={`${styles.logTab} ${styles.logTabActive}`}>크롤링 로그</span>
-          </div>
-
-          <div className={styles.logTableScroll} aria-label="크롤링 로그 목록">
-            <table className={styles.logTable}>
-              <thead>
-                <tr>
-                  <th style={{ width: 130 }}>시작 시각</th>
-                  <th style={{ width: 130 }}>종료 시각</th>
-                  <th style={{ width: 80 }}>기사 수</th>
-                  <th>로그 메시지</th>
-                  <th style={{ width: 70 }}>상태</th>
-                </tr>
-              </thead>
-              <tbody>
-                {crawlLogs.map((row, idx) => (
-                  <tr key={`${row.startedAt}-${idx}`}>
-                    <td>{row.startedAt}</td>
-                    <td>{row.endedAt}</td>
-                    <td>{row.articleCount}</td>
-                    <td className={styles.cellWrap}>{row.message}</td>
-                    <td>
-                      <span className={logStatusClass(row.status)}>{row.status === "success" ? "성공" : "실패"}</span>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-
-          <div className={styles.logTabs} style={{ marginTop: 14 }}>
-            <span className={`${styles.logTab} ${styles.logTabActive}`}>분석 로그</span>
-          </div>
-
-          <div className={styles.logTableScroll} aria-label="분석 로그 목록">
-            <table className={styles.logTable}>
-              <thead>
-                <tr>
-                  <th style={{ width: 130 }}>시작 시각</th>
-                  <th style={{ width: 130 }}>종료 시각</th>
-                  <th style={{ width: 90 }}>분석 키워드</th>
-                  <th>로그 메시지</th>
-                  <th style={{ width: 70 }}>상태</th>
-                </tr>
-              </thead>
-              <tbody>
-                {analyzeLogs.map((row, idx) => (
-                  <tr key={`${row.startedAt}-${idx}`}>
-                    <td>{row.startedAt}</td>
-                    <td>{row.endedAt}</td>
-                    <td>{row.keywordCount}</td>
-                    <td className={styles.cellWrap}>{row.message}</td>
-                    <td>
-                      <span className={logStatusClass(row.status)}>{row.status === "success" ? "성공" : "실패"}</span>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </article>
-
-        <article className={styles.card}>
-          <div className={styles.cardHeader}>
-            <div className={styles.cardHeaderMain}>
-              <div className={styles.cardTitle}>수동 크롤링 실행</div>
-              <div className={styles.cardSub}>
-                기본적으로 매일 특정 시각에 자동 크롤링이 수행되며, 필요 시 이곳에서 수동으로 즉시 실행할 수
-                있습니다.
-              </div>
-            </div>
-          </div>
-
-          <div className={styles.manualBody}>
-            <p>
-              · 자동 크롤링 스케줄: 매일 <strong>04:00 KST</strong>
-              <br />· 실행 대상: 등록된 모든 언론사 및 섹션
-            </p>
-
-            <p className={styles.manualNext}>다음 자동 실행 예정 시각: {nextAutoRunLabel}</p>
-
-            <p>즉시 데이터 갱신이 필요할 때만 수동 실행을 사용해 주세요.</p>
-
-            <div className={styles.manualActions}>
-              <button type="button" className={styles.btnPrimary} onClick={runCrawlingDemo}>
-                지금 바로 크롤링 실행
-              </button>
-              <button type="button" className={styles.btnSecondary} onClick={refreshLogsDemo}>
-                최근 실행 로그 새로고침
-              </button>
-            </div>
-          </div>
-        </article>
-      </section>
-
       <section>
         <article className={styles.card}>
           <div className={styles.cardHeader}>
             <div className={styles.cardHeaderMain}>
               <div className={styles.cardTitle}>로그인 시도 기록</div>
               <div className={styles.cardSub}>
-                회원 로그인 시도 이력(시각, 성공 여부, IP, User-Agent, 입력 ID/회원번호 등)을 확인할 수
-                있습니다.
+                회원 로그인 시도 이력(시각, 성공 여부, IP, User-Agent, 입력 ID/회원번호 등)을 확인할 수 있습니다.
               </div>
             </div>
 
@@ -595,7 +375,6 @@ export default function AdminDashboardPage() {
             </div>
           </div>
 
-          {/* 둥근 모서리 클리핑을 위한 프레임 + 내부 스크롤 구조 */}
           <div className={styles.logTableFrame} aria-label="로그인 시도 로그 목록">
             <div className={styles.logTableScrollInner}>
               <table className={styles.logTable}>
@@ -735,7 +514,14 @@ export default function AdminDashboardPage() {
                     <span className={statusPillClass(row.status)}>{row.status === "done" ? "답변 완료" : "처리 중"}</span>
                   </td>
                   <td>
-                    <button type="button" className={styles.btnTable} onClick={() => openInquiryPanel(row.id)}>
+                    <button
+                      type="button"
+                      className={`${styles.btnTable} ${row.status === "done" ? styles.btnDisabled : ""}`}
+                      onClick={() => openInquiryPanel(row.id)}
+                      disabled={row.status === "done"}
+                      aria-disabled={row.status === "done"}
+                      title={row.status === "done" ? "답변 완료된 문의입니다." : "답변 작성"}
+                    >
                       답변 하기
                     </button>
                   </td>
