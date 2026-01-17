@@ -1,3 +1,78 @@
+# .gitignore
+
+# -------------------------
+# Env / Secrets (절대 커밋 금지)
+# -------------------------
+.env
+.env.*
+!.env.example
+
+# data-pipeline env
+data-pipeline/.env
+data-pipeline/.env.*
+!data-pipeline/.env.example
+
+# logs
+data-pipeline/**/logs/
+data-pipeline/logs/
+
+# -------------------------
+# Python (data-pipeline)
+# -------------------------
+__pycache__/
+*.py[cod]
+*.pyd
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.venv/
+venv/
+env/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# -------------------------
+# Data / DB / Outputs
+# (프로젝트 결과물/로컬 DB가 올라가는 것 방지)
+# -------------------------
+*.sqlite3
+*.db
+*.parquet
+*.pkl
+*.joblib
+*.csv
+*.jsonl
+
+# -------------------------
+# ML / HF / Transformers cache
+# -------------------------
+**/.cache/
+**/huggingface/
+**/hf_cache/
+**/wandb/
+
+# -------------------------
+# Logs (이미 있긴 한데 폴더는 /로 고정 추천)
+# -------------------------
+logs/
+*.log
+
+# -------------------------
+# Frontend cache
+# -------------------------
+.vite/
+coverage/
+
+# -------------------------
+# OS / IDE
+# -------------------------
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/*
+!.vscode/extensions.json
+
 # Logs
 logs
 *.log
