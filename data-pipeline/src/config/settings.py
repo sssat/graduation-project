@@ -357,6 +357,12 @@ class Settings:
     # media codes는 int CSV로 파싱(비어있으면 default로 처리)
     wordcloud_media_codes: tuple[int, ...] = _get_csv_ints("WORDCLOUD_MEDIA_CODES", ())
 
+    # (추가) run_all 실행 옵션을 .env로 제어
+    run_all_steps: str = _get_str(
+        "RUN_ALL_STEPS",
+        "trend,news,preprocess,aggregate,final_rank,summary,title_sentiment,content_sentiment,title_bias,content_bias,wordcloud",
+    )
+    run_all_fail_fast: bool = _get_bool01("RUN_ALL_FAIL_FAST", True)
 
 
     # -------------------- 2. __post_init__(): 값 "안전 보정/정규화" 하는 부분 (전체 보정 작업 총괄) --------------------
@@ -699,6 +705,40 @@ class Settings:
             seen_mc.add(ix)
             dedup_mc.append(ix)
         object.__setattr__(self, "wordcloud_media_codes", tuple(dedup_mc))
+
+        # (추가) run_all steps 정규화
+        allowed_steps = {
+            "trend",
+            "news",
+            "preprocess",
+            "aggregate",
+            "final_rank",
+            "summary",
+            "title_sentiment",
+            "content_sentiment",
+            "title_bias",
+            "content_bias",
+            "wordcloud",
+        }
+
+        raw_steps = (self.run_all_steps or "").strip()
+        if not raw_steps:
+            raw_steps = "trend,news,preprocess,aggregate,final_rank,summary,title_sentiment,content_sentiment,title_bias,content_bias,wordcloud"
+
+        out_steps: list[str] = []
+        seen_steps: set[str] = set()
+        for part in raw_steps.split(","):
+            s = part.strip().lower()
+            if not s or s not in allowed_steps or s in seen_steps:
+                continue
+            seen_steps.add(s)
+            out_steps.append(s)
+
+        if not out_steps:
+            out_steps = ["trend", "news", "preprocess", "aggregate", "final_rank", "summary", "title_sentiment", "content_sentiment", "title_bias", "content_bias", "wordcloud"]
+
+        object.__setattr__(self, "run_all_steps", ",".join(out_steps))
+        object.__setattr__(self, "run_all_fail_fast", bool(self.run_all_fail_fast))
 
 
         # 17) 로그 디렉토리 기본값 구성
