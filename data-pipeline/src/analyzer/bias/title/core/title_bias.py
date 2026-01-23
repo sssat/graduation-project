@@ -29,6 +29,9 @@
 # 실행 오케스트레이션(run_title_bias_for_run):
 # - DB 조회(reader) -> 계산(calc_title_bias_items) -> DB 저장(writer)
 # - refresh는 DELETE 금지(본문 점수와 충돌). 동일 run+period의 BIAS_SCORE_TITLE만 0으로 reset 후 UPSERT.
+#
+# 지원 기간:
+# - TODAY, D7, D14
 
 from __future__ import annotations
 
@@ -37,6 +40,9 @@ from typing import Any, Dict, Iterable, List, Optional, Tuple
 
 PERIOD_TODAY = "TODAY"
 PERIOD_D7 = "D7"
+PERIOD_D14 = "D14"
+
+SUPPORTED_PERIODS = (PERIOD_TODAY, PERIOD_D7, PERIOD_D14)
 
 
 @dataclass(frozen=True)
@@ -44,7 +50,7 @@ class SentimentTitleRow:
     """
     제목 감성분석 입력 row(언론사별).
     - media_code는 언론사 코드(0은 overall로 쓰는 경우가 많으니, 여기서는 보통 0이 아닌 값이 들어온다고 가정)
-    - positive/neutal/negative는 "퍼센트(0~100)" 값
+    - positive/neutral/negative는 "퍼센트(0~100)" 값
     """
     keyword_seq: int
     media_code: int
@@ -65,6 +71,14 @@ class TitleBiasItem:
 
 def _clamp(v: float, lo: float, hi: float) -> float:
     return max(lo, min(hi, v))
+
+
+def _normalize_period_filter(raw: str) -> str:
+    pf = str(raw).upper().strip()
+    if pf not in SUPPORTED_PERIODS:
+        supported = "/".join(SUPPORTED_PERIODS)
+        raise ValueError(f"period_filter는 {supported} 중 하나여야 합니다: {pf}")
+    return pf
 
 
 def _to_prob3(pos_pct: float, neu_pct: float, neg_pct: float) -> Tuple[float, float, float]:
@@ -223,7 +237,7 @@ def calc_title_bias_items(
     제목 편향도 핵심 계산(순수 로직).
 
     입력:
-      - period_filter: "TODAY" 또는 "D7"
+      - period_filter: "TODAY" 또는 "D7" 또는 "D14"
       - media_rows: 언론사별 제목 감성 비율 row들 (보통 media_code != 0)
       - overall_map: (keyword_seq -> (pos, neu, neg)) overall(전체) 분포
           - 없으면 fallback으로 (가중평균 -> 단순평균) 계산
@@ -235,10 +249,7 @@ def calc_title_bias_items(
       - TitleBiasItem 리스트 (언론사별)
         - bias_score_title: -10 .. +10 (3방향 단일 값)
     """
-    pf = str(period_filter).upper().strip()
-    if pf not in (PERIOD_TODAY, PERIOD_D7):
-        raise ValueError(f"period_filter는 {PERIOD_TODAY}/{PERIOD_D7} 중 하나여야 합니다: {pf}")
-
+    pf = _normalize_period_filter(period_filter)
     rows_list = list(media_rows)
 
     # 키워드별로 언론사 row를 묶어 overall fallback 계산에 사용
@@ -307,7 +318,7 @@ def run_title_bias_for_run(
     """
     제목 편향도 실행(DB 조회 -> 계산 -> DB 저장) 오케스트레이션.
 
-    - 입력: TREND_RUN_SEQ, PERIOD_FILTER(TODAY/D7), refresh 여부
+    - 입력: TREND_RUN_SEQ, PERIOD_FILTER(TODAY/D7/D14), refresh 여부
     - 동작:
       1) T_ANALYZE_SENTIMENT에서 언론사별 제목 감성비율 조회
       2) overall(MEDIA_CODE=0) 있으면 사용, 없으면 기사수 가중평균 -> 단순평균 fallback
@@ -315,9 +326,7 @@ def run_title_bias_for_run(
       4) refresh면 같은 run+period에서 BIAS_SCORE_TITLE만 0으로 reset
       5) T_ANALYZE_MEDIA_BIAS에 UPSERT
     """
-    pf = str(period_filter).upper().strip()
-    if pf not in (PERIOD_TODAY, PERIOD_D7):
-        raise ValueError(f"period_filter는 {PERIOD_TODAY}/{PERIOD_D7} 중 하나여야 합니다: {pf}")
+    pf = _normalize_period_filter(period_filter)
 
     # 레이어 간 결합을 최소화하려고 내부 import 사용
     from src.common.db import get_conn

@@ -2,9 +2,9 @@
 # 키워드 AI 요약을 위한 DB 조회 전용(reader)
 # - 최신 TREND_RUN_SEQ
 # - BASE_DATE
-# - 요약 대상 키워드 목록(우선 FINAL_RANK(D7), 없으면 TREND_KEYWORD)
+# - 요약 대상 키워드 목록(우선 FINAL_RANK(D14), 없으면 TREND_KEYWORD)
 # - 키워드명
-# - D7 윈도우에서 키워드별 기사 입력 후보(언론사별 최신 N)
+# - D14 윈도우에서 키워드별 기사 입력 후보(언론사별 최신 N)
 
 from __future__ import annotations
 
@@ -12,7 +12,7 @@ from dataclasses import dataclass
 from datetime import date, datetime
 from typing import List
 
-PERIOD_D7 = "D7"
+PERIOD_D14 = "D14"
 
 
 @dataclass(frozen=True)
@@ -53,19 +53,19 @@ def get_base_date_for_run(*, conn, trend_run_seq: int) -> date:
 def select_keywords_for_summary(*, conn, trend_run_seq: int, top_n: int) -> List[int]:
     """
     우선순위:
-    1) T_TREND_KEYWORD_FINAL_RANK (D7 기준) 상위 N
+    1) T_TREND_KEYWORD_FINAL_RANK (D14 기준) 상위 N
        - top_n <= 0 이면 LIMIT 없이 전체
     2) 없으면 T_TREND_KEYWORD_SNAPSHOT (TREND_RANK 기준) 상위 N
        - top_n <= 0 이면 LIMIT 없이 전체
     """
     top_n = int(top_n)
 
-    # 1) FINAL_RANK(D7) 우선
+    # 1) FINAL_RANK(D14) 우선
     sql1 = """
         SELECT KEYWORD_SEQ
         FROM T_TREND_KEYWORD_FINAL_RANK
         WHERE TREND_RUN_SEQ = %s
-          AND PERIOD_FILTER = 'D7'
+          AND PERIOD_FILTER = 'D14'
         ORDER BY FINAL_RANK ASC
     """
     params1 = [trend_run_seq]
@@ -113,7 +113,7 @@ def select_keyword_name(*, conn, keyword_seq: int) -> str:
         return str(row.get("KEYWORD_NAME") or "")
 
 
-def select_articles_for_keyword_d7(
+def select_articles_for_keyword_d14(
     *,
     conn,
     trend_run_seq: int,
@@ -124,7 +124,7 @@ def select_articles_for_keyword_d7(
     content_min_chars: int,
 ) -> List[ArticleInput]:
     """
-    D7 윈도우에서
+    D14 윈도우에서
     - 해당 키워드/런
     - media별 최신 N개
     - TITLE_CLEAN, CONTENT_CLEAN 기반(둘 중 하나라도 없으면 제외)

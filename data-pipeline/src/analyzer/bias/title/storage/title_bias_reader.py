@@ -11,7 +11,7 @@ from typing import Dict, List, Optional, Tuple
 
 PERIOD_TODAY = "TODAY"
 PERIOD_D7 = "D7"
-
+PERIOD_D14 = "D14"
 
 @dataclass(frozen=True)
 class SentimentTitleRow:

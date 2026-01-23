@@ -32,7 +32,7 @@ from src.analyzer.sentiment.title.storage.title_sentiment_writer import (
     upsert_keyword_sentiment_rows,
 )
 
-SUPPORTED_PERIODS = ("TODAY", "D7")
+SUPPORTED_PERIODS = ("TODAY", "D7", "D14")
 
 
 def _now_in_tz() -> datetime:
@@ -314,8 +314,8 @@ def main() -> None:
     p.add_argument(
         "--periods",
         type=str,
-        default=str(settings.sentiment_title_periods or "TODAY,D7"),
-        help="대상 PERIOD_FILTER 목록(콤마). 예: TODAY,D7",
+        default=str(settings.sentiment_title_periods or "TODAY,D7,D14"),
+        help="대상 PERIOD_FILTER 목록(콤마). 예: TODAY,D7,D14",
     )
 
     p.add_argument(

@@ -38,7 +38,7 @@ def upsert_wordcloud_header(
     trend_run_seq: int,
     keyword_seq: int,
     media_code: int,
-    period_filter: str,  # 'TODAY' | 'D7'
+    period_filter: str,  # 'TODAY' | 'D7' | 'D14'
     wc_type: str,        # 'TITLE' | 'CONTENT' | 'COMMENT'
 ) -> int:
     """

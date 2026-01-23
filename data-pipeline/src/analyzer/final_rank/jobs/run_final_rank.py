@@ -27,13 +27,13 @@ def _now_iso() -> str:
 
 def _parse_periods(raw: str) -> List[str]:
     """
-    "TODAY,D7" 형태를 ["TODAY","D7"]로 파싱한다.
+    "TODAY,D7,D14" 형태를 ["TODAY","D7","D14]로 파싱한다.
     - 공백 제거, 대문자 정규화
     - SUPPORTED_PERIODS 외 값은 에러 처리
     """
     s = (raw or "").strip()
     if not s:
-        return ["TODAY", "D7"]
+        return ["TODAY", "D7", "D14"]
 
     items: List[str] = []
     for part in s.split(","):
@@ -43,7 +43,7 @@ def _parse_periods(raw: str) -> List[str]:
         items.append(p)
 
     if not items:
-        return ["TODAY", "D7"]
+        return ["TODAY", "D7", "D14"]
 
     for p in items:
         if p not in SUPPORTED_PERIODS:
@@ -136,7 +136,7 @@ def main() -> None:
         "--periods",
         type=str,
         default=None,
-        help='기간 필터 목록(콤마 구분) 예: "TODAY,D7". 미지정 시 .env(FINAL_RANK_PERIODS) 사용',
+        help='기간 필터 목록(콤마 구분) 예: "TODAY,D7,D14". 미지정 시 .env(FINAL_RANK_PERIODS) 사용',
     )
     parser.add_argument(
         "--refresh",
@@ -149,7 +149,7 @@ def main() -> None:
     # 1) 옵션/환경변수 해석
     trend_run_seq = _resolve_trend_run_seq(args.trend_run_seq)
 
-    periods_raw = args.periods if args.periods is not None else str(getattr(settings, "final_rank_periods", "TODAY,D7"))
+    periods_raw = args.periods if args.periods is not None else str(getattr(settings, "final_rank_periods", "TODAY,D7,D14"))
     periods = _parse_periods(periods_raw)
 
     refresh = _resolve_refresh(bool(args.refresh))

@@ -82,7 +82,7 @@ def upsert_TREND_keyword_final_rank_for_run(
     T_TREND_KEYWORD_FINAL_RANK 적재(UPSERT)
 
     - trend_run_seq: 대상 회차
-    - periods: ["TODAY","D7"] 등
+    - periods: ["TODAY","D7","D14"] 등
     - refresh_same_run=True면 해당 run의 기존 최종순위 데이터를 먼저 삭제 후 재적재
 
     반환: 실행 통계(dict)

@@ -13,7 +13,7 @@
 #
 # 실행 예:
 #   python -m src.analyzer.wordcloud.jobs.run_wordcloud
-#   python -m src.analyzer.wordcloud.jobs.run_wordcloud --trend-run-seq 15 --periods TODAY,D7 --types TITLE,CONTENT --refresh
+#   python -m src.analyzer.wordcloud.jobs.run_wordcloud --trend-run-seq 15 --periods TODAY,D7,D14 --types TITLE,CONTENT --refresh
 #
 # 주의:
 # - run_wordcloud의 실행 옵션(대상 run/기간/타입/refresh/media_codes)은 반드시 .env에 등록하고
@@ -34,6 +34,7 @@ from src.common.db import get_conn
 from src.config.settings import settings
 
 from src.analyzer.wordcloud.storage.wdc_reader import (
+    PERIOD_D14,
     PERIOD_D7,
     PERIOD_TODAY,
     WC_COMMENT,
@@ -59,7 +60,7 @@ from src.analyzer.wordcloud.storage.wdc_writer import WordcloudItem as DbWordclo
 from src.analyzer.wordcloud.storage.wdc_writer import replace_wordcloud_items, upsert_wordcloud_header
 
 
-_ALLOWED_PERIODS = {PERIOD_TODAY, PERIOD_D7}
+_ALLOWED_PERIODS = {PERIOD_TODAY, PERIOD_D7, PERIOD_D14}
 _ALLOWED_TYPES = {WC_TITLE, WC_CONTENT, WC_COMMENT}
 
 
@@ -84,7 +85,7 @@ def _parse_csv_upper(raw: str) -> list[str]:
 def _resolve_periods(periods_csv: str) -> list[str]:
     raw = (periods_csv or "").strip()
     if not raw:
-        raw = "TODAY,D7"
+        raw = "TODAY,D7,D14"
 
     out: list[str] = []
     for p in _parse_csv_upper(raw):
@@ -92,7 +93,7 @@ def _resolve_periods(periods_csv: str) -> list[str]:
             out.append(p)
 
     if not out:
-        out = [PERIOD_TODAY, PERIOD_D7]
+        out = [PERIOD_TODAY, PERIOD_D7, PERIOD_D14]
     return out
 
 
@@ -231,7 +232,7 @@ def main() -> None:
 
     # CLI는 "필요할 때만 override" 용도
     parser.add_argument("--trend-run-seq", type=int, default=None, help="대상 TREND_RUN_SEQ (미지정 시 settings 사용)")
-    parser.add_argument("--periods", type=str, default=None, help="기간 목록 (예: TODAY,D7) (미지정 시 settings 사용)")
+    parser.add_argument("--periods", type=str, default=None, help="기간 목록 (예: TODAY,D7,D14) (미지정 시 settings 사용)")
     parser.add_argument("--types", type=str, default=None, help="타입 목록 (예: TITLE,CONTENT,COMMENT) (미지정 시 settings 사용)")
     parser.add_argument("--refresh", action="store_true", help="기존 결과가 있어도 재계산/덮어쓰기")
     parser.add_argument("--no-refresh", action="store_true", help="refresh 강제 해제(기존 결과 있으면 스킵)")

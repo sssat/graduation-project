@@ -1,5 +1,6 @@
 # data-pipeline/src/analyzer/bias/content/core/content_bias.py
-# 본문 감성분석 결과(T_KEYWORD_SENTIMENT)를 이용해 언론사별 본문 편향도 지수를 계산하는 "순수 로직" 모듈
+# 본문 감성분석 결과(T_ANALYZE_SENTIMENT의 CONTENT 비율 컬럼 등)를 이용해
+# 언론사별 본문 편향도 지수를 계산하는 "순수 로직" 모듈
 # - DB I/O(조회/적재), 트랜잭션, get_conn 호출을 하지 않는다.
 # - 필요한 입력(media 분포, overall 분포, 기사수 가중치, 키워드명)은 호출자가 주입한다.
 #
@@ -24,9 +25,13 @@
 #   - NEU 구간:     score = sign(delta) * min(3, |delta| * 5) -> -3..+3
 #
 # overall 기준(키워드별):
-# - media_code=0(전체 집계) row가 있으면 그 값을 사용
+# - media_code=0(전체 집계) row가 있으면 overall_map에 들어온 값을 사용
 # - 없으면 기사수 가중평균(ARTICLE_COUNT)으로 overall 추정
 # - 가중치가 없거나 합이 0이면 단순 평균으로 overall 추정
+#
+# 주의:
+# - 본 모듈은 "period_filter 단일값"을 기준으로 계산한다.
+#   period_filter가 다른 row가 섞여 들어오면 안전하게 무시한다.
 
 from __future__ import annotations
 
@@ -35,14 +40,16 @@ from typing import Dict, List, Optional, Sequence, Tuple
 
 PERIOD_TODAY = "TODAY"
 PERIOD_D7 = "D7"
-_ALLOWED_PERIODS = {PERIOD_TODAY, PERIOD_D7}
+PERIOD_D14 = "D14"  # 필요 시 확장용(다른 모듈도 함께 지원해야 실제 사용 가능)
+SUPPORTED_PERIODS = (PERIOD_TODAY, PERIOD_D7, PERIOD_D14)
+_ALLOWED_PERIODS = set(SUPPORTED_PERIODS)
 
 
 @dataclass(frozen=True)
 class SentimentContentRow:
     """
     언론사별 본문 감성 분포(퍼센트, 0~100)
-    - overall(MEDIA_CODE=0)은 이 row로 들어오지 않는다고 가정(언론사별만 전달)
+    - 보통 MEDIA_CODE != 0 인 row만 전달된다고 가정
     """
     keyword_seq: int
     media_code: int
@@ -175,35 +182,37 @@ def _avg_overall_from_media(rows: Sequence[SentimentContentRow]) -> Optional[Tup
 
 
 def _weighted_overall_from_media(
-    *,
     rows: Sequence[SentimentContentRow],
-    weights_by_media: Dict[int, int],
+    *,
+    counts: Dict[Tuple[int, int], int],
 ) -> Optional[Tuple[float, float, float]]:
     """
-    언론사별 분포를 기사수(가중치)로 가중평균하여 overall을 추정한다.
-    - weights_by_media: media_code -> article_count
+    (키워드 내) 언론사별 감성비율을 기사수(article_count)로 가중평균해서 overall을 추정한다.
+    counts: (keyword_seq, media_code) -> article_count
+
+    - 기사수 합계가 0이면 None 반환(호출부에서 단순 평균 fallback)
     """
     if not rows:
         return None
 
-    total = 0.0
-    pos_sum = 0.0
-    neu_sum = 0.0
-    neg_sum = 0.0
+    sum_w = 0.0
+    sum_pos = 0.0
+    sum_neu = 0.0
+    sum_neg = 0.0
 
     for r in rows:
-        w = float(weights_by_media.get(int(r.media_code), 0))
-        if w <= 0:
+        w = float(max(0, int(counts.get((int(r.keyword_seq), int(r.media_code)), 0))))
+        if w <= 0.0:
             continue
-        total += w
-        pos_sum += float(r.positive_pct_content) * w
-        neu_sum += float(r.neutral_pct_content) * w
-        neg_sum += float(r.negative_pct_content) * w
+        sum_w += w
+        sum_pos += float(r.positive_pct_content) * w
+        sum_neu += float(r.neutral_pct_content) * w
+        sum_neg += float(r.negative_pct_content) * w
 
-    if total <= 0.0:
+    if sum_w <= 0.0:
         return None
 
-    return (pos_sum / total, neu_sum / total, neg_sum / total)
+    return (sum_pos / sum_w, sum_neu / sum_w, sum_neg / sum_w)
 
 
 def compute_content_bias_items(
@@ -226,45 +235,67 @@ def compute_content_bias_items(
 
     반환:
       - items: ContentBiasItem 리스트(언론사별)
-      - stats: {"keywords": x, "items": y, "missing_keyword_name": z, "missing_baseline": w}
+      - stats: 요약 카운트들
     """
     pf = str(period_filter).upper().strip()
     if pf not in _ALLOWED_PERIODS:
-        raise ValueError(f"period_filter는 {PERIOD_TODAY}/{PERIOD_D7} 중 하나여야 합니다: {period_filter}")
+        raise ValueError(f"period_filter는 {', '.join(SUPPORTED_PERIODS)} 중 하나여야 합니다: {period_filter}")
 
     if not media_rows:
-        return ([], {"keywords": 0, "items": 0, "missing_keyword_name": 0, "missing_baseline": 0})
+        return (
+            [],
+            {
+                "trend_run_seq": int(trend_run_seq),
+                "keywords": 0,
+                "items": 0,
+                "filtered_out_period_mismatch": 0,
+                "missing_keyword_name": 0,
+                "missing_baseline": 0,
+            },
+        )
 
-    # 키워드별로 언론사 row 묶기(전체 baseline 추정용)
+    # period mismatch row 안전 제거 + 키워드별 그룹핑(전체 baseline 추정용)
+    filtered_out = 0
+    rows_filtered: List[SentimentContentRow] = []
     by_keyword: Dict[int, List[SentimentContentRow]] = {}
+
     for r in media_rows:
+        if str(r.period_filter).upper().strip() != pf:
+            filtered_out += 1
+            continue
+        rows_filtered.append(r)
         by_keyword.setdefault(int(r.keyword_seq), []).append(r)
+
+    if not rows_filtered:
+        return (
+            [],
+            {
+                "trend_run_seq": int(trend_run_seq),
+                "keywords": 0,
+                "items": 0,
+                "filtered_out_period_mismatch": int(filtered_out),
+                "missing_keyword_name": 0,
+                "missing_baseline": 0,
+            },
+        )
 
     missing_keyword_name = 0
     missing_baseline = 0
 
     items: List[ContentBiasItem] = []
-    for r in media_rows:
+    for r in rows_filtered:
         kseq = int(r.keyword_seq)
         mcode = int(r.media_code)
 
-        # baseline(전체) 확보
+        # baseline(전체) 확보: overall_map 우선, 없으면 fallback
         base = overall_map.get(kseq)
         if base is None:
-            rows_k = by_keyword.get(kseq, [])
-
-            # 기사수 가중평균 시도
-            weights_by_media = {
-                int(rr.media_code): int(article_count_map.get((kseq, int(rr.media_code)), 0))
-                for rr in rows_k
-            }
-            wavg = _weighted_overall_from_media(rows=rows_k, weights_by_media=weights_by_media)
-
+            rows_same_kw = by_keyword.get(kseq, [])
+            wavg = _weighted_overall_from_media(rows_same_kw, counts=article_count_map)
             if wavg is not None:
                 base = wavg
             else:
-                # 단순 평균 fallback
-                avg = _avg_overall_from_media(rows_k)
+                avg = _avg_overall_from_media(rows_same_kw)
                 if avg is None:
                     missing_baseline += 1
                     continue
@@ -297,9 +328,15 @@ def compute_content_bias_items(
         )
 
     stats = {
+        "trend_run_seq": int(trend_run_seq),
         "keywords": len(by_keyword),
         "items": len(items),
-        "missing_keyword_name": missing_keyword_name,
-        "missing_baseline": missing_baseline,
+        "filtered_out_period_mismatch": int(filtered_out),
+        "missing_keyword_name": int(missing_keyword_name),
+        "missing_baseline": int(missing_baseline),
     }
     return (items, stats)
+
+
+# 호환용 별칭(원하는 명명 규칙으로 통일할 때 사용)
+calc_content_bias_items = compute_content_bias_items

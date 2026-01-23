@@ -12,7 +12,9 @@ from typing import Dict, Iterable, List, Sequence, Tuple
 
 PERIOD_TODAY = "TODAY"
 PERIOD_D7 = "D7"
-SUPPORTED_PERIODS = (PERIOD_TODAY, PERIOD_D7)
+PERIOD_D14 = "D14"
+SUPPORTED_PERIODS = (PERIOD_TODAY, PERIOD_D7, PERIOD_D14)
+
 
 _RE_NUMERIC_ONLY = re.compile(r"^\d+$")
 _RE_HAS_KOREAN = re.compile(r"[가-힣]")

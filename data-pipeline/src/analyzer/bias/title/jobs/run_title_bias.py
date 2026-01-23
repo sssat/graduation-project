@@ -7,8 +7,8 @@
 #
 # 하위호환 CLI:
 # - --trend-run-seq 15
-# - --period TODAY | D7
-# - --periods TODAY,D7
+# - --period TODAY | D7 | D14
+# - --periods TODAY,D7,D14
 # - --refresh
 
 from __future__ import annotations
@@ -22,8 +22,14 @@ from zoneinfo import ZoneInfo
 
 from src.common.db import get_conn
 from src.config.settings import settings
-from src.analyzer.bias.title.core.title_bias import run_title_bias_for_run
-from src.analyzer.bias.title.storage.title_bias_reader import PERIOD_D7, PERIOD_TODAY, get_latest_trend_run_seq
+from src.analyzer.bias.title.core.title_bias import (
+    PERIOD_D7,
+    PERIOD_D14,
+    PERIOD_TODAY,
+    SUPPORTED_PERIODS,
+    run_title_bias_for_run,
+)
+from src.analyzer.bias.title.storage.title_bias_reader import get_latest_trend_run_seq
 
 
 def _now_in_tz() -> datetime:
@@ -32,15 +38,16 @@ def _now_in_tz() -> datetime:
 
 def _parse_periods(raw: str) -> List[str]:
     """
-    콤마 구분 기간 문자열을 TODAY/D7 리스트로 정규화한다.
-    - 허용: TODAY, D7
+    콤마 구분 기간 문자열을 TODAY/D7/D14 리스트로 정규화한다.
+    - 허용: TODAY, D7, D14
     - 중복 제거(순서 유지)
-    - 결과가 비면 기본 ["TODAY", "D7"]
+    - 결과가 비면 기본 ["TODAY", "D7", "D14"]
     """
-    allowed = {PERIOD_TODAY, PERIOD_D7}
+    allowed = set(SUPPORTED_PERIODS)
+
     raw = (raw or "").strip()
     if not raw:
-        return [PERIOD_TODAY, PERIOD_D7]
+        return [PERIOD_TODAY, PERIOD_D7, PERIOD_D14]
 
     out: List[str] = []
     seen: set[str] = set()
@@ -55,7 +62,7 @@ def _parse_periods(raw: str) -> List[str]:
         seen.add(pf)
         out.append(pf)
 
-    return out if out else [PERIOD_TODAY, PERIOD_D7]
+    return out if out else [PERIOD_TODAY, PERIOD_D7, PERIOD_D14]
 
 
 def _settings_one_line(*, trend_run_seq: int, periods: List[str], refresh: bool) -> str:
@@ -104,10 +111,10 @@ def main() -> None:
 
     # periods:
     # - 미지정 시 settings.bias_title_periods 사용
-    parser.add_argument("--periods", type=str, default=None, help="기간 목록(콤마 구분) 예: TODAY,D7")
+    parser.add_argument("--periods", type=str, default=None, help="기간 목록(콤마 구분) 예: TODAY,D7,D14")
 
     # 하위호환: 단일 period
-    parser.add_argument("--period", type=str, default=None, help="단일 기간(TODAY 또는 D7)")
+    parser.add_argument("--period", type=str, default=None, help="단일 기간(TODAY 또는 D7 또는 D14)")
 
     # refresh:
     # - 옵션 미지정 시 settings.bias_title_refresh 사용
@@ -140,8 +147,10 @@ def main() -> None:
             resolved_run_seq = get_latest_trend_run_seq(conn=conn)
         finally:
             conn.close()
+
         if resolved_run_seq is None:
             raise RuntimeError("T_TREND_RUN에 데이터가 없습니다. 먼저 run_trend를 실행하세요.")
+
         trend_run_seq = int(resolved_run_seq)
 
     started_at = _now_in_tz()
