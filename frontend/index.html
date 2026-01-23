@@ -135,26 +135,32 @@
      새로운 feature 브랜치를 딸 때마다, 그 시점의 develop에 있는 모든 Git 관리 파일들을 그대로 끌어오면된다.
 
      
- [AWS EC2 개발 서버에 새롭게 작업한 develop 브랜치 반영하는 법 (cmd/PowerShell 기준)]
+ [로컬에서 새롭게 작업한 develop 브랜치를 AWS EC2 개발 서버에 반영하는 법 (cmd/PowerShell 기준)]
  1. EC2 서버 접속
- - ssh -i C:\Users\leehk\.ssh\bidderlive-dev-key.pem ubuntu@3.37.127.33 
+ - ssh -i "C:\Users\leehk\.ssh\newsight-pipeline-20260117.pem" ubuntu@퍼블릭 IPv4 주소
 
  2. 여기서 부턴 EC2 서버 안에서 실행
   (1) 프로젝트 루트로 이동
-  - cd ~/graduation-project
+  - cd /opt/graduation-project/data-pipeline
 
-  (2) develop 브랜치로 이동 후 원격 develop 기준으로 내 EC2로 최신 내용 가져오기
+  (2) 유지할 파일만 스태시로 보관
+  - git stash push -m "ec2-local keep docker-compose" -- docker-compose.yml
+
+  (3) 이대로 pull하면 docker-compose.yml 파일 때문에 pull이 안되므로 나머지 로컬 변경은 전부 버리기
+  - git reset --hard HEAD
+  - git clean -fd
+
+  (4) develop 브랜치로 이동 후 원격 develop 기준으로 내 EC2로 최신 내용 가져오기
   - git checkout develop
-  - git pull origin develop
+  - git pull --ff-only origin develop
 
-  (3) 프론트엔드 빌드 (Vue 정적 파일 다시 생성)
-  - cd frontend
-  - npm run build
+  (5) 내 깃 닉네임과 액세스 토큰 입력
 
-  (4) Nginx 재로드하여 새 빌드 반영
-  - sudo nginx -t                        # 선택: 설정 문법 체크
-  - sudo systemctl daemon-reload         # nginx.service 수정/업데이트 후 한 번만 필요
-  - sudo systemctl reload nginx
+  (6) 스태시에서 아까 저장해둔 파일만 복원
+  - git stash pop
+
+  (7) 확인
+  - git status
 
 
  [Git 커밋 타입]
