@@ -143,24 +143,40 @@
   (1) 프로젝트 루트로 이동
   - cd /opt/graduation-project/data-pipeline
 
-  (2) 유지할 파일만 스태시로 보관
-  - git stash push -m "ec2-local keep docker-compose" -- docker-compose.yml
-
-  (3) 이대로 pull하면 docker-compose.yml 파일 때문에 pull이 안되므로 나머지 로컬 변경은 전부 버리기
-  - git reset --hard HEAD
-  - git clean -fd
-
-  (4) develop 브랜치로 이동 후 원격 develop 기준으로 내 EC2로 최신 내용 가져오기
+  (2) develop 브랜치로 이동 후 원격 develop 기준으로 내 EC2로 최신 내용 가져오기
   - git checkout develop
   - git pull --ff-only origin develop
 
-  (5) 내 깃 닉네임과 액세스 토큰 입력
+  (3) 내 깃 닉네임과 액세스 토큰 입력
 
-  (6) 스태시에서 아까 저장해둔 파일만 복원
-  - git stash pop
-
-  (7) 확인
+  (4) 확인
   - git status
+  - git diff --name-status ORIG_HEAD..HEAD
+
+
+ [AWS EC2 개발 서버에서 새롭게 작업한 결과를 내 git의 develop 브랜치에 반영하는 법 (cmd/PowerShell 기준)]
+ 1. EC2 서버 접속
+ - ssh -i "C:\Users\leehk\.ssh\newsight-pipeline-20260117.pem" ubuntu@퍼블릭 IPv4 주소
+
+ 2. 여기서 부턴 EC2 서버 안에서 실행
+  (1) 프로젝트 루트로 이동
+  - cd /opt/graduation-project/data-pipeline
+
+  (2) git checkout develop
+
+  (3) 최신 develop 당겨서 "푸시 거절" 예방
+  - git fetch origin
+  - git pull --ff-only origin develop
+
+  (4) git status
+
+  (5) git add .
+
+  (6) git commit -m "커밋 메시지"
+
+  (7) git push origin develop
+
+  (8) 내 깃 닉네임과 액세스 토큰 입력
 
 
  [Git 커밋 타입]
