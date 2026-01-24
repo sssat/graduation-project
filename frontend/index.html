@@ -164,21 +164,19 @@
   (1) 프로젝트 루트로 이동
   - cd /opt/graduation-project
 
-  (2) git checkout develop
-
-  (3) 최신 develop 당겨서 "푸시 거절" 예방
-  - git fetch origin
+  (2) develop 브랜치로 이동 후 원격 develop 기준으로 내 EC2로 최신 내용 가져오기
+  - git checkout develop
   - git pull --ff-only origin develop
 
-  (4) git status
+  (3) git status
 
-  (5) git add .
+  (4) git add .
 
-  (6) git commit -m "커밋 메시지"
+  (5) git commit -m "커밋 메시지"
 
-  (7) git push origin develop
+  (6) git push origin develop
 
-  (8) 내 깃 닉네임과 액세스 토큰 입력
+  (7) 내 깃 닉네임과 액세스 토큰 입력
 
 
  [Git 커밋 타입]
