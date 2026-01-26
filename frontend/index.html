@@ -12,16 +12,22 @@
 
   (3) feature 브랜치들
   - 작업 단위로 따서 쓰기
-  - 예를들어 메인 페이지: feature/frontend-main-page, 로그인 페이지: feature/frontend-login-page, .... 이런식으로 분할
+  - 예를들어 프론트 작업한다면 메인 페이지: feature/frontend-main-page, 로그인 페이지: feature/frontend-login-page, .... 이런식으로 분할
   - 무조건 develop에서 분기해서 -> 여기 feature에서 작업 후 -> 다시 develop으로 머지
+  - 작업 다 끝나서 develop 브랜치에 머지했으면 feature 브랜치들은 삭제하기
+  - 나 같은 경우는 현재 graduation-project 레포지토리 내부에 frontend, data-pipeline, backend의 총 3개의 프로젝트가 존재하므로,
+    feature 브랜치를 feature/frontend-main-page, feature/frontend-login-page, feature/backend-accounts,
+    feature/backend-inquiries, feature/data-pipeline-xxx, feature/data-pipeline-xxx, .... 이런식으로 따고
+    작업이 완료되서 develop에 머진한 후 이 feautre 브랜치들을 전부 삭제하는 방향으로 진행하면 된다.
+    따라서 머지된 feature 브랜치는 삭제해서 보통 main/develop만 상시 남게 된다.
 
   (4) 브랜치 전체 구조
   - develop은 main에서 갈라져 나왔고
   - feature/frontend-layout와 같은 각 feature들은 develop에서 갈라져 나왔다.
 
 
- 1. 맨 처음 깃 초기화 + 첫 커밋 => 이건 frontend 프로젝트 생성 후 맨 처음 한 번만 하면 됨
-  (1) graduation-project 루트에서 Git 초기화
+ 1. 맨 처음 깃 초기화 + 첫 커밋 => 이건 레포지토리 생성 후 첫번째 프로젝트(여기선 frontend) 생성 후 맨 처음 한 번만 하면 됨
+  (1) 프로젝트 루트(graduation-project)에서 Git 초기화
   - git init                                                      : 지금 폴더(graduation-project)를 Git 저장소로 초기화하는 명령어
   - git add .                                                     : 새로 만든 파일, 수정, 삭제 모두 스테이징
   - git commit -m "chore: Vue 사용자/관리자 프로젝트 초기 설정"     : 지금까지 스테이징 한 변경사항을 하나의 버전(스냅샷)으로 저장
@@ -38,9 +44,12 @@
   - git push -u origin develop              : develop 브랜치도 GitHub에 처음 올리고, 기본 연결 설정
 
 
- 2. 이후 실제 작업 흐름 (작업 단위(feature)가 달라질때마다 매번 이 짓을 하면 된다)
-  (1) 항상 develop으로 먼저 이동해서, 최신 상태로 맞춘다 (새 feature 작업을 시작할 때마다 매번 한번씩만 해주면된다)
-  graduation-project 루트에서 입력
+ 2. 이후 실제 작업 흐름 (작업 단위(feature)가 달라질때마다 매번 이 짓을 하면 된다 -> EC2에서 작업할때도 동일하게 하면됨)
+  (0) 프로젝트 루트(graduation-project)로 이동 
+  - cd C:\Users\leehk\graduation-project : 로컬
+  - cd /opt/graduation-project : EC2
+
+  (1) 항상 develop으로 먼저 이동해서 최신 상태로 맞춘다 (새 feature 작업을 시작할 때마다 매번 한번씩만 해주면된다)
   - git checkout develop               : 이미 있는 develop 브랜치로 이동(checkout)
   - git pull origin develop            : 원격 develop 최신 상태 가져오기
  
@@ -67,7 +76,9 @@
   - git push                                               : 이미 한 번 git push -u origin feature/frontend-layout 를 했기 때문에 이 브랜치의 원격 대상은 origin/feature/frontend-layout으로 저장되어 있음. 그래서 그 다음부터는 그냥 git push만 쳐도 알아서 같은 브랜치로 올라감
 
   (4) feature 브랜치에서 이번에 develop으로 올리고 싶은 기능 단위가 안정적으로 동작하면 develop에 합치기
-    1) 항상 루트로 이동
+    1) 프로젝트 루트(graduation-project)로 이동
+    - cd C:\Users\leehk\graduation-project : 로컬
+    - cd /opt/graduation-project : EC2
 
     2) develop 브랜치로 이동
     - git checkout develop
@@ -91,37 +102,48 @@
   => 여기까지 했으면 이제 다시 (1)번으로 돌아가서 새로운 feature 브랜치 생성해서 작업하면 된다.
 
 
-  2-1. develop 브랜치에서 간단한 수정 후 커밋하기
-   (0) 커밋할 작업물이 저장되어 있는 경로로 이동
+  2-1. develop 브랜치에서 간단한 수정 후 커밋하기 -> EC2에서 작업할때도 동일하게 하면됨
+   (1) 프로젝트 루트(graduation-project)로 이동 
+   - cd C:\Users\leehk\graduation-project : 로컬
+   - cd /opt/graduation-project : EC2
 
-   (1) git status
+   (2) git status
 
-   (2) git add .
+   (3) git add .
 
-   (3) git commit -m "커밋 메시지"
+   (4) git commit -m "커밋 메시지"
 
-   (4) git push origin develop
+   (5) git push origin develop
+
+   (5)-1 EC2에서 작업하는 경우 내 깃 닉네임과 액세스 토큰 입력
 
 
- 3. 두개 이상의 브랜치 작성 후 합쳐야 할때 (여기서는 레이아웃 브랜치의 헤더/기본 레이아웃과 메인 페이지 브랜치의 메인 페이지를 합치는 경우를 예시로 듦)
+ 3. 두개 이상의 브랜치 작성 후 합쳐야 할때 -> EC2에서 작업할때도 동일하게 하면됨 
+  (여기서는 레이아웃 브랜치의 헤더/기본 레이아웃과 메인 페이지 브랜치의 메인 페이지를 합치는 경우를 예시로 듦)
   (전제: 레이아웃 브랜치(feature/frontend-layout)는 이미 2-(4) 과정을 통해 develop에 머지되어 있음)
-  (0) (선택) 혹시 develop이 그 사이에 원격에서 더 업데이트 되었을 수 있으니,
+  (0) 프로젝트 루트(graduation-project)로 이동 
+  - cd C:\Users\leehk\graduation-project : 로컬
+  - cd /opt/graduation-project : EC2
+
+  (1) (선택) 혹시 develop이 그 사이에 원격에서 더 업데이트 되었을 수 있으니,
     merge 전에 한 번 develop을 최신으로 맞춰두면 안전하다.
     - git checkout develop
     - git pull origin develop
 
-  (1) 메인 페이지 브랜치로 이동
+  (1)-1 EC2에서 작업하는 경우 내 깃 닉네임과 액세스 토큰 입력
+
+  (2) 메인 페이지 브랜치로 이동
   - git checkout feature/frontend-main-page
 
-  (2) 혹시 현재 브랜치(메인 페이지 브랜치)에서 작업 중인 파일이 있다면 먼저 커밋
+  (3) 혹시 현재 브랜치(메인 페이지 브랜치)에서 작업 중인 파일이 있다면 먼저 커밋
   - git status
   - git add .
   - git commit -m "feat: 홈 메인 페이지 기본 섹션/스타일 추가"
 
-  (3) 레이아웃 브랜치가 반영되어있는 develop 브랜치의 내용을 현재 브랜치(메인 페이지 브랜치)로 머지
+  (4) 레이아웃 브랜치가 반영되어있는 develop 브랜치의 내용을 현재 브랜치(메인 페이지 브랜치)로 머지
   - git merge develop
 
-  (4) 서버 실행
+  (5) 서버 실행
   - cd frontend
   - npm run dev
 
@@ -135,48 +157,6 @@
      기존 레이아웃 브랜치에 develop을 머지한 뒤 그 위에서 이어서 작성한다.
      따라서 특정 브랜치에서 의미있는 수정이 발생한 파일들은 전부 add해서 develop에 머지해두고, 
      새로운 feature 브랜치를 딸 때마다, 그 시점의 develop에 있는 모든 Git 관리 파일들을 그대로 끌어오면된다.
-
-     
- [로컬에서 새롭게 작업한 develop 브랜치를 AWS EC2 개발 서버에 반영하는 법 (cmd/PowerShell 기준)]
- 1. EC2 서버 접속
- - ssh -i "C:\Users\leehk\.ssh\newsight-pipeline-20260117.pem" ubuntu@퍼블릭 IPv4 주소
-
- 2. 여기서 부턴 EC2 서버 안에서 실행
-  (1) graduation-project 루트에서 입력
-  - cd /opt/graduation-project
-
-  (2) develop 브랜치로 이동 후 원격 develop 기준으로 내 EC2로 최신 내용 가져오기
-  - git checkout develop
-  - git pull --ff-only origin develop
-
-  (3) 내 깃 닉네임과 액세스 토큰 입력
-
-  (4) 확인
-  - git status
-  - git diff --name-status ORIG_HEAD..HEAD
-
-
- [AWS EC2 개발 서버에서 새롭게 작업한 결과를 내 git의 develop 브랜치에 반영하는 법 (cmd/PowerShell 기준)]
- 1. EC2 서버 접속
- - ssh -i "C:\Users\leehk\.ssh\newsight-pipeline-20260117.pem" ubuntu@퍼블릭 IPv4 주소
-
- 2. 여기서 부턴 EC2 서버 안에서 실행
-  (1) 프로젝트 루트로 이동
-  - cd /opt/graduation-project
-
-  (2) develop 브랜치로 이동 후 원격 develop 기준으로 내 EC2로 최신 내용 가져오기
-  - git checkout develop
-  - git pull --ff-only origin develop
-
-  (3) git status
-
-  (4) git add .
-
-  (5) git commit -m "커밋 메시지"
-
-  (6) git push origin develop
-
-  (7) 내 깃 닉네임과 액세스 토큰 입력
 
 
  [Git 커밋 타입]
