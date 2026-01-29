@@ -55,7 +55,7 @@ GROUP BY a.MEDIA_CODE;
   2) T_TREND_KEYWORD_MASTER (키워드 마스터)
 ------------------------------------------------------------------------ */
 
--- 1) 키워드 총량/최근 생성
+-- 1) 키워드 총량/최근 생성 날짜
 SELECT COUNT(*) AS keyword_cnt, MAX(CREATED_AT) AS last_created_at
 FROM T_TREND_KEYWORD_MASTER;
 

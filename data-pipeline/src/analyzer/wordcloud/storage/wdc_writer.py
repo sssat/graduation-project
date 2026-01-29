@@ -8,8 +8,8 @@
 # 정책:
 # - (TREND_RUN_SEQ, KEYWORD_SEQ, MEDIA_CODE, PERIOD_FILTER, WC_TYPE) 조합은 헤더 1행만 존재(UNIQUE)
 # - 같은 조합으로 다시 생성 시:
-#   1) 헤더는 upsert로 WC_SEQ를 확보
-#   2) 해당 WC_SEQ의 아이템을 전부 삭제 후 재삽입(랭킹/가중치 재생성)
+#   1) 헤더는 upsert로 WC_SEQ를 확보하되, CREATED_AT(최초 생성 시각)은 절대 변경하지 않는다.
+#   2) 해당 WC_SEQ의 아이템을 전부 삭제 후 재삽입(랭킹/가중치 재생성) -> 아이템 CREATED_AT은 새로 찍힘(정상)
 #
 # 주의:
 # - commit/rollback은 호출자가 관리(바깥에서 트랜잭션 처리)
@@ -18,7 +18,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from decimal import Decimal
-from typing import Iterable, List, Sequence
+from typing import Sequence
 
 
 @dataclass(frozen=True)
@@ -44,6 +44,10 @@ def upsert_wordcloud_header(
     """
     헤더 upsert 후 WC_SEQ를 반환한다.
     (ERD 기준: WC_SEQ PK)
+
+    정책:
+    - CREATED_AT은 '최초 생성 시각'이므로, 중복 갱신 시 절대 업데이트하지 않는다.
+    - INSERT 시 CREATED_AT은 DB DEFAULT(CURRENT_TIMESTAMP)에 맡긴다.
     """
     with conn.cursor() as cur:
         cur.execute(
@@ -57,7 +61,7 @@ def upsert_wordcloud_header(
             )
             VALUES (%s, %s, %s, %s, %s)
             ON DUPLICATE KEY UPDATE
-              CREATED_AT = CURRENT_TIMESTAMP
+              WC_SEQ = WC_SEQ
             """,
             (int(trend_run_seq), int(keyword_seq), int(media_code), str(period_filter), str(wc_type)),
         )
@@ -143,6 +147,7 @@ def replace_wordcloud_items(
 ) -> dict:
     """
     (삭제 후 재삽입) 결과 요약을 반환한다.
+    - 아이템은 매번 새로 생성되므로 CREATED_AT이 갱신(새로 찍힘)되는 것이 정상이다.
     """
     deleted = delete_wordcloud_items_by_wc_seq(conn=conn, wc_seq=wc_seq)
     inserted = insert_wordcloud_items(conn=conn, wc_seq=wc_seq, items=items)

@@ -360,9 +360,49 @@ class Settings:
     # (추가) run_all 실행 옵션을 .env로 제어
     run_all_steps: str = _get_str(
         "RUN_ALL_STEPS",
-        "trend,news,preprocess,aggregate,final_rank,summary,title_sentiment,content_sentiment,title_bias,content_bias,wordcloud",
+        "trend,news,preprocess,aggregate,final_rank,summary,title_sentiment,content_sentiment,title_bias,content_bias,wordcloud,cooc_network",
     )
     run_all_fail_fast: bool = _get_bool01("RUN_ALL_FAIL_FAST", True)
+
+    # ---------------- (추가) 공동언급 네트워크(cooc_network) 옵션을 .env로 제어 ----------------
+    # 실행 옵션
+    cooc_trend_run_seq: int = _get_int("COOC_TREND_RUN_SEQ", 0)
+    cooc_periods: str = _get_str("COOC_PERIODS", "TODAY,D7,D14")
+    cooc_keyword_top_n: int = _get_int("COOC_KEYWORD_TOP_N", 20)
+    cooc_refresh: bool = _get_bool01("COOC_REFRESH", False)
+
+    # 텍스트 소스: TITLE | CONTENT | BOTH
+    cooc_text_source: str = _get_str("COOC_TEXT_SOURCE", "CONTENT")
+
+    # 조회 텍스트 최소 길이(CHAR_LENGTH 기준)
+    cooc_min_text_chars: int = _get_int("COOC_MIN_TEXT_CHARS", 200)
+
+    # 전처리 옵션(기존 wordcloud 전처리 로직 재사용, 옵션만 cooc 전용)
+    cooc_pre_lowercase_english: bool = _get_bool01("COOC_PRE_LOWERCASE_ENGLISH", True)
+    cooc_pre_normalize_repeats: bool = _get_bool01("COOC_PRE_NORMALIZE_REPEATS", True)
+    cooc_pre_max_len: int = _get_int("COOC_PRE_MAX_LEN", 5000)
+
+    # 토큰화 옵션(공백 기반) + 불용어(.env 지정)
+    cooc_token_min_len: int = _get_int("COOC_TOKEN_MIN_LEN", 2)
+    cooc_token_max_len: int = _get_int("COOC_TOKEN_MAX_LEN", 30)
+    cooc_drop_numeric_only: bool = _get_bool01("COOC_DROP_NUMERIC_ONLY", True)
+    cooc_stopwords_csv: str = _get_str("COOC_STOPWORDS_CSV", "")
+    cooc_stopwords_file: str = _get_str("COOC_STOPWORDS_FILE", "")
+
+    # 네트워크 생성 옵션
+    # - COOC_MODE: "doc" | "window"
+    # - window 모드일 때 COOC_WINDOW_SIZE 사용
+    cooc_mode: str = _get_str("COOC_MODE", "doc")
+    cooc_window_size: int = _get_int("COOC_WINDOW_SIZE", 20)
+
+    # 안전장치/출력 제한
+    cooc_max_tokens_per_doc: int = _get_int("COOC_MAX_TOKENS_PER_DOC", 60)
+    cooc_node_top_k: int = _get_int("COOC_NODE_TOP_K", 60)
+    cooc_edge_top_k: int = _get_int("COOC_EDGE_TOP_K", 300)
+    cooc_min_edge_weight: int = _get_int("COOC_MIN_EDGE_WEIGHT", 2)
+
+    # (선택) cooc 로그 디렉토리 (현재 job는 파일 로그를 안 남기지만, 디렉토리는 통일 차원에서 둔다)
+    log_dir_cooc_network: str = _get_str("LOG_DIR_COOC_NETWORK", "")
 
 
     # -------------------- 2. __post_init__(): 값 "안전 보정/정규화" 하는 부분 (전체 보정 작업 총괄) --------------------
@@ -719,11 +759,12 @@ class Settings:
             "title_bias",
             "content_bias",
             "wordcloud",
+            "cooc_network",
         }
 
         raw_steps = (self.run_all_steps or "").strip()
         if not raw_steps:
-            raw_steps = "trend,news,preprocess,aggregate,final_rank,summary,title_sentiment,content_sentiment,title_bias,content_bias,wordcloud"
+            raw_steps = "trend,news,preprocess,aggregate,final_rank,summary,title_sentiment,content_sentiment,title_bias,content_bias,wordcloud,cooc_network"
 
         out_steps: list[str] = []
         seen_steps: set[str] = set()
@@ -739,6 +780,74 @@ class Settings:
 
         object.__setattr__(self, "run_all_steps", ",".join(out_steps))
         object.__setattr__(self, "run_all_fail_fast", bool(self.run_all_fail_fast))
+
+        # ---------------- (추가) 공동언급 네트워크(cooc_network) 옵션 안전화/정규화 ----------------
+        object.__setattr__(self, "cooc_trend_run_seq", max(0, int(self.cooc_trend_run_seq)))
+        object.__setattr__(self, "cooc_refresh", bool(self.cooc_refresh))
+
+        # periods 정규화: TODAY/D7/D14만 허용, 중복 제거
+        raw_cp = (self.cooc_periods or "").strip()
+        if not raw_cp:
+            raw_cp = "TODAY,D7,D14"
+        allowed_cp = {"TODAY", "D7", "D14"}
+        out_cp: list[str] = []
+        seen_cp: set[str] = set()
+        for part in raw_cp.split(","):
+            pf = part.strip().upper()
+            if not pf or pf not in allowed_cp or pf in seen_cp:
+                continue
+            seen_cp.add(pf)
+            out_cp.append(pf)
+        if not out_cp:
+            out_cp = ["TODAY", "D7", "D14"]
+        object.__setattr__(self, "cooc_periods", ",".join(out_cp))
+
+        # text_source 정규화
+        ts = (self.cooc_text_source or "").strip().upper()
+        if ts not in {"TITLE", "CONTENT", "BOTH"}:
+            ts = "CONTENT"
+        object.__setattr__(self, "cooc_text_source", ts)
+
+        # 길이/갯수 안전화
+        object.__setattr__(self, "cooc_keyword_top_n", max(0, int(self.cooc_keyword_top_n)))
+        object.__setattr__(self, "cooc_min_text_chars", max(0, int(self.cooc_min_text_chars)))
+        object.__setattr__(self, "cooc_pre_max_len", max(0, int(self.cooc_pre_max_len)))
+
+        # tokenize 옵션
+        tok_min = max(1, int(self.cooc_token_min_len))
+        tok_max = max(tok_min, int(self.cooc_token_max_len))
+        object.__setattr__(self, "cooc_token_min_len", tok_min)
+        object.__setattr__(self, "cooc_token_max_len", tok_max)
+        object.__setattr__(self, "cooc_drop_numeric_only", bool(self.cooc_drop_numeric_only))
+
+        sw_csv = (self.cooc_stopwords_csv or "").strip()
+        object.__setattr__(self, "cooc_stopwords_csv", sw_csv)
+
+        sw_file = (self.cooc_stopwords_file or "").strip()
+        if sw_file:
+            p = Path(sw_file)
+            if not p.is_absolute():
+                p = PROJECT_ROOT / p
+            sw_file = str(p)
+        object.__setattr__(self, "cooc_stopwords_file", sw_file)
+
+        # mode/window 정규화
+        cm = (self.cooc_mode or "").strip().lower()
+        if cm not in {"doc", "window"}:
+            cm = "doc"
+        object.__setattr__(self, "cooc_mode", cm)
+        object.__setattr__(self, "cooc_window_size", max(2, int(self.cooc_window_size)))
+
+        object.__setattr__(self, "cooc_max_tokens_per_doc", max(0, int(self.cooc_max_tokens_per_doc)))
+        object.__setattr__(self, "cooc_node_top_k", max(0, int(self.cooc_node_top_k)))
+        object.__setattr__(self, "cooc_edge_top_k", max(0, int(self.cooc_edge_top_k)))
+        object.__setattr__(self, "cooc_min_edge_weight", max(1, int(self.cooc_min_edge_weight)))
+
+        # (선택) 로그 디렉토리 기본값 구성
+        cooc_dir = (self.log_dir_cooc_network or "").strip()
+        if not cooc_dir:
+            cooc_dir = "src/analyzer/cooc_network/logs"
+        object.__setattr__(self, "log_dir_cooc_network", _resolve_dir(cooc_dir))
 
 
         # 17) 로그 디렉토리 기본값 구성

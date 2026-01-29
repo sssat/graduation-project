@@ -26,13 +26,13 @@ def main() -> None:
         "preprocess": "src.preprocess.jobs.run_preprocess",
         "aggregate": "src.analyzer.aggregate.jobs.run_aggregate",
         "final_rank": "src.analyzer.final_rank.jobs.run_final_rank",
-        # 요청사항: summary를 final_rank "바로 다음"에 위치시키는 건 .env의 RUN_ALL_STEPS로 제어
         "summary": "src.analyzer.summary.jobs.run_summary",
         "title_sentiment": "src.analyzer.sentiment.title.jobs.run_title_sentiment",
         "content_sentiment": "src.analyzer.sentiment.content.jobs.run_content_sentiment",
         "title_bias": "src.analyzer.bias.title.jobs.run_title_bias",
         "content_bias": "src.analyzer.bias.content.jobs.run_content_bias",
         "wordcloud": "src.analyzer.wordcloud.jobs.run_wordcloud",
+        "cooc_network": "src.analyzer.cooc_network.jobs.run_cooc_network",
     }
 
     steps = _parse_steps(getattr(settings, "run_all_steps", ""))
