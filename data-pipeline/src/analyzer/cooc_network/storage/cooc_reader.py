@@ -45,6 +45,7 @@ def _period_range(base_date: date, period_filter: str) -> Tuple[datetime, dateti
     - TODAY: base_date 00:00:00 ~ (base_date+1) 00:00:00
     - D7:    (base_date-6) 00:00:00 ~ (base_date+1) 00:00:00
     - D14:   (base_date-13) 00:00:00 ~ (base_date+1) 00:00:00
+    - D30:   (base_date-29) 00:00:00 ~ (base_date+1) 00:00:00
 
     주의:
     - DB의 PUBLISHED_AT은 MySQL DATETIME(타임존 정보 없음)이라 tz-aware datetime을 그대로 넘기면
@@ -76,6 +77,12 @@ def _period_range(base_date: date, period_filter: str) -> Tuple[datetime, dateti
 
     if period == "D14":
         start_date = base_date - timedelta(days=13)
+        start_aware = datetime.combine(start_date, datetime.min.time(), tzinfo=tz)
+        end_aware = datetime.combine(base_date, datetime.min.time(), tzinfo=tz) + timedelta(days=1)
+        return _naive_local(start_aware), _naive_local(end_aware)
+    
+    if period == "D30":
+        start_date = base_date - timedelta(days=29)
         start_aware = datetime.combine(start_date, datetime.min.time(), tzinfo=tz)
         end_aware = datetime.combine(base_date, datetime.min.time(), tzinfo=tz) + timedelta(days=1)
         return _naive_local(start_aware), _naive_local(end_aware)

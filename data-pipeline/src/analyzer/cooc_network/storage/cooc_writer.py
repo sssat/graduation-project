@@ -21,7 +21,7 @@ class CoocHeaderKey:
     trend_run_seq: int
     keyword_seq: int
     media_code: int
-    period_filter: str  # TODAY | D7 | D14
+    period_filter: str  # TODAY | D7 | D14 | D30
 
 
 def _now_local_naive() -> datetime:
@@ -39,7 +39,7 @@ def _normalize_periods(periods: Sequence[str]) -> List[str]:
         s = str(p).strip().upper()
         if not s:
             continue
-        if s not in {"TODAY", "D7", "D14"}:
+        if s not in {"TODAY", "D7", "D14", "D30"}:
             raise ValueError(f"지원하지 않는 period_filter: {p}")
         out.append(s)
     return out
@@ -130,7 +130,7 @@ def upsert_cooc_header_and_get_seq(
     - INSERT 시 CREATED_AT은 DB DEFAULT(CURRENT_TIMESTAMP)에 맡긴다.
     """
     pf = str(key.period_filter).strip().upper()
-    if pf not in {"TODAY", "D7", "D14"}:
+    if pf not in {"TODAY", "D7", "D14", "D30"}:
         raise ValueError(f"지원하지 않는 period_filter: {key.period_filter}")
 
     sql = """

@@ -1,7 +1,7 @@
 # data-pipeline/src/analyzer/sentiment/title/storage/title_sentiment_reader.py
 # 제목 기반 감성분석 대상 기사 조회(Reader)
 # - 이번 TREND_RUN_SEQ의 키워드 스냅샷(T_TREND_KEYWORD_SNAPSHOT)에 포함된 "모든 키워드"를 대상으로 한다.
-# - 해당 키워드의 기사(T_NEWS_ARTICLE)를 기간(TODAY/D7/D14) 기준으로 조회한다.
+# - 해당 키워드의 기사(T_NEWS_ARTICLE)를 기간(TODAY/D7/D14/D30) 기준으로 조회한다.
 
 from __future__ import annotations
 
@@ -49,6 +49,7 @@ def _period_range(base_date: date, period_filter: str) -> Tuple[datetime, dateti
     - TODAY: base_date 00:00:00 ~ (base_date+1) 00:00:00
     - D7:   (base_date-6) 00:00:00 ~ (base_date+1) 00:00:00
     - D14:  (base_date-13) 00:00:00 ~ (base_date+1) 00:00:00
+    - D30:  (base_date-29) 00:00:00 ~ (base_date+1) 00:00:00
     """
     period = (period_filter or "").strip().upper()
     tz = ZoneInfo(settings.tz)
@@ -66,6 +67,12 @@ def _period_range(base_date: date, period_filter: str) -> Tuple[datetime, dateti
 
     if period == "D14":
         start_date = base_date - timedelta(days=13)
+        start = datetime.combine(start_date, datetime.min.time(), tzinfo=tz)
+        end = datetime.combine(base_date, datetime.min.time(), tzinfo=tz) + timedelta(days=1)
+        return start, end
+    
+    if period == "D30":
+        start_date = base_date - timedelta(days=29)
         start = datetime.combine(start_date, datetime.min.time(), tzinfo=tz)
         end = datetime.combine(base_date, datetime.min.time(), tzinfo=tz) + timedelta(days=1)
         return start, end

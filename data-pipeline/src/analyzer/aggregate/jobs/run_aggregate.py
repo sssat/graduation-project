@@ -39,7 +39,7 @@ def _settings_summary_one_line() -> str:
         f"aggregate_log_dir={getattr(settings, 'log_dir_aggregate', '')} "
         f"agg_insert_chunk_size={getattr(settings, 'agg_insert_chunk_size', 800)} "
         f"agg_trend_run_seq={getattr(settings, 'agg_trend_run_seq', 0)} "
-        f"agg_periods={getattr(settings, 'agg_periods', 'TODAY,D7,D14')} "
+        f"agg_periods={getattr(settings, 'agg_periods', 'TODAY,D7,D14,D30')} "
         f"agg_refresh={1 if getattr(settings, 'agg_refresh', False) else 0}"
     )
 
@@ -89,7 +89,7 @@ def main() -> None:
         "--periods",
         type=str,
         default=None,
-        help="대상 PERIOD_FILTER 목록(콤마 구분). 미지정 시 .env의 AGG_PERIODS 사용. 예: TODAY,D7,D14",
+        help="대상 PERIOD_FILTER 목록(콤마 구분). 미지정 시 .env의 AGG_PERIODS 사용. 예: TODAY,D7,D14,D30",
     )
     parser.add_argument(
         "--refresh",
@@ -117,7 +117,7 @@ def main() -> None:
     )
     trend_run_seq = _resolve_trend_run_seq(requested_trend_run_seq)
 
-    raw_periods = args.periods if args.periods is not None else str(getattr(settings, "agg_periods", "TODAY,D7,D14"))
+    raw_periods = args.periods if args.periods is not None else str(getattr(settings, "agg_periods", "TODAY,D7,D14,D30"))
     periods = _parse_periods(raw_periods)
 
     refresh_same_run = (

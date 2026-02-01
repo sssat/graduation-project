@@ -190,7 +190,7 @@ class Settings:
 
     # (추가) run_aggregate 기본 실행 옵션을 .env로 제어
     agg_trend_run_seq: int = _get_int("AGG_TREND_RUN_SEQ", 0)
-    agg_periods: str = _get_str("AGG_PERIODS", "TODAY,D7,D14")
+    agg_periods: str = _get_str("AGG_PERIODS", "TODAY,D7,D14,D30")
     agg_refresh: bool = _get_bool01("AGG_REFRESH", False)
 
     # 최종순위에서 영문-only 허용 키워드 화이트리스트(콤마 구분 문자열)
@@ -198,7 +198,7 @@ class Settings:
 
     # (추가) run_final_rank 기본 실행 옵션을 .env로 제어
     final_rank_trend_run_seq: int = _get_int("FINAL_RANK_TREND_RUN_SEQ", 0)
-    final_rank_periods: str = _get_str("FINAL_RANK_PERIODS", "TODAY,D7,D14")
+    final_rank_periods: str = _get_str("FINAL_RANK_PERIODS", "TODAY,D7,D14,D30")
     final_rank_refresh: bool = _get_bool01("FINAL_RANK_REFRESH", False)
 
     # AI 요약 관련 환경변수 읽어오기
@@ -256,7 +256,7 @@ class Settings:
 
     # (추가) run_title_sentiment 기본 실행 옵션을 .env로 제어
     sentiment_title_trend_run_seq: int = _get_int("SENTIMENT_TITLE_TREND_RUN_SEQ", 0)
-    sentiment_title_periods: str = _get_str("SENTIMENT_TITLE_PERIODS", "TODAY,D7,D14")
+    sentiment_title_periods: str = _get_str("SENTIMENT_TITLE_PERIODS", "TODAY,D7,D14,D30")
     sentiment_title_refresh: bool = _get_bool01("SENTIMENT_TITLE_REFRESH", False)
 
     # 본문 감성분석 관련 환경변수 읽어오기
@@ -272,7 +272,7 @@ class Settings:
 
     # (추가) run_content_sentiment 기본 실행 옵션을 .env로 제어
     sentiment_content_trend_run_seq: int = _get_int("SENTIMENT_CONTENT_TREND_RUN_SEQ", 0)
-    sentiment_content_periods: str = _get_str("SENTIMENT_CONTENT_PERIODS", "TODAY,D7,D14")
+    sentiment_content_periods: str = _get_str("SENTIMENT_CONTENT_PERIODS", "TODAY,D7,D14,D30")
     sentiment_content_refresh: bool = _get_bool01("SENTIMENT_CONTENT_REFRESH", False)
 
     # (추가) 본문 감성분석 그룹 최소 기사수 스킵 규칙
@@ -283,11 +283,11 @@ class Settings:
 
     # ---------------- (추가) 제목 편향도(run_title_bias) 기본 실행 옵션을 .env로 제어 ----------------
     # - BIAS_TITLE_TREND_RUN_SEQ=0 이면 최신 자동
-    # - BIAS_TITLE_PERIOD 또는 BIAS_TITLE_PERIODS="TODAY,D7,D14"
+    # - BIAS_TITLE_PERIOD 또는 BIAS_TITLE_PERIODS="TODAY,D7,D14,D30"
     # - BIAS_TITLE_REFRESH=1 이면 같은 run+period 범위에서 제목 점수만 reset 후 재적재
     bias_title_trend_run_seq: int = _get_int("BIAS_TITLE_TREND_RUN_SEQ", 0)
 
-    # 사용자가 .env에 BIAS_TITLE_PERIOD=TODAY,D7,D14 형태로 넣을 수 있으므로,
+    # 사용자가 .env에 BIAS_TITLE_PERIOD=TODAY,D7,D14,D30 형태로 넣을 수 있으므로,
     # BIAS_TITLE_PERIODS를 먼저 보고 없으면 BIAS_TITLE_PERIOD를 본다(하위호환).
     bias_title_periods: str = _get_str("BIAS_TITLE_PERIODS", "")
     bias_title_period_legacy: str = _get_str("BIAS_TITLE_PERIOD", "")
@@ -296,10 +296,10 @@ class Settings:
 
     # ---------------- (추가) 본문 편향도(run_content_bias) 기본 실행 옵션을 .env로 제어 ----------------
     # - BIAS_CONTENT_TREND_RUN_SEQ=0 이면 최신 자동
-    # - BIAS_CONTENT_PERIODS="TODAY,D7,D14"
+    # - BIAS_CONTENT_PERIODS="TODAY,D7,D14,D30"
     # - BIAS_CONTENT_REFRESH=1 이면 같은 run+period 범위에서 본문 점수만 reset 후 재적재
     bias_content_trend_run_seq: int = _get_int("BIAS_CONTENT_TREND_RUN_SEQ", 0)
-    bias_content_periods: str = _get_str("BIAS_CONTENT_PERIODS", "TODAY,D7,D14")
+    bias_content_periods: str = _get_str("BIAS_CONTENT_PERIODS", "TODAY,D7,D14,D30")
     bias_content_refresh: bool = _get_bool01("BIAS_CONTENT_REFRESH", False)
 
     # ---------------- (추가) 워드클라우드 입력 옵션(wdc_reader) 을 .env로 제어 ----------------
@@ -345,12 +345,12 @@ class Settings:
 
     # ---------------- (추가) 워드클라우드(run_wordcloud) 실행 옵션을 .env로 제어 ----------------
     # - WORDCLOUD_TREND_RUN_SEQ=0 이면 최신 자동
-    # - WORDCLOUD_PERIODS="TODAY,D7,D14"
+    # - WORDCLOUD_PERIODS="TODAY,D7,D14,D30"
     # - WORDCLOUD_TYPES="TITLE,CONTENT,COMMENT"
     # - WORDCLOUD_REFRESH=1 이면 기존 결과가 있어도 재계산/덮어쓰기
     # - WORDCLOUD_MEDIA_CODES="0,1023,..." (비우면 기본: 0 + news_press_codes)
     wordcloud_trend_run_seq: int = _get_int("WORDCLOUD_TREND_RUN_SEQ", 0)
-    wordcloud_periods: str = _get_str("WORDCLOUD_PERIODS", "TODAY,D7,D14")
+    wordcloud_periods: str = _get_str("WORDCLOUD_PERIODS", "TODAY,D7,D14,D30")
     wordcloud_types: str = _get_str("WORDCLOUD_TYPES", "TITLE,CONTENT,COMMENT")
     wordcloud_refresh: bool = _get_bool01("WORDCLOUD_REFRESH", False)
 
@@ -367,7 +367,7 @@ class Settings:
     # ---------------- (추가) 공동언급 네트워크(cooc_network) 옵션을 .env로 제어 ----------------
     # 실행 옵션
     cooc_trend_run_seq: int = _get_int("COOC_TREND_RUN_SEQ", 0)
-    cooc_periods: str = _get_str("COOC_PERIODS", "TODAY,D7,D14")
+    cooc_periods: str = _get_str("COOC_PERIODS", "TODAY,D7,D14,D30")
     cooc_keyword_top_n: int = _get_int("COOC_KEYWORD_TOP_N", 20)
     cooc_refresh: bool = _get_bool01("COOC_REFRESH", False)
 
@@ -485,7 +485,7 @@ class Settings:
         object.__setattr__(self, "agg_trend_run_seq", max(0, int(self.agg_trend_run_seq)))
         periods = (self.agg_periods or "").strip()
         if not periods:
-            periods = "TODAY,D7,D14"
+            periods = "TODAY,D7,D14,D30"
         object.__setattr__(self, "agg_periods", periods)
         object.__setattr__(self, "agg_refresh", bool(self.agg_refresh))
 
@@ -493,7 +493,7 @@ class Settings:
         object.__setattr__(self, "final_rank_trend_run_seq", max(0, int(self.final_rank_trend_run_seq)))
         fr_periods = (self.final_rank_periods or "").strip()
         if not fr_periods:
-            fr_periods = "TODAY,D7,D14"
+            fr_periods = "TODAY,D7,D14,D30"
         object.__setattr__(self, "final_rank_periods", fr_periods)
         object.__setattr__(self, "final_rank_refresh", bool(self.final_rank_refresh))
 
@@ -544,7 +544,7 @@ class Settings:
         object.__setattr__(self, "sentiment_title_trend_run_seq", max(0, int(self.sentiment_title_trend_run_seq)))
         st_periods = (self.sentiment_title_periods or "").strip()
         if not st_periods:
-            st_periods = "TODAY,D7,D14"
+            st_periods = "TODAY,D7,D14,D30"
         object.__setattr__(self, "sentiment_title_periods", st_periods)
         object.__setattr__(self, "sentiment_title_refresh", bool(self.sentiment_title_refresh))
 
@@ -566,7 +566,7 @@ class Settings:
         object.__setattr__(self, "sentiment_content_trend_run_seq", max(0, int(self.sentiment_content_trend_run_seq)))
         sc_periods = (self.sentiment_content_periods or "").strip()
         if not sc_periods:
-            sc_periods = "TODAY,D7,D14"
+            sc_periods = "TODAY,D7,D14,D30"
         object.__setattr__(self, "sentiment_content_periods", sc_periods)
         object.__setattr__(self, "sentiment_content_refresh", bool(self.sentiment_content_refresh))
 
@@ -598,9 +598,9 @@ class Settings:
         if not raw_periods:
             raw_periods = (self.bias_title_period_legacy or "").strip()
         if not raw_periods:
-            raw_periods = "TODAY,D7,D14"
+            raw_periods = "TODAY,D7,D14,D30"
 
-        allowed = {"TODAY", "D7", "D14"}
+        allowed = {"TODAY", "D7", "D14", "D30"}
         out: list[str] = []
         seen_pf: set[str] = set()
 
@@ -616,7 +616,7 @@ class Settings:
             out.append(pf)
 
         if not out:
-            out = ["TODAY", "D7", "D14"]
+            out = ["TODAY", "D7", "D14", "D30"]
 
         object.__setattr__(self, "bias_title_periods", ",".join(out))
 
@@ -626,9 +626,9 @@ class Settings:
 
         bc_raw = (self.bias_content_periods or "").strip()
         if not bc_raw:
-            bc_raw = "TODAY,D7,D14"
+            bc_raw = "TODAY,D7,D14,D30"
 
-        bc_allowed = {"TODAY", "D7", "D14"}
+        bc_allowed = {"TODAY", "D7", "D14", "D30"}
         bc_out: list[str] = []
         bc_seen: set[str] = set()
 
@@ -644,7 +644,7 @@ class Settings:
             bc_out.append(pf)
 
         if not bc_out:
-            bc_out = ["TODAY", "D7", "D14"]
+            bc_out = ["TODAY", "D7", "D14", "D30"]
 
         object.__setattr__(self, "bias_content_periods", ",".join(bc_out))
 
@@ -696,11 +696,11 @@ class Settings:
         object.__setattr__(self, "wordcloud_trend_run_seq", max(0, int(self.wordcloud_trend_run_seq)))
         object.__setattr__(self, "wordcloud_refresh", bool(self.wordcloud_refresh))
 
-        # periods 정규화: TODAY/D7/D14만 허용, 중복 제거
+        # periods 정규화: TODAY/D7/D14/D30만 허용, 중복 제거
         raw_p = (self.wordcloud_periods or "").strip()
         if not raw_p:
-            raw_p = "TODAY,D7,D14"
-        allowed_p = {"TODAY", "D7", "D14"}
+            raw_p = "TODAY,D7,D14,D30"
+        allowed_p = {"TODAY", "D7", "D14", "D30"}
         out_p: list[str] = []
         seen_p: set[str] = set()
         for part in raw_p.split(","):
@@ -710,7 +710,7 @@ class Settings:
             seen_p.add(pf)
             out_p.append(pf)
         if not out_p:
-            out_p = ["TODAY", "D7", "D14"]
+            out_p = ["TODAY", "D7", "D14", "D30"]
         object.__setattr__(self, "wordcloud_periods", ",".join(out_p))
 
         # types 정규화: TITLE/CONTENT/COMMENT만 허용, 중복 제거
@@ -785,11 +785,11 @@ class Settings:
         object.__setattr__(self, "cooc_trend_run_seq", max(0, int(self.cooc_trend_run_seq)))
         object.__setattr__(self, "cooc_refresh", bool(self.cooc_refresh))
 
-        # periods 정규화: TODAY/D7/D14만 허용, 중복 제거
+        # periods 정규화: TODAY/D7/D14/D30만 허용, 중복 제거
         raw_cp = (self.cooc_periods or "").strip()
         if not raw_cp:
-            raw_cp = "TODAY,D7,D14"
-        allowed_cp = {"TODAY", "D7", "D14"}
+            raw_cp = "TODAY,D7,D14,D30"
+        allowed_cp = {"TODAY", "D7", "D14", "D30"}
         out_cp: list[str] = []
         seen_cp: set[str] = set()
         for part in raw_cp.split(","):
@@ -799,7 +799,7 @@ class Settings:
             seen_cp.add(pf)
             out_cp.append(pf)
         if not out_cp:
-            out_cp = ["TODAY", "D7", "D14"]
+            out_cp = ["TODAY", "D7", "D14", "D30"]
         object.__setattr__(self, "cooc_periods", ",".join(out_cp))
 
         # text_source 정규화

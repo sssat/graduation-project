@@ -313,6 +313,21 @@
   white-space: nowrap;
 }
 
+/* 답변 보기(답변 완료) 버튼 전용: 답변 하기(btnTable)보다 살짝 옅게 */
+.btnViewAnswer {
+  border-color: rgba(148, 163, 184, 0.45); /* 기존(0.7)보다 옅게 */
+  color: rgba(229, 231, 235, 0.82);       /* 기존(#e5e7eb)보다 살짝 옅게 */
+  background: rgba(15, 23, 42, 0.75);     /* 기존(0.95)보다 옅게 */
+}
+
+/* (선택) 호버 시엔 원래 버튼에 가까워지게 */
+.btnViewAnswer:hover {
+  border-color: rgba(148, 163, 184, 0.7);
+  color: #e5e7eb;
+  background: rgba(15, 23, 42, 0.9);
+}
+
+
 .btnDelete {
   border-color: rgba(248, 113, 113, 0.8);
   color: #fecaca;
@@ -344,6 +359,12 @@
   justify-content: space-between;
   align-items: center;
   margin-bottom: 10px;
+}
+
+.viewHeaderRight {
+  display: flex;
+  gap: 8px;
+  align-items: center;
 }
 
 .viewTitle {

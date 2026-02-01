@@ -33,7 +33,7 @@ from src.analyzer.cooc_network.storage.cooc_writer import (
     replace_cooc_nodes_edges,
 )
 
-SUPPORTED_PERIODS = ("TODAY", "D7", "D14")
+SUPPORTED_PERIODS = ("TODAY", "D7", "D14", "D30")
 
 
 def _now_in_tz() -> datetime:
@@ -340,8 +340,8 @@ def main() -> None:
     p.add_argument(
         "--periods",
         type=str,
-        default=str(getattr(settings, "cooc_periods", "TODAY,D7,D14") or "TODAY,D7,D14"),
-        help="대상 PERIOD_FILTER 목록(콤마). 예: TODAY,D7,D14",
+        default=str(getattr(settings, "cooc_periods", "TODAY,D7,D14,D30") or "TODAY,D7,D14,D30"),
+        help="대상 PERIOD_FILTER 목록(콤마). 예: TODAY,D7,D14,D30",
     )
     p.add_argument(
         "--keyword-top-n",

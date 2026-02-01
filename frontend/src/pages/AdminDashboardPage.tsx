@@ -19,7 +19,8 @@ type LogStatus = "success" | "fail";
 
 type AdminOverride = {
   status?: Exclude<StatusKey, "all">;
-  answer?: InquiryDataItem["answer"];
+  // null은 "답변을 지웠다"를 의미 (undefined는 override 없음)
+  answer?: InquiryDataItem["answer"] | null;
 };
 
 type AdminStore = {
@@ -89,10 +90,14 @@ export default function AdminDashboardPage() {
       .map((it) => {
         const ov = adminStore.overrides[it.id];
         if (!ov) return it;
+
+        const nextStatus = ov.status ?? it.status;
+        const nextAnswer = Object.prototype.hasOwnProperty.call(ov, "answer") ? ov.answer : it.answer;
+
         return {
           ...it,
-          status: ov.status ?? it.status,
-          answer: ov.answer ?? it.answer,
+          status: nextStatus,
+          answer: nextAnswer,
         };
       });
 
@@ -119,6 +124,11 @@ export default function AdminDashboardPage() {
 
   const [answerText, setAnswerText] = useState("");
   const [answerStatus, setAnswerStatus] = useState<Exclude<StatusKey, "all">>("done");
+
+  const isEditingExistingAnswer = useMemo(() => {
+    if (!selectedInquiry) return false;
+    return selectedInquiry.status === "done";
+  }, [selectedInquiry]);
 
   const summary = useMemo(() => {
     const signupsToday = 27;
@@ -168,20 +178,6 @@ export default function AdminDashboardPage() {
     setAnswerStatus("done");
   }
 
-  function openInquiryPanel(id: number) {
-    const target = inquiriesAll.find((x) => x.id === id);
-    if (!target) return;
-
-    // 답변 완료(done)는 클릭 불가
-    if (target.status === "done") return;
-
-    setSelectedInquiryId(id);
-    setInquiryPanelMode("edit");
-    setAnswerText("");
-    setAnswerStatus("done");
-    setInquiryPanelOpen(true);
-  }
-
   function persistOverride(id: number, patch: AdminOverride) {
     setAdminStore((prev) => {
       const next: AdminStore = {
@@ -204,10 +200,37 @@ export default function AdminDashboardPage() {
     });
   }
 
+  function openInquiryPanel(id: number) {
+    const target = inquiriesAll.find((x) => x.id === id);
+    if (!target) return;
+
+    setSelectedInquiryId(id);
+
+    // done이면 "보기"로 열고, processing이면 "작성"으로 연다
+    if (target.status === "done") {
+      setInquiryPanelMode("view");
+      setAnswerText("");
+      setAnswerStatus("done");
+    } else {
+      setInquiryPanelMode("edit");
+      setAnswerText("");
+      setAnswerStatus("done");
+    }
+
+    setInquiryPanelOpen(true);
+  }
+
+  function startEditAnswer() {
+    if (!selectedInquiry) return;
+
+    setInquiryPanelMode("edit");
+    setAnswerText(selectedInquiry.answer?.body ?? "");
+    setAnswerStatus(selectedInquiry.status);
+  }
+
   function submitAnswer(e: FormEvent) {
     e.preventDefault();
     if (!selectedInquiry) return;
-    if (selectedInquiry.status !== "processing") return;
 
     const body = answerText.trim();
     if (!body) {
@@ -220,7 +243,7 @@ export default function AdminDashboardPage() {
 
     persistOverride(selectedInquiry.id, {
       status: answerStatus,
-      answer: answerStatus === "done" ? answer : selectedInquiry.answer,
+      answer: answerStatus === "done" ? answer : null,
     });
 
     setAnswerText("");
@@ -307,6 +330,14 @@ export default function AdminDashboardPage() {
     for (let p = start; p <= end; p += 1) arr.push(p);
     return arr;
   }, [loginPageSafe, loginTotalPages]);
+
+  const panelTitle = useMemo(() => {
+    if (!selectedInquiry) return "선택한 문의 상세";
+    if (inquiryPanelMode === "edit") {
+      return selectedInquiry.status === "done" ? "선택한 문의 답변 수정" : "선택한 문의 답변 하기";
+    }
+    return selectedInquiry.status === "done" ? "선택한 문의 답변 보기" : "선택한 문의 상세";
+  }, [inquiryPanelMode, selectedInquiry]);
 
   return (
     <main className={styles.pageRoot}>
@@ -501,41 +532,45 @@ export default function AdminDashboardPage() {
               </tr>
             </thead>
             <tbody>
-              {pageItems.map((row) => (
-                <tr key={row.id}>
-                  <td>{row.id}</td>
-                  <td>
-                    <span className={typePillClass(row.typeKey)}>{row.typeLabel}</span>
-                  </td>
-                  <td className={styles.cellWrap}>{row.title}</td>
-                  <td>{row.author}</td>
-                  <td>{row.date}</td>
-                  <td>
-                    <span className={statusPillClass(row.status)}>{row.status === "done" ? "답변 완료" : "처리 중"}</span>
-                  </td>
-                  <td>
-                    <button
-                      type="button"
-                      className={`${styles.btnTable} ${row.status === "done" ? styles.btnDisabled : ""}`}
-                      onClick={() => openInquiryPanel(row.id)}
-                      disabled={row.status === "done"}
-                      aria-disabled={row.status === "done"}
-                      title={row.status === "done" ? "답변 완료된 문의입니다." : "답변 작성"}
-                    >
-                      답변 하기
-                    </button>
-                  </td>
-                  <td>
-                    <button
-                      type="button"
-                      className={`${styles.btnTable} ${styles.btnDelete}`}
-                      onClick={() => onDelete(row.id)}
-                    >
-                      삭제
-                    </button>
-                  </td>
-                </tr>
-              ))}
+              {pageItems.map((row) => {
+                const isDone = row.status === "done";
+                const actionLabel = isDone ? "답변 보기" : "답변 하기";
+                const actionTitle = isDone ? "등록된 답변을 확인합니다." : "답변 작성";
+
+                return (
+                  <tr key={row.id}>
+                    <td>{row.id}</td>
+                    <td>
+                      <span className={typePillClass(row.typeKey)}>{row.typeLabel}</span>
+                    </td>
+                    <td className={styles.cellWrap}>{row.title}</td>
+                    <td>{row.author}</td>
+                    <td>{row.date}</td>
+                    <td>
+                      <span className={statusPillClass(row.status)}>{isDone ? "답변 완료" : "처리 중"}</span>
+                    </td>
+                    <td>
+                      <button
+                        type="button"
+                        className={`${styles.btnTable} ${isDone ? styles.btnViewAnswer : ""}`}
+                        onClick={() => openInquiryPanel(row.id)}
+                        title={actionTitle}
+                      >
+                        {actionLabel}
+                      </button>
+                    </td>
+                    <td>
+                      <button
+                        type="button"
+                        className={`${styles.btnTable} ${styles.btnDelete}`}
+                        onClick={() => onDelete(row.id)}
+                      >
+                        삭제
+                      </button>
+                    </td>
+                  </tr>
+                );
+              })}
               {pageItems.length === 0 ? (
                 <tr>
                   <td colSpan={8} className={styles.emptyRow}>
@@ -603,13 +638,20 @@ export default function AdminDashboardPage() {
             <div ref={inquiryPanelRef} className={styles.viewPanel}>
               <div className={styles.viewHeader}>
                 <div>
-                  <div className={styles.viewTitle}>
-                    {inquiryPanelMode === "edit" ? "선택한 문의 답변 하기" : "선택한 문의 상세"}
-                  </div>
+                  <div className={styles.viewTitle}>{panelTitle}</div>
                 </div>
-                <button type="button" className={styles.btnSecondary} onClick={closeInquiryPanel}>
-                  닫기
-                </button>
+
+                <div className={styles.viewHeaderRight}>
+                  {inquiryPanelMode === "view" && selectedInquiry.status === "done" ? (
+                    <button type="button" className={styles.btnSecondary} onClick={startEditAnswer}>
+                      답변 수정
+                    </button>
+                  ) : null}
+
+                  <button type="button" className={styles.btnSecondary} onClick={closeInquiryPanel}>
+                    닫기
+                  </button>
+                </div>
               </div>
 
               <div className={styles.viewMetaInlineRow}>
@@ -691,7 +733,7 @@ export default function AdminDashboardPage() {
                         취소
                       </button>
                       <button type="submit" className={styles.btnPrimary}>
-                        답변 저장
+                        {isEditingExistingAnswer ? "답변 수정" : "답변 저장"}
                       </button>
                     </div>
                   </form>

@@ -9,9 +9,6 @@
 # - 댓글 테이블 컬럼명은 프로젝트마다 조금씩 다를 수 있다.
 #   아래 COMMENT 쿼리는 "T_NEWS_COMMENT(COMMENT_SEQ, ARTICLE_SEQ, COMMENT_CLEAN)" 형태를 가정한다.
 #   실제 스키마와 다르면 쿼리의 컬럼명만 맞춰서 수정하면 된다.
-#
-# 수정:
-# - period에 D14(최근 14일: base_date-13 ~ base_date) 지원 추가
 
 from __future__ import annotations
 
@@ -22,18 +19,19 @@ from zoneinfo import ZoneInfo
 
 from src.config.settings import settings
 
-PeriodFilter = Literal["TODAY", "D7", "D14"]
+PeriodFilter = Literal["TODAY", "D7", "D14","D30"]
 WcType = Literal["TITLE", "CONTENT", "COMMENT"]
 
 PERIOD_TODAY: PeriodFilter = "TODAY"
 PERIOD_D7: PeriodFilter = "D7"
 PERIOD_D14: PeriodFilter = "D14"
+PERIOD_D30: PeriodFilter = "D30"
 
 WC_TITLE: WcType = "TITLE"
 WC_CONTENT: WcType = "CONTENT"
 WC_COMMENT: WcType = "COMMENT"
 
-_ALLOWED_PERIODS = {PERIOD_TODAY, PERIOD_D7, PERIOD_D14}
+_ALLOWED_PERIODS = {PERIOD_TODAY, PERIOD_D7, PERIOD_D14, PERIOD_D30}
 _ALLOWED_TYPES = {WC_TITLE, WC_CONTENT, WC_COMMENT}
 
 
@@ -68,6 +66,7 @@ def resolve_date_window(*, base_date: date, period: PeriodFilter) -> tuple[date,
     - TODAY: base_date 하루 (start=end=base_date)
     - D7:  base_date 포함 과거 7일 (base_date-6  ~ base_date)
     - D14: base_date 포함 과거 14일(base_date-13 ~ base_date)
+    - D30: base_date 포함 과거 30일(base_date-29 ~ base_date)
     """
     if period == PERIOD_TODAY:
         return base_date, base_date
@@ -75,6 +74,8 @@ def resolve_date_window(*, base_date: date, period: PeriodFilter) -> tuple[date,
         return base_date - timedelta(days=6), base_date
     if period == PERIOD_D14:
         return base_date - timedelta(days=13), base_date
+    if period == PERIOD_D30:
+        return base_date - timedelta(days=29), base_date
     raise ValueError(f"지원하지 않는 period 입니다: {period!r}")
 
 

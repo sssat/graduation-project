@@ -3,7 +3,7 @@
 #
 # 목표:
 # - 기본값은 settings(.env)에서 읽고, 필요하면 CLI로 덮어쓴다.
-# - (TODAY,D7,D14) 같은 복수 기간을 한 번에 실행할 수 있게 periods를 지원한다.
+# - (TODAY,D7,D14,D30) 같은 복수 기간을 한 번에 실행할 수 있게 periods를 지원한다.
 #
 # 사용 예:
 # 1) 아무 옵션 없이 실행 (settings 기본값 사용)
@@ -13,7 +13,7 @@
 #   python -m src.analyzer.bias.content.jobs.run_content_bias --trend-run-seq 15
 #
 # 3) 기간 복수 지정
-#   python -m src.analyzer.bias.content.jobs.run_content_bias --periods TODAY,D7,D14
+#   python -m src.analyzer.bias.content.jobs.run_content_bias --periods TODAY,D7,D14,D30
 #
 # 4) refresh(같은 run+period 재실행 시 본문 점수만 reset 후 재적재)
 #   python -m src.analyzer.bias.content.jobs.run_content_bias --refresh
@@ -34,6 +34,7 @@ from src.analyzer.bias.content.core.content_bias import (
     PERIOD_D14,
     PERIOD_D7,
     PERIOD_TODAY,
+    PERIOD_D30,
     SentimentContentRow as CoreSentimentContentRow,
     compute_content_bias_items,
 )
@@ -61,20 +62,20 @@ def _logs_dir() -> Path:
 
 def _parse_periods(raw: str) -> List[str]:
     """
-    콤마 구분 기간 문자열을 TODAY/D7/D14 리스트로 정규화한다.
-    - 허용: TODAY, D7, D14
+    콤마 구분 기간 문자열을 TODAY/D7/D14/D30 리스트로 정규화한다.
+    - 허용: TODAY, D7, D14, D30
     - 중복 제거(순서 유지)
-    - 비어있으면 기본 ["TODAY", "D7"]
-      (원하면 settings.bias_content_periods에서 기본을 TODAY,D7,D14로 바꿔도 됨)
+    - 비어있으면 기본 ["TODAY", "D7", "D14", "D30"]
+      (원하면 settings.bias_content_periods에서 기본을 TODAY,D7,D14,D30로 바꿔도 됨)
     """
-    allowed = {PERIOD_TODAY, PERIOD_D7, PERIOD_D14}
+    allowed = {PERIOD_TODAY, PERIOD_D7, PERIOD_D14, PERIOD_D30}
     raw = (raw or "").strip()
     if not raw:
-        return [PERIOD_TODAY, PERIOD_D7]
+        return [PERIOD_TODAY, PERIOD_D7, PERIOD_D14, PERIOD_D30]
 
     parts = [p.strip().upper() for p in raw.split(",") if p.strip()]
     if not parts:
-        return [PERIOD_TODAY, PERIOD_D7]
+        return [PERIOD_TODAY, PERIOD_D7, PERIOD_D14, PERIOD_D30]
 
     seen: set[str] = set()
     out: List[str] = []
@@ -87,7 +88,7 @@ def _parse_periods(raw: str) -> List[str]:
     bad = [p for p in out if p not in allowed]
     if bad:
         raise ValueError(
-            f"--periods에는 {PERIOD_TODAY},{PERIOD_D7},{PERIOD_D14}만 허용됩니다. 잘못된 값: {bad}"
+            f"--periods에는 {PERIOD_TODAY},{PERIOD_D7},{PERIOD_D14},{PERIOD_D30}만 허용됩니다. 잘못된 값: {bad}"
         )
 
     return out
@@ -168,8 +169,8 @@ def _run_one_period(
     refresh_same_run: bool,
 ) -> Dict[str, Any]:
     period = str(period_filter).upper().strip()
-    if period not in (PERIOD_TODAY, PERIOD_D7, PERIOD_D14):
-        raise ValueError(f"period_filter는 {PERIOD_TODAY}/{PERIOD_D7}/{PERIOD_D14} 중 하나여야 합니다: {period}")
+    if period not in (PERIOD_TODAY, PERIOD_D7, PERIOD_D14, PERIOD_D30):
+        raise ValueError(f"period_filter는 {PERIOD_TODAY}/{PERIOD_D7}/{PERIOD_D14}/{PERIOD_D30} 중 하나여야 합니다: {period}")
 
     # 1) 입력 조회
     media_rows_db = select_media_sentiments_content(conn=conn, trend_run_seq=trend_run_seq, period_filter=period)
@@ -244,15 +245,15 @@ def main() -> None:
         "--period",
         type=str,
         default="",
-        help=f"(deprecated) 기간 필터({PERIOD_TODAY}/{PERIOD_D7}/{PERIOD_D14}). 가능하면 --periods 사용",
+        help=f"(deprecated) 기간 필터({PERIOD_TODAY}/{PERIOD_D7}/{PERIOD_D14}/{PERIOD_D30}). 가능하면 --periods 사용",
     )
 
-    # 권장: --periods TODAY,D7,D14
+    # 권장: --periods TODAY,D7,D14,D30
     parser.add_argument(
         "--periods",
         type=str,
         default=default_periods_raw,
-        help=f"기간 필터 목록(예: {PERIOD_TODAY} 또는 {PERIOD_TODAY},{PERIOD_D7},{PERIOD_D14})",
+        help=f"기간 필터 목록(예: {PERIOD_TODAY} 또는 {PERIOD_TODAY},{PERIOD_D7},{PERIOD_D14}, {PERIOD_D30})",
     )
 
     parser.add_argument(

@@ -11,7 +11,8 @@ from typing import Any, Dict, Iterable, List, Sequence, Tuple
 PERIOD_TODAY = "TODAY"
 PERIOD_D7 = "D7"
 PERIOD_D14 = "D14"
-SUPPORTED_PERIODS = (PERIOD_TODAY, PERIOD_D7, PERIOD_D14)
+PERIOD_D30 = "D30"
+SUPPORTED_PERIODS = (PERIOD_TODAY, PERIOD_D7, PERIOD_D14, PERIOD_D30)
 
 MEDIA_TOTAL = 0  # 전체 집계용 MEDIA_CODE
 
@@ -35,6 +36,9 @@ def build_windows(*, base_date: date, periods: Sequence[str]) -> List[PeriodWind
         elif p == PERIOD_D14:
             start = base_date - timedelta(days=13)
             windows.append(PeriodWindow(period_filter=PERIOD_D14, start_date=start, end_date=base_date))
+        elif p == PERIOD_D30:
+            start = base_date - timedelta(days=29)
+            windows.append(PeriodWindow(period_filter=PERIOD_D30, start_date=start, end_date=base_date))
         else:
             raise ValueError(f"지원하지 않는 period_filter: {p}")
 

@@ -110,19 +110,8 @@ export default function AdminUserManagementPage() {
       if (roleFilter !== "ALL" && u.role !== roleFilter) return false;
       if (!query) return true;
 
-      const hay = [
-        u.name,
-        u.userId,
-        u.email,
-        u.birthDate,
-        u.role,
-        String(u.userSeq),
-        u.lastLoginAt,
-        u.joinedAt,
-      ]
-        .join(" ")
-        .toLowerCase();
-
+      // 검색 범위: 이름/아이디만
+      const hay = [u.name, u.userId].join(" ").toLowerCase();
       return hay.includes(query);
     });
   }, [allUsersMerged, q, roleFilter]);
@@ -251,7 +240,7 @@ export default function AdminUserManagementPage() {
             <input
               id="user-search"
               className={styles.input}
-              placeholder="이름 / 아이디 / 이메일 / 생년월일 / 회원일련번호 검색"
+              placeholder="이름 / 아이디 검색"
               value={q}
               onChange={(e) => onQueryChange(e.target.value)}
             />

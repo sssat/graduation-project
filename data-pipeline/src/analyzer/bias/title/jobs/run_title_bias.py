@@ -7,8 +7,8 @@
 #
 # 하위호환 CLI:
 # - --trend-run-seq 15
-# - --period TODAY | D7 | D14
-# - --periods TODAY,D7,D14
+# - --period TODAY | D7 | D14 | D30
+# - --periods TODAY,D7,D14,D30
 # - --refresh
 
 from __future__ import annotations
@@ -25,6 +25,7 @@ from src.config.settings import settings
 from src.analyzer.bias.title.core.title_bias import (
     PERIOD_D7,
     PERIOD_D14,
+    PERIOD_D30,
     PERIOD_TODAY,
     SUPPORTED_PERIODS,
     run_title_bias_for_run,
@@ -38,16 +39,16 @@ def _now_in_tz() -> datetime:
 
 def _parse_periods(raw: str) -> List[str]:
     """
-    콤마 구분 기간 문자열을 TODAY/D7/D14 리스트로 정규화한다.
-    - 허용: TODAY, D7, D14
+    콤마 구분 기간 문자열을 TODAY/D7/D14/D30 리스트로 정규화한다.
+    - 허용: TODAY, D7, D14, D30
     - 중복 제거(순서 유지)
-    - 결과가 비면 기본 ["TODAY", "D7", "D14"]
+    - 결과가 비면 기본 ["TODAY", "D7", "D14", "D30"]
     """
     allowed = set(SUPPORTED_PERIODS)
 
     raw = (raw or "").strip()
     if not raw:
-        return [PERIOD_TODAY, PERIOD_D7, PERIOD_D14]
+        return [PERIOD_TODAY, PERIOD_D7, PERIOD_D14, PERIOD_D30]
 
     out: List[str] = []
     seen: set[str] = set()
@@ -62,7 +63,7 @@ def _parse_periods(raw: str) -> List[str]:
         seen.add(pf)
         out.append(pf)
 
-    return out if out else [PERIOD_TODAY, PERIOD_D7, PERIOD_D14]
+    return out if out else [PERIOD_TODAY, PERIOD_D7, PERIOD_D14, PERIOD_D30]
 
 
 def _settings_one_line(*, trend_run_seq: int, periods: List[str], refresh: bool) -> str:
@@ -111,10 +112,10 @@ def main() -> None:
 
     # periods:
     # - 미지정 시 settings.bias_title_periods 사용
-    parser.add_argument("--periods", type=str, default=None, help="기간 목록(콤마 구분) 예: TODAY,D7,D14")
+    parser.add_argument("--periods", type=str, default=None, help="기간 목록(콤마 구분) 예: TODAY,D7,D14,D30")
 
     # 하위호환: 단일 period
-    parser.add_argument("--period", type=str, default=None, help="단일 기간(TODAY 또는 D7 또는 D14)")
+    parser.add_argument("--period", type=str, default=None, help="단일 기간(TODAY 또는 D7 또는 D14 또는 D30)")
 
     # refresh:
     # - 옵션 미지정 시 settings.bias_title_refresh 사용
