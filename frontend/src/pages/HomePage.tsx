@@ -1,4 +1,5 @@
 // frontend/src/pages/HomePage.tsx
+
 import { Link } from "react-router-dom";
 import styles from "./HomePage.module.css";
 import { getTopKeywords, type TopKeywordItem } from "../mocks/keywordMockData";
@@ -27,33 +28,48 @@ export default function HomePage() {
 
   const dateText = `${year}년 ${month} ${day}일 (${weekday})`;
 
-  // KST 기준 "오늘 날짜"를 YYYY-MM-DD로 뽑아서, 04:00으로 고정 표기
   const kstDateYmd = new Intl.DateTimeFormat("en-CA", {
     timeZone: "Asia/Seoul",
     year: "numeric",
     month: "2-digit",
     day: "2-digit",
-  }).format(now); // 예: 2025-12-18
+  }).format(now);
 
-  const updatedAtText = `${kstDateYmd}-04:00`;
+  const updatedAtText = `${kstDateYmd} 06:00`;
 
-  const renderItem = (item: TopKeywordItem) => (
-    <Link
-      key={item.rank}
-      to={`/keywords/${encodeURIComponent(item.label)}`}
-      className={styles.statItem}
-      aria-label={`${item.label} 키워드 상세 보기`}
-    >
-      <div className={styles.statLabel}>
-        <span className={styles.statIndex}>{item.rank}</span>
-        {item.label}
-      </div>
-      <div className={styles.statCount}>
-        {item.count.toLocaleString("ko-KR")}
-        <span className={styles.statUnit}>건</span>
-      </div>
-    </Link>
-  );
+  const MIN_REQUIRED_COUNT = 10;
+
+  const renderItem = (item: TopKeywordItem) => {
+    const isInsufficient = item.count < MIN_REQUIRED_COUNT;
+
+    return (
+      <Link
+        key={item.rank}
+        to={isInsufficient ? "#" : `/keywords/${encodeURIComponent(item.label)}`}
+        className={styles.statItem}
+        aria-label={
+          isInsufficient
+            ? `${item.label} 키워드: 데이터 부족으로 분석 제공 불가`
+            : `${item.label} 키워드 상세 보기`
+        }
+        onClick={(e) => {
+          if (!isInsufficient) return;
+
+          e.preventDefault();
+          alert("데이터가 부족하여 분석을 제공하지 않습니다. (기사 10건 이상 필요)");
+        }}
+      >
+        <div className={styles.statLabel}>
+          <span className={styles.statIndex}>{item.rank}</span>
+          {item.label}
+        </div>
+        <div className={styles.statCount}>
+          {item.count.toLocaleString("ko-KR")}
+          <span className={styles.statUnit}>건</span>
+        </div>
+      </Link>
+    );
+  };
 
   return (
     <div className={styles.page}>

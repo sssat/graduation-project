@@ -9,6 +9,14 @@
   --ns-border-soft: rgba(148, 163, 184, 0.35);
   --ns-text-muted: #9ca3af;
   --ns-text-main: #e5e7eb;
+
+  /* 차트 색상(Chart.js에서 참조) */
+  --ns-bias-pos: #38bdf8;
+  --ns-bias-neg: #f97316;
+
+  --ns-sent-pos: #22c55e;
+  --ns-sent-neu: #e5e7eb;
+  --ns-sent-neg: #ef4444;
 }
 
 .pageRoot {
@@ -250,15 +258,15 @@
 }
 
 .swatchPositive {
-  background: #22c55e;
+  background: var(--ns-sent-pos);
 }
 
 .swatchNeutral {
-  background: #e5e7eb;
+  background: var(--ns-sent-neu);
 }
 
 .swatchNegative {
-  background: #ef4444;
+  background: var(--ns-sent-neg);
 }
 
 .biasCaption {

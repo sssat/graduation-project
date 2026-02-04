@@ -5,7 +5,7 @@ import { Link } from "react-router-dom";
 import Chart from "chart.js/auto";
 import styles from "./MediaComparePage.module.css";
 
-type Period = "today" | "7d";
+type Period = "7d" | "14d";
 
 type MediaRow = {
   key: string;
@@ -45,28 +45,28 @@ function formatDateYYYYMMDD(d: Date) {
   return `${yyyy}-${mm}-${dd}`;
 }
 
+function readCssVar(varName: string, fallback: string) {
+  const v = getComputedStyle(document.documentElement).getPropertyValue(varName).trim();
+  return v || fallback;
+}
+
 function pickTopWords(mediaKey: string, keyword: string, rand: () => number) {
-  // "상위 단어 카운팅" 느낌의 목업(감성/긍부정 강조 없음)
   const pools: Record<string, string[]> = {
+    overall: ["종합", "분석", "쟁점", "논의", "현안", "대응", "확대", "전망", "검증"],
+    yonhap: ["속보", "발표", "공식", "현안", "논의", "쟁점", "동향", "점검", "대응"],
+    pressian: ["비판", "논평", "쟁점", "정책", "현장", "논란", "검증", "대응", "분석"],
+    donga: ["단독", "취재", "파장", "대책", "혼선", "현안", "발언", "후속", "검증"],
     chosun: ["의사", "파업", "반발", "혼란", "쟁점", "논란", "현장", "확대", "갈등"],
     joongang: ["진통", "협상", "조정", "갈등", "분석", "쟁점", "속보", "대응", "논의"],
-    donga: ["단독", "취재", "파장", "대책", "혼선", "현안", "발언", "후속", "검증"],
     hani: ["공공의료", "확대", "지역", "불균형", "현장", "권리", "책임", "논의", "쟁점"],
     kyunghyang: ["현장", "증언", "쟁점", "후속", "점검", "문제", "대응", "논란", "기준"],
-    hankyung: ["투자", "성장", "실적", "시장", "전망", "전략", "기업", "지표", "확대"],
-    maeil: ["플랫폼", "혁신", "경쟁", "독점", "시장", "규제", "전략", "수요", "확대"],
-    kbs: ["정책", "갈등", "협의", "조정", "대책", "논의", "브리핑", "현안", "점검"],
-    mbc: ["노동", "안전", "논란", "현장", "취재", "확인", "점검", "대응", "사고"],
-    sbs: ["사건", "단독", "취재", "폭로", "후속", "단서", "쟁점", "논란", "현장"],
-    jtbc: ["심층", "분석", "AI", "쟁점", "현안", "점검", "논란", "검증", "후속"],
-    ytn: ["속보", "브리핑", "현안", "쟁점", "분석", "논의", "점검", "대응", "후속"],
-    yonhap: ["속보", "발표", "공식", "현안", "논의", "쟁점", "동향", "점검", "대응"],
+    seoul: ["정책", "논의", "쟁점", "해명", "대책", "점검", "현안", "조정", "갈등"],
+    hankookilbo: ["분석", "여론", "쟁점", "논의", "대응", "검증", "현안", "조사", "파장"],
   };
 
-  const base = pools[mediaKey] ?? pools.jtbc;
+  const base = pools[mediaKey] ?? pools.overall;
   const uniq = new Set<string>();
 
-  // 키워드도 상위 단어에 섞이도록(하지만 강조/색상 차이 없음)
   if (keyword.trim()) uniq.add(keyword.trim());
 
   while (uniq.size < 5) {
@@ -77,43 +77,275 @@ function pickTopWords(mediaKey: string, keyword: string, rand: () => number) {
   return Array.from(uniq).slice(0, 5);
 }
 
+/**
+ * ✅ 기사수(volume)를 "랜덤/시드"가 아니라 "고정 매핑"으로 제공
+ * - period별로 값이 다르게 나오도록 7d/14d를 따로 둠
+ * - 키워드/언론사 조합별로 항상 동일한 기사수가 나오게 됨
+ *
+ * 필요하면 이 테이블만 백엔드 응답으로 교체하면 됨.
+ */
+const FIXED_VOLUMES: Record<Period, Record<string, Record<string, number>>> = {
+  "7d": {
+    쿠팡: {
+      yonhap: 42,
+      pressian: 18,
+      donga: 31,
+      chosun: 28,
+      joongang: 26,
+      hani: 17,
+      kyunghyang: 15,
+      seoul: 19,
+      hankookilbo: 21,
+    },
+    문재인: {
+      yonhap: 22,
+      pressian: 14,
+      donga: 16,
+      chosun: 15,
+      joongang: 13,
+      hani: 12,
+      kyunghyang: 11,
+      seoul: 10,
+      hankookilbo: 12,
+    },
+    윤석열: {
+      yonhap: 38,
+      pressian: 20,
+      donga: 24,
+      chosun: 26,
+      joongang: 22,
+      hani: 19,
+      kyunghyang: 18,
+      seoul: 17,
+      hankookilbo: 20,
+    },
+    데이터: {
+      yonhap: 16,
+      pressian: 10,
+      donga: 11,
+      chosun: 12,
+      joongang: 10,
+      hani: 9,
+      kyunghyang: 8,
+      seoul: 9,
+      hankookilbo: 10,
+    },
+    "개인정보 유출": {
+      yonhap: 27,
+      pressian: 12,
+      donga: 18,
+      chosun: 16,
+      joongang: 15,
+      hani: 11,
+      kyunghyang: 10,
+      seoul: 12,
+      hankookilbo: 13,
+    },
+    삼성: {
+      yonhap: 33,
+      pressian: 12,
+      donga: 22,
+      chosun: 21,
+      joongang: 19,
+      hani: 10,
+      kyunghyang: 9,
+      seoul: 12,
+      hankookilbo: 14,
+    },
+    금리: {
+      yonhap: 25,
+      pressian: 10,
+      donga: 14,
+      chosun: 13,
+      joongang: 15,
+      hani: 9,
+      kyunghyang: 8,
+      seoul: 11,
+      hankookilbo: 12,
+    },
+    부동산: {
+      yonhap: 29,
+      pressian: 11,
+      donga: 16,
+      chosun: 17,
+      joongang: 15,
+      hani: 10,
+      kyunghyang: 9,
+      seoul: 12,
+      hankookilbo: 13,
+    },
+    AI: {
+      yonhap: 20,
+      pressian: 9,
+      donga: 12,
+      chosun: 11,
+      joongang: 10,
+      hani: 8,
+      kyunghyang: 7,
+      seoul: 9,
+      hankookilbo: 10,
+    },
+    전기차: {
+      yonhap: 1,
+      pressian: 1,
+      donga: 1,
+      chosun: 2,
+      joongang: 0,
+      hani: 0,
+      kyunghyang: 0,
+      seoul: 1,
+      hankookilbo: 1,
+    },
+  },
+  "14d": {
+    쿠팡: {
+      yonhap: 71,
+      pressian: 30,
+      donga: 52,
+      chosun: 47,
+      joongang: 44,
+      hani: 28,
+      kyunghyang: 25,
+      seoul: 31,
+      hankookilbo: 35,
+    },
+    문재인: {
+      yonhap: 36,
+      pressian: 22,
+      donga: 24,
+      chosun: 23,
+      joongang: 20,
+      hani: 19,
+      kyunghyang: 17,
+      seoul: 16,
+      hankookilbo: 18,
+    },
+    윤석열: {
+      yonhap: 64,
+      pressian: 34,
+      donga: 41,
+      chosun: 44,
+      joongang: 38,
+      hani: 33,
+      kyunghyang: 30,
+      seoul: 29,
+      hankookilbo: 33,
+    },
+    데이터: {
+      yonhap: 24,
+      pressian: 15,
+      donga: 17,
+      chosun: 18,
+      joongang: 15,
+      hani: 13,
+      kyunghyang: 12,
+      seoul: 13,
+      hankookilbo: 14,
+    },
+    "개인정보 유출": {
+      yonhap: 45,
+      pressian: 20,
+      donga: 29,
+      chosun: 27,
+      joongang: 25,
+      hani: 18,
+      kyunghyang: 16,
+      seoul: 19,
+      hankookilbo: 21,
+    },
+    삼성: {
+      yonhap: 55,
+      pressian: 20,
+      donga: 35,
+      chosun: 34,
+      joongang: 31,
+      hani: 17,
+      kyunghyang: 15,
+      seoul: 19,
+      hankookilbo: 22,
+    },
+    금리: {
+      yonhap: 40,
+      pressian: 16,
+      donga: 23,
+      chosun: 21,
+      joongang: 24,
+      hani: 14,
+      kyunghyang: 12,
+      seoul: 16,
+      hankookilbo: 18,
+    },
+    부동산: {
+      yonhap: 47,
+      pressian: 18,
+      donga: 25,
+      chosun: 27,
+      joongang: 24,
+      hani: 16,
+      kyunghyang: 14,
+      seoul: 18,
+      hankookilbo: 20,
+    },
+    AI: {
+      yonhap: 32,
+      pressian: 13,
+      donga: 19,
+      chosun: 18,
+      joongang: 16,
+      hani: 12,
+      kyunghyang: 11,
+      seoul: 13,
+      hankookilbo: 15,
+    },
+    전기차: {
+      yonhap: 29,
+      pressian: 12,
+      donga: 17,
+      chosun: 16,
+      joongang: 14,
+      hani: 11,
+      kyunghyang: 10,
+      seoul: 12,
+      hankookilbo: 13,
+    },
+  },
+};
+
+function getFixedVolume(keyword: string, period: Period, mediaKey: string) {
+  const byPeriod = FIXED_VOLUMES[period];
+  const byKeyword = byPeriod?.[keyword];
+  const v = byKeyword?.[mediaKey];
+  // 테이블에 없으면 0으로(= 기사 수 부족/비표시 정책에 걸릴 수 있음)
+  return typeof v === "number" ? v : 0;
+}
+
 function buildMockRows(keyword: string, period: Period): MediaRow[] {
   const medias: { key: string; label: string }[] = [
+    { key: "yonhap", label: "연합뉴스" },
+    { key: "pressian", label: "프레시안" },
+    { key: "donga", label: "동아일보" },
     { key: "chosun", label: "조선일보" },
     { key: "joongang", label: "중앙일보" },
-    { key: "donga", label: "동아일보" },
     { key: "hani", label: "한겨레" },
     { key: "kyunghyang", label: "경향신문" },
-    { key: "hankyung", label: "한국경제" },
-    { key: "maeil", label: "매일경제" },
-    { key: "kbs", label: "KBS" },
-    { key: "mbc", label: "MBC" },
-    { key: "sbs", label: "SBS" },
-    // 필요하면 아래도 쉽게 추가 가능
-    // { key: "jtbc", label: "JTBC" },
-    // { key: "ytn", label: "YTN" },
-    // { key: "yonhap", label: "연합뉴스" },
+    { key: "seoul", label: "서울신문" },
+    { key: "hankookilbo", label: "한국일보" },
   ];
 
+  // ✅ volume은 고정값, 나머지(편향/감성/대표단어)는 기존처럼 시드 기반으로 유지
+  // (원하면 이것들도 고정 테이블로 바꿀 수 있음)
   const seed = hashInt(`${keyword}-${period}-media-compare`);
   const rand = mulberry32(seed);
 
-  const periodScale = period === "today" ? 1 : 1.6;
-
   return medias.map((m) => {
-    // 기사량(건)
-    const baseVol = 50 + Math.floor(rand() * 80); // 50~129
-    const volume = Math.floor(baseVol * periodScale);
+    const volume = getFixedVolume(keyword, period, m.key);
 
-    // 편향도(-6~+6)
     const bias = clamp(Math.round((rand() * 12 - 6) * 10) / 10, -6, 6);
 
-    // 감성(합 100)
-    const p = Math.floor(15 + rand() * 30); // 15~44
-    const n = Math.floor(20 + rand() * 25); // 20~44
+    const p = Math.floor(15 + rand() * 30);
+    const n = Math.floor(20 + rand() * 25);
     let neg = 100 - (p + n);
 
-    // 너무 튀면 보정
     if (neg < 10) neg = 10;
     if (neg > 70) neg = 70;
 
@@ -121,7 +353,6 @@ function buildMockRows(keyword: string, period: Period): MediaRow[] {
     const positive = clamp(p, 5, 70);
     const negative = clamp(neg, 5, 80);
 
-    // 합을 정확히 100으로 맞추기
     const sum = positive + neutral + negative;
     const fix = 100 - sum;
     const fixedNeutral = clamp(neutral + fix, 0, 100);
@@ -140,19 +371,92 @@ function buildMockRows(keyword: string, period: Period): MediaRow[] {
   });
 }
 
-export default function MediaComparePage() {
-  const [period, setPeriod] = useState<Period>("today");
+function buildOverallRow(rows: MediaRow[], keyword: string, period: Period): MediaRow | null {
+  if (rows.length === 0) return null;
 
-  const TOP_KEYWORDS = useMemo(
+  const totalVol = rows.reduce((acc, r) => acc + r.volume, 0);
+  if (totalVol <= 0) return null;
+
+  const biasWeighted = rows.reduce((acc, r) => acc + r.bias * r.volume, 0) / Math.max(1, totalVol);
+  const bias = clamp(Math.round(biasWeighted * 10) / 10, -6, 6);
+
+  const posW = rows.reduce((acc, r) => acc + r.sentiment.positive * r.volume, 0) / totalVol;
+  const neuW = rows.reduce((acc, r) => acc + r.sentiment.neutral * r.volume, 0) / totalVol;
+  const negW = rows.reduce((acc, r) => acc + r.sentiment.negative * r.volume, 0) / totalVol;
+
+  const positive = clamp(Math.round(posW), 0, 100);
+  const negative = clamp(Math.round(negW), 0, 100);
+  let neutral = clamp(Math.round(neuW), 0, 100);
+
+  const sum = positive + neutral + negative;
+  const fix = 100 - sum;
+  neutral = clamp(neutral + fix, 0, 100);
+
+  const wordRand = mulberry32(hashInt(`${keyword}-${period}-overall-words`));
+  const topWords = pickTopWords("overall", keyword, wordRand);
+
+  return {
+    key: "overall",
+    label: "전체",
+    volume: totalVol,
+    bias,
+    sentiment: { positive, neutral, negative },
+    topWords,
+  };
+}
+
+export default function MediaComparePage() {
+  const [period, setPeriod] = useState<Period>("7d");
+
+  // 키워드 후보(원본). 여기서 "기간별 기사 수"로 정렬/필터링해서 화면에 뿌린다.
+  const ALL_KEYWORDS = useMemo(
     () => ["쿠팡", "문재인", "윤석열", "데이터", "개인정보 유출", "삼성", "금리", "부동산", "AI", "전기차"],
     []
   );
-  const [keyword, setKeyword] = useState<string>(TOP_KEYWORDS[0]);
 
-  const rows = useMemo(() => buildMockRows(keyword, period), [keyword, period]);
+  // period 기준으로 키워드별 총 기사 수(=9개 언론사 volume 합)를 계산
+  // - 기사 수 10 미만은 아예 숨김
+  // - 기사 수 내림차순으로 칩 배치
+  const keywordStats = useMemo(() => {
+    const stats = ALL_KEYWORDS.map((k) => {
+      const r = buildMockRows(k, period);
+      const totalArticles = r.reduce((acc, row) => acc + row.volume, 0);
+      return { keyword: k, totalArticles };
+    })
+      .filter((x) => x.totalArticles >= 10)
+      .sort((a, b) => b.totalArticles - a.totalArticles);
+
+    return stats;
+  }, [ALL_KEYWORDS, period]);
+
+  const visibleKeywords = useMemo(() => keywordStats.map((x) => x.keyword), [keywordStats]);
+
+  // 사용자가 마지막으로 클릭한 "의도" 키워드
+  const [keyword, setKeyword] = useState<string>(() => ALL_KEYWORDS[0] ?? "");
+
+  // 실제로 화면/분석에 쓰는 키워드(목록에서 사라지면 자동으로 1등 키워드로 대체)
+  // useEffect에서 setState로 맞추지 않고, 파생값으로 처리해서 React 경고를 제거한다.
+  const selectedKeyword = useMemo(() => {
+    if (visibleKeywords.length === 0) return "";
+    if (visibleKeywords.includes(keyword)) return keyword;
+    return visibleKeywords[0];
+  }, [visibleKeywords, keyword]);
+
+  const rows = useMemo(() => {
+    if (!selectedKeyword) return [];
+    return buildMockRows(selectedKeyword, period);
+  }, [selectedKeyword, period]);
+
+  const overallRow = useMemo(
+    () => (selectedKeyword ? buildOverallRow(rows, selectedKeyword, period) : null),
+    [rows, selectedKeyword, period]
+  );
+
+  const biasRows = useMemo(() => (overallRow ? [overallRow, ...rows] : rows), [overallRow, rows]);
+  const sentimentRows = useMemo(() => (overallRow ? [overallRow, ...rows] : rows), [overallRow, rows]);
 
   const summary = useMemo(() => {
-    const mediaCount = rows.length;
+    const mediaCount = rows.length; // 9개(키워드가 있으면)
     const totalArticles = rows.reduce((acc, r) => acc + r.volume, 0);
 
     const sortedByVol = [...rows].sort((a, b) => b.volume - a.volume);
@@ -164,22 +468,18 @@ export default function MediaComparePage() {
     return {
       mediaCount,
       totalArticles,
-      topVol,
+      topVol: topVol || "-",
       mostBiased,
     };
   }, [rows]);
 
-  // 상단 메타(키워드 상세 페이지처럼) 표시용 기간 문자열
   const metaRangeLabel = useMemo(() => {
     const end = new Date();
     end.setHours(0, 0, 0, 0);
 
-    if (period === "today") {
-      return formatDateYYYYMMDD(end);
-    }
-
+    const daysBack = period === "7d" ? 6 : 13;
     const start = new Date(end);
-    start.setDate(start.getDate() - 6);
+    start.setDate(start.getDate() - daysBack);
 
     return `${formatDateYYYYMMDD(start)} ~ ${formatDateYYYYMMDD(end)}`;
   }, [period]);
@@ -188,7 +488,7 @@ export default function MediaComparePage() {
   const biasCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const sentimentCanvasRef = useRef<HTMLCanvasElement | null>(null);
 
-  // 기사량 차트
+  // 기사량 차트 (언론사 9개만)
   useEffect(() => {
     if (!volumeCanvasRef.current) return;
     const ctx = volumeCanvasRef.current.getContext("2d");
@@ -196,6 +496,8 @@ export default function MediaComparePage() {
 
     const labels = rows.map((r) => r.label);
     const data = rows.map((r) => r.volume);
+
+    const blue = readCssVar("--ns-accent-blue", "#38bdf8");
 
     const chart = new Chart(ctx, {
       type: "bar",
@@ -205,7 +507,7 @@ export default function MediaComparePage() {
           {
             label: "기사량(건)",
             data,
-            backgroundColor: "#38bdf8",
+            backgroundColor: blue,
             borderWidth: 0,
             borderRadius: 6,
           },
@@ -215,14 +517,8 @@ export default function MediaComparePage() {
         responsive: true,
         maintainAspectRatio: false,
         scales: {
-          x: {
-            grid: { display: false },
-            ticks: { color: "#9ca3af", font: { size: 11 } },
-          },
-          y: {
-            grid: { color: "rgba(55,65,81,0.5)" },
-            ticks: { color: "#9ca3af", font: { size: 11 } },
-          },
+          x: { grid: { display: false }, ticks: { color: "#9ca3af", font: { size: 11 } } },
+          y: { grid: { color: "rgba(55,65,81,0.5)" }, ticks: { color: "#9ca3af", font: { size: 11 } } },
         },
         plugins: {
           legend: { display: false },
@@ -240,14 +536,17 @@ export default function MediaComparePage() {
     return () => chart.destroy();
   }, [rows]);
 
-  // 편향도 차트
+  // 편향도 차트 (맨 왼쪽 "전체" 포함)
   useEffect(() => {
     if (!biasCanvasRef.current) return;
     const ctx = biasCanvasRef.current.getContext("2d");
     if (!ctx) return;
 
-    const labels = rows.map((r) => r.label);
-    const data = rows.map((r) => r.bias);
+    const labels = biasRows.map((r) => r.label);
+    const data = biasRows.map((r) => r.bias);
+
+    const posColor = readCssVar("--ns-bias-pos", "#38bdf8");
+    const negColor = readCssVar("--ns-bias-neg", "#f97316");
 
     const chart = new Chart(ctx, {
       type: "bar",
@@ -261,7 +560,7 @@ export default function MediaComparePage() {
             borderRadius: 6,
             backgroundColor(context) {
               const raw = context.raw as number;
-              return raw >= 0 ? "#38bdf8" : "#f97316";
+              return raw >= 0 ? posColor : negColor;
             },
           },
         ],
@@ -270,14 +569,8 @@ export default function MediaComparePage() {
         responsive: true,
         maintainAspectRatio: false,
         scales: {
-          x: {
-            grid: { display: false },
-            ticks: { color: "#9ca3af", font: { size: 11 } },
-          },
-          y: {
-            grid: { color: "rgba(55,65,81,0.5)" },
-            ticks: { color: "#9ca3af", font: { size: 11 } },
-          },
+          x: { grid: { display: false }, ticks: { color: "#9ca3af", font: { size: 11 } } },
+          y: { grid: { color: "rgba(55,65,81,0.5)" }, ticks: { color: "#9ca3af", font: { size: 11 } } },
         },
         plugins: {
           legend: { display: false },
@@ -293,38 +586,38 @@ export default function MediaComparePage() {
     });
 
     return () => chart.destroy();
-  }, [rows]);
+  }, [biasRows]);
 
-  // 감성(스택) 차트
+  // 감성(스택) 차트 (맨 왼쪽 "전체" 포함)
   useEffect(() => {
     if (!sentimentCanvasRef.current) return;
     const ctx = sentimentCanvasRef.current.getContext("2d");
     if (!ctx) return;
 
-    const labels = rows.map((r) => r.label);
-    const positive = rows.map((r) => r.sentiment.positive);
-    const neutral = rows.map((r) => r.sentiment.neutral);
-    const negative = rows.map((r) => r.sentiment.negative);
+    const labels = sentimentRows.map((r) => r.label);
+    const positive = sentimentRows.map((r) => r.sentiment.positive);
+    const neutral = sentimentRows.map((r) => r.sentiment.neutral);
+    const negative = sentimentRows.map((r) => r.sentiment.negative);
+
+    const sentPos = readCssVar("--ns-sent-pos", "#22c55e");
+    const sentNeu = readCssVar("--ns-sent-neu", "#e5e7eb");
+    const sentNeg = readCssVar("--ns-sent-neg", "#ef4444");
 
     const chart = new Chart(ctx, {
       type: "bar",
       data: {
         labels,
         datasets: [
-          { label: "긍정", data: positive, backgroundColor: "#22c55e", borderWidth: 0 },
-          { label: "중립", data: neutral, backgroundColor: "#e5e7eb", borderWidth: 0 },
-          { label: "부정", data: negative, backgroundColor: "#ef4444", borderWidth: 0 },
+          { label: "긍정", data: positive, backgroundColor: sentPos, borderWidth: 0 },
+          { label: "중립", data: neutral, backgroundColor: sentNeu, borderWidth: 0 },
+          { label: "부정", data: negative, backgroundColor: sentNeg, borderWidth: 0 },
         ],
       },
       options: {
         responsive: true,
         maintainAspectRatio: false,
         scales: {
-          x: {
-            stacked: true,
-            grid: { display: false },
-            ticks: { color: "#9ca3af", font: { size: 11 } },
-          },
+          x: { stacked: true, grid: { display: false }, ticks: { color: "#9ca3af", font: { size: 11 } } },
           y: {
             stacked: true,
             grid: { color: "rgba(55,65,81,0.5)" },
@@ -338,9 +631,7 @@ export default function MediaComparePage() {
           },
         },
         plugins: {
-          legend: {
-            labels: { color: "#e5e7eb", font: { size: 11 } },
-          },
+          legend: { labels: { color: "#e5e7eb", font: { size: 11 } } },
           tooltip: {
             callbacks: {
               label(context) {
@@ -353,9 +644,9 @@ export default function MediaComparePage() {
     });
 
     return () => chart.destroy();
-  }, [rows]);
+  }, [sentimentRows]);
 
-  const rangeLabel = period === "today" ? "오늘" : "최근 7일";
+  const rangeLabel = period === "7d" ? "최근 7일" : "최근 14일";
 
   return (
     <main className={styles.pageRoot}>
@@ -371,20 +662,18 @@ export default function MediaComparePage() {
             <h1 className={styles.compareMainTitle}>언론사별 키워드 보도 비교 대시보드</h1>
 
             <p className={styles.compareSub}>
-              분석 기간: {metaRangeLabel} · 기사 수: {summary.totalArticles}건 · 분석 언론사:{" "}
-              {summary.mediaCount}개
+              분석 기간: {metaRangeLabel} · 기사 수: {summary.totalArticles}건 · 분석 언론사: {summary.mediaCount}개
             </p>
           </div>
         </div>
 
-        {/* 키워드 필터 라인과 "기간 필터"의 높이를 맞추기 위해, 기간 필터를 이 행으로 이동 */}
         <div className={styles.keywordFilterRow}>
           <div className={styles.keywordChipGroup} aria-label="TOP 키워드 선택">
-            {TOP_KEYWORDS.map((k) => (
+            {visibleKeywords.map((k) => (
               <button
                 key={k}
                 type="button"
-                className={`${styles.keywordChip} ${keyword === k ? styles.keywordChipActive : ""}`}
+                className={`${styles.keywordChip} ${selectedKeyword === k ? styles.keywordChipActive : ""}`}
                 onClick={() => setKeyword(k)}
               >
                 {k}
@@ -397,21 +686,21 @@ export default function MediaComparePage() {
             <div className={styles.filterChipGroup} role="tablist" aria-label="분석 기간 선택">
               <button
                 type="button"
-                className={`${styles.filterChip} ${period === "today" ? styles.active : ""}`}
-                onClick={() => setPeriod("today")}
-                role="tab"
-                aria-selected={period === "today"}
-              >
-                오늘
-              </button>
-              <button
-                type="button"
                 className={`${styles.filterChip} ${period === "7d" ? styles.active : ""}`}
                 onClick={() => setPeriod("7d")}
                 role="tab"
                 aria-selected={period === "7d"}
               >
                 최근 7일
+              </button>
+              <button
+                type="button"
+                className={`${styles.filterChip} ${period === "14d" ? styles.active : ""}`}
+                onClick={() => setPeriod("14d")}
+                role="tab"
+                aria-selected={period === "14d"}
+              >
+                최근 14일
               </button>
             </div>
           </div>
@@ -423,15 +712,23 @@ export default function MediaComparePage() {
           <div className={styles.cardHeader}>
             <div>
               <div className={styles.cardTitle}>오늘의 키워드 분석 요약</div>
-              <div className={styles.cardSub}>수집된 데이터와 다양한 분석 지표를 종합해 생성된 ai 요약입니다.</div>
+              <div className={styles.cardSub}>수집된 기사 내용을 바탕으로 생성한 AI 요약입니다.</div>
             </div>
             <span className={styles.badgeSoft}>요약 리포트</span>
           </div>
 
           <div className={styles.summaryText}>
-            {rangeLabel} 기준 {summary.mediaCount}개 언론사가 키워드 {keyword}을(를) 다룬 기사량은 총{" "}
-            {summary.totalArticles}건입니다. 기사량 상위 언론사는 {summary.topVol}이며, 편향도 절댓값 기준으로 변동 폭이 큰
-            언론사는 {summary.mostBiased}입니다.
+            {selectedKeyword ? (
+              <>
+                {rangeLabel} 기준 {summary.mediaCount}개 언론사가 키워드 {selectedKeyword}을(를) 다룬 기사량은 총{" "}
+                {summary.totalArticles}건입니다. 기사량 상위 언론사는 {summary.topVol}이며, 편향도 절댓값 기준으로
+                변동 폭이 큰 언론사는 {summary.mostBiased}입니다.
+              </>
+            ) : (
+              <>
+                {rangeLabel} 기준으로 기사 수 10건 이상인 키워드가 없어 목록에 표시할 키워드가 없습니다.
+              </>
+            )}
           </div>
         </article>
       </section>
@@ -483,7 +780,9 @@ export default function MediaComparePage() {
           <div className={styles.cardHeader}>
             <div>
               <div className={styles.cardTitle}>언론사별 감성 비율 비교</div>
-              <div className={styles.cardSub}>선택 키워드 기사 제목을 기반으로 긍정/중립/부정 비율을 비교한 결과입니다.</div>
+              <div className={styles.cardSub}>
+                선택 키워드 기사 본문을 기반으로 긍정/중립/부정 비율을 비교한 결과입니다.
+              </div>
             </div>
             <span className={styles.badgeSoft}>감성 분석</span>
           </div>

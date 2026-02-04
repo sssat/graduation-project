@@ -1,6 +1,13 @@
 /* frontend/src/pages/KeywordDetailPage.module.css */
 
-:global(:root) {
+.pageRoot {
+  /* 차트 색상은 “CSS 모듈에서만” 정의 */
+  --ns-sent-pos: #22c55e;
+  --ns-sent-neu: #e5e7eb;
+  --ns-sent-neg: #ef4444;
+  --ns-bias-pos: #38bdf8;
+  --ns-bias-neg: #f97316;
+
   --ns-accent-yellow: #facc15;
   --ns-accent-blue: #38bdf8;
   --ns-accent-purple: #8b5cf6;
@@ -9,9 +16,7 @@
   --ns-border-soft: rgba(148, 163, 184, 0.35);
   --ns-text-muted: #9ca3af;
   --ns-text-main: #e5e7eb;
-}
 
-.pageRoot {
   width: 100%;
   max-width: 1200px;
   margin: 0 auto;
@@ -122,22 +127,10 @@
 }
 
 .active {
-  background: linear-gradient(
-    135deg,
-    rgba(56, 189, 248, 0.45),
-    rgba(129, 140, 248, 0.6)
-  );
+  background: linear-gradient(135deg, rgba(56, 189, 248, 0.45), rgba(129, 140, 248, 0.6));
 }
 
-.filterSelect {
-  background: rgba(15, 23, 42, 0.9);
-  border-radius: 999px;
-  border: 1px solid rgba(148, 163, 184, 0.4);
-  color: #e5e7eb;
-  font-size: 12px;
-  padding: 6px 10px;
-  outline: none;
-}
+/* ✅ 언론사 select 제거했으므로 .filterSelect 는 더 이상 사용하지 않음 */
 
 /* 1) 카드 좌우 패딩 값을 변수로 빼서(= 20px) 내부 시각화가 카드 폭을 꽉 쓰게 만들기 */
 .card {
@@ -149,6 +142,7 @@
   padding: 18px var(--card-pad-x) 18px;
   box-shadow: 0 14px 32px rgba(15, 23, 42, 0.6);
 }
+
 .cardHeader {
   display: flex;
   justify-content: space-between;
@@ -218,7 +212,7 @@
   align-items: center;
   justify-content: center;
 
-  overflow: visible; /* 박스에 갇힌 느낌 완화 */
+  overflow: visible;
 }
 
 .wordcloudSvg {
@@ -258,16 +252,17 @@
   border-radius: 999px;
 }
 
+/* 범례 색도 CSS 변수 기반으로 맞춤 */
 .swatchPositive {
-  background: #22c55e;
+  background: var(--ns-sent-pos);
 }
 
 .swatchNeutral {
-  background: #e5e7eb;
+  background: var(--ns-sent-neu);
 }
 
 .swatchNegative {
-  background: #ef4444;
+  background: var(--ns-sent-neg);
 }
 
 .biasCaption {
@@ -327,15 +322,13 @@
   letter-spacing: -0.02em;
 }
 
-/* 힌트 텍스트는 카드 안쪽 정렬 유지 */
 .networkHint {
   margin-top: 8px;
   padding: 0 var(--card-pad-x);
   font-size: 11px;
   color: var(--ns-text-muted);
-  text-align: left; /* 왼쪽 정렬 */
+  text-align: left;
 }
-
 
 @media (max-width: 900px) {
   .pageRoot {

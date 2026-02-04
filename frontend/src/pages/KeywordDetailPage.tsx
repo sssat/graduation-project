@@ -1,7 +1,7 @@
 // frontend/src/pages/KeywordDetailPage.tsx
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Link, useParams, useSearchParams } from "react-router-dom";
+import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import Chart from "chart.js/auto";
 import cloud from "d3-cloud";
 import {
@@ -15,14 +15,7 @@ import {
   type SimulationNodeDatum,
 } from "d3-force";
 import styles from "./KeywordDetailPage.module.css";
-import {
-  getKeywordDetailMock,
-  MEDIA_LABEL_MAP,
-  type KeywordPeriod,
-  type MediaKey,
-  type WordItem,
-  type BiasItem,
-} from "../mocks/keywordMockData";
+import { getKeywordDetailMock, type KeywordPeriod, type WordItem, type BiasItem } from "../mocks/keywordMockData";
 
 function safeDecode(s: string) {
   try {
@@ -52,6 +45,31 @@ function mulberry32(seed: number) {
 
 function clamp(n: number, min: number, max: number) {
   return Math.max(min, Math.min(max, n));
+}
+
+type ChartColors = {
+  sentPos: string;
+  sentNeu: string;
+  sentNeg: string;
+  biasPos: string;
+  biasNeg: string;
+};
+
+function readCssVar(style: CSSStyleDeclaration, name: string) {
+  return (style.getPropertyValue(name) || "").trim();
+}
+
+function getChartColors(el: HTMLElement | null): ChartColors {
+  const base = el ?? document.documentElement;
+  const style = window.getComputedStyle(base);
+
+  const sentPos = readCssVar(style, "--ns-sent-pos") || "#22c55e";
+  const sentNeu = readCssVar(style, "--ns-sent-neu") || "#e5e7eb";
+  const sentNeg = readCssVar(style, "--ns-sent-neg") || "#ef4444";
+  const biasPos = readCssVar(style, "--ns-bias-pos") || "#38bdf8";
+  const biasNeg = readCssVar(style, "--ns-bias-neg") || "#f97316";
+
+  return { sentPos, sentNeu, sentNeg, biasPos, biasNeg };
 }
 
 /* ---------- 워드클라우드 ---------- */
@@ -180,8 +198,7 @@ function WordCloudD3({
                 style={{
                   fill: color,
                   fontSize: w.size,
-                  fontFamily:
-                    "system-ui, -apple-system, Segoe UI, Roboto, Noto Sans KR, sans-serif",
+                  fontFamily: "system-ui, -apple-system, Segoe UI, Roboto, Noto Sans KR, sans-serif",
                   fontWeight: 800,
                   letterSpacing: "-0.02em",
                 }}
@@ -212,7 +229,11 @@ type GraphLink = SimulationLinkDatum<GraphNode> & {
   target: string | GraphNode;
 };
 
-function buildMockCoMentionGraph(keyword: string, entities: string[], seed: string): {
+function buildMockCoMentionGraph(
+  keyword: string,
+  entities: string[],
+  seed: string
+): {
   nodes: GraphNode[];
   links: GraphLink[];
   kwId: string;
@@ -337,14 +358,12 @@ function NetworkGraph({
     return () => ro.disconnect();
   }, []);
 
-  // ✅ 렌더에서 쓸 nodes/links는 useMemo로 “결정적으로” 생성 (setState 필요 없음)
   const simData = useMemo(() => {
     const baseGraph = buildMockCoMentionGraph(keyword, entities, seed);
 
     const nodes: GraphNode[] = baseGraph.nodes.map((n) => ({ ...n }));
     const links: GraphLink[] = baseGraph.links.map((l) => ({ ...l }));
 
-    // Math.random 금지 대응: 결정적 랜덤
     const posSeed = hashInt(`pos-${seed}-${keyword}-${width}-${height}`);
     const randPos = mulberry32(posSeed);
 
@@ -465,7 +484,6 @@ function NetworkGraph({
     };
   }, [simData, width, height]);
 
-  // tick은 렌더 트리거 역할
   void tick;
 
   return (
@@ -546,42 +564,24 @@ function NetworkGraph({
       </div>
     </div>
   );
-} 
+}
 
 /* ---------- 페이지 ---------- */
 
-const MEDIA_ORDER: MediaKey[] = [
-  "all",
-  "chosun",
-  "joongang",
-  "hani",
-  "kbs",
-  "mbc",
-  "sbs",
-  "jtbc",
-  "ytn",
-  "yonhap",
-  "hankyung",
-];
-
-const MEDIA_OPTIONS: { value: MediaKey; label: string }[] = MEDIA_ORDER.map((value) => ({
-  value,
-  label: MEDIA_LABEL_MAP[value],
-}));
-
 export default function KeywordDetailPage() {
+  const navigate = useNavigate();
   const params = useParams();
   const [searchParams] = useSearchParams();
 
-  const rawKeyword =
-    params.keyword ?? searchParams.get("keyword") ?? searchParams.get("q") ?? "쿠팡";
-
+  const rawKeyword = params.keyword ?? searchParams.get("keyword") ?? searchParams.get("q") ?? "쿠팡";
   const keyword = useMemo(() => safeDecode(rawKeyword), [rawKeyword]);
 
-  const [period, setPeriod] = useState<KeywordPeriod>("today");
-  const [media, setMedia] = useState<MediaKey>("all");
+  const [period, setPeriod] = useState<KeywordPeriod>("7d");
 
-  const detail = useMemo(() => getKeywordDetailMock(keyword, period, media), [keyword, period, media]);
+  // ✅ 언론사 필터 제거: 항상 전체 언론사("all")로 고정
+  const media = "all" as const;
+
+  const detail = useMemo(() => getKeywordDetailMock(keyword, period, media), [keyword, period]);
 
   const meta = useMemo(
     () => ({
@@ -598,14 +598,45 @@ export default function KeywordDetailPage() {
   const entities = detail.entities;
   const reactionWordCloud: WordItem[] = detail.reactionWordCloud;
 
+  const rootRef = useRef<HTMLElement | null>(null);
+
   const sentimentCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const biasCanvasRef = useRef<HTMLCanvasElement | null>(null);
 
+  const sentimentChartRef = useRef<Chart | null>(null);
+  const biasChartRef = useRef<Chart | null>(null);
+
+  const isInsufficient = meta.articleCount < 10;
+
   useEffect(() => {
+    if (!isInsufficient) return;
+
+    if (sentimentChartRef.current) {
+      sentimentChartRef.current.destroy();
+      sentimentChartRef.current = null;
+    }
+    if (biasChartRef.current) {
+      biasChartRef.current.destroy();
+      biasChartRef.current = null;
+    }
+
+    window.alert("데이터가 부족하여 분석을 제공하지 않습니다. (기사 수 10건 미만)");
+    navigate("/", { replace: true });
+  }, [isInsufficient, navigate]);
+
+  useEffect(() => {
+    if (isInsufficient) return;
     if (!sentimentCanvasRef.current) return;
 
     const ctx = sentimentCanvasRef.current.getContext("2d");
     if (!ctx) return;
+
+    const chartColors = getChartColors(rootRef.current);
+
+    if (sentimentChartRef.current) {
+      sentimentChartRef.current.destroy();
+      sentimentChartRef.current = null;
+    }
 
     const chart = new Chart(ctx, {
       type: "doughnut",
@@ -614,7 +645,7 @@ export default function KeywordDetailPage() {
         datasets: [
           {
             data: [sentiment.positive, sentiment.neutral, sentiment.negative],
-            backgroundColor: ["#22c55e", "#e5e7eb", "#ef4444"],
+            backgroundColor: [chartColors.sentPos, chartColors.sentNeu, chartColors.sentNeg],
             borderWidth: 0,
           },
         ],
@@ -638,14 +669,27 @@ export default function KeywordDetailPage() {
       },
     });
 
-    return () => chart.destroy();
-  }, [sentiment.positive, sentiment.neutral, sentiment.negative]);
+    sentimentChartRef.current = chart;
+
+    return () => {
+      chart.destroy();
+      sentimentChartRef.current = null;
+    };
+  }, [isInsufficient, sentiment.positive, sentiment.neutral, sentiment.negative]);
 
   useEffect(() => {
+    if (isInsufficient) return;
     if (!biasCanvasRef.current) return;
 
     const ctx = biasCanvasRef.current.getContext("2d");
     if (!ctx) return;
+
+    const chartColors = getChartColors(rootRef.current);
+
+    if (biasChartRef.current) {
+      biasChartRef.current.destroy();
+      biasChartRef.current = null;
+    }
 
     const labels = biasItems.map((b) => b.label);
     const data = biasItems.map((b) => b.value);
@@ -662,7 +706,7 @@ export default function KeywordDetailPage() {
             borderRadius: 6,
             backgroundColor(context) {
               const raw = context.raw as number;
-              return raw >= 0 ? "#38bdf8" : "#f97316";
+              return raw >= 0 ? chartColors.biasPos : chartColors.biasNeg;
             },
           },
         ],
@@ -693,11 +737,20 @@ export default function KeywordDetailPage() {
       },
     });
 
-    return () => chart.destroy();
-  }, [biasItems]);
+    biasChartRef.current = chart;
+
+    return () => {
+      chart.destroy();
+      biasChartRef.current = null;
+    };
+  }, [isInsufficient, biasItems]);
+
+  if (isInsufficient) {
+    return null;
+  }
 
   return (
-    <main className={styles.pageRoot}>
+    <main ref={rootRef} className={styles.pageRoot}>
       <section className={styles.keywordHeader}>
         <div className={styles.breadcrumb}>
           <Link to="/">메인</Link>
@@ -712,23 +765,13 @@ export default function KeywordDetailPage() {
             </div>
             <h1 className={styles.keywordMainTitle}>{keyword} 키워드 상세 분석</h1>
             <div className={styles.keywordMeta}>
-              분석 기간: {meta.rangeLabel} · 기사 수: {meta.articleCount}건 · 분석 언론사:{" "}
-              {meta.mediaCount}개
+              분석 기간: {meta.rangeLabel} · 기사 수: {meta.articleCount}건 · 분석 언론사: {meta.mediaCount}개
             </div>
           </div>
 
           <div className={styles.filterBar}>
             <div className={styles.filterLabel}>기간</div>
             <div className={styles.filterChipGroup} role="tablist" aria-label="분석 기간 선택">
-              <button
-                type="button"
-                className={`${styles.filterChip} ${period === "today" ? styles.active : ""}`}
-                onClick={() => setPeriod("today")}
-                role="tab"
-                aria-selected={period === "today"}
-              >
-                오늘
-              </button>
               <button
                 type="button"
                 className={`${styles.filterChip} ${period === "7d" ? styles.active : ""}`}
@@ -738,21 +781,18 @@ export default function KeywordDetailPage() {
               >
                 최근 7일
               </button>
+              <button
+                type="button"
+                className={`${styles.filterChip} ${period === "14d" ? styles.active : ""}`}
+                onClick={() => setPeriod("14d")}
+                role="tab"
+                aria-selected={period === "14d"}
+              >
+                최근 14일
+              </button>
             </div>
 
-            <div className={styles.filterLabel}>언론사</div>
-            <select
-              className={styles.filterSelect}
-              value={media}
-              onChange={(e) => setMedia(e.target.value as MediaKey)}
-              aria-label="언론사 선택"
-            >
-              {MEDIA_OPTIONS.map((opt) => (
-                <option key={opt.value} value={opt.value}>
-                  {opt.label}
-                </option>
-              ))}
-            </select>
+            {/* ✅ 언론사 필터 제거됨 (항상 전체 언론사) */}
           </div>
         </div>
       </section>
@@ -762,7 +802,7 @@ export default function KeywordDetailPage() {
           <div className={styles.cardHeader}>
             <div>
               <div className={styles.cardTitle}>오늘의 키워드 분석 요약</div>
-              <div className={styles.cardSub}>수집된 데이터와 다양한 분석 지표를 종합해 생성된 ai 요약입니다.</div>
+              <div className={styles.cardSub}>수집된 기사 내용을 바탕으로 생성한 AI 요약입니다.</div>
             </div>
             <span className={styles.badgeSoft}>요약 리포트</span>
           </div>
@@ -780,14 +820,14 @@ export default function KeywordDetailPage() {
             <span className={styles.badgeSoft}>제목 기반</span>
           </div>
 
-          <WordCloudD3 items={titleWordCloud} height={220} seed={`${keyword}-${period}-${media}-title`} />
+          <WordCloudD3 items={titleWordCloud} height={220} seed={`${keyword}-${period}-all-title`} />
         </article>
 
         <article className={styles.card}>
           <div className={styles.cardHeader}>
             <div>
               <div className={styles.cardTitle}>감성 분석 결과</div>
-              <div className={styles.cardSub}>제목 텍스트를 기반으로 긍정/중립/부정 비율을 집계했습니다.</div>
+              <div className={styles.cardSub}>기사 본문을 기반으로 긍정/중립/부정 비율을 집계했습니다.</div>
             </div>
             <span className={styles.badgeSoft}>텍스트 감성</span>
           </div>
@@ -845,7 +885,7 @@ export default function KeywordDetailPage() {
             <span className={styles.badgeSoft}>공동 언급 네트워크</span>
           </div>
 
-          <NetworkGraph keyword={keyword} entities={entities} height={260} seed={`${keyword}-${period}-${media}`} />
+          <NetworkGraph keyword={keyword} entities={entities} height={260} seed={`${keyword}-${period}-all`} />
         </article>
       </section>
 
@@ -859,7 +899,7 @@ export default function KeywordDetailPage() {
             <span className={styles.badgeSoft}>댓글 기반</span>
           </div>
 
-          <WordCloudD3 items={reactionWordCloud} height={220} seed={`${keyword}-${period}-${media}-reaction`} />
+          <WordCloudD3 items={reactionWordCloud} height={220} seed={`${keyword}-${period}-all-reaction`} />
         </article>
       </section>
     </main>
