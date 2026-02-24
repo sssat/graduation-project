@@ -16,6 +16,17 @@ import AdminDashboardPage from "../pages/AdminDashboardPage";
 import AdminUserManagementPage from "../pages/AdminUserManagementPage";
 import { useAuth } from "../hooks/useAuth";
 
+import FindIdPage from "../pages/AuthPage/FindIdPage/FindIdPage";
+import FindIdResultFailPage from "../pages/AuthPage/FindIdPage/FindIdResultFailPage";
+import FindIdResultSuccessPage from "../pages/AuthPage/FindIdPage/FindIdResultSuccessPage";
+
+import FindPasswordPage from "../pages/AuthPage/FindPasswordPage/FindPasswordPage";
+import FindPasswordResultFailPage from "../pages/AuthPage/FindPasswordPage/FindPasswordResultFailPage";
+import FindPasswordResultSuccessPage from "../pages/AuthPage/FindPasswordPage/FindPasswordResultSuccessPage";
+
+// ✅ 추가
+import ChangePasswordPage from "../pages/AuthPage/ChangePasswordPage/ChangePasswordPage";
+
 function RequireAuth({ children }: { children: React.ReactNode }) {
   const { auth } = useAuth();
   const location = useLocation();
@@ -52,18 +63,6 @@ function RequireSuperAdmin({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
-function ChangePasswordPlaceholder() {
-  return (
-    <main style={{ width: "100%", maxWidth: 720, margin: "0 auto", padding: "28px 18px" }}>
-      <h1 style={{ margin: 0, fontSize: 22, fontWeight: 700 }}>비밀번호 변경</h1>
-      <p style={{ marginTop: 10, color: "#9ca3af", fontSize: 13 }}>
-        이 페이지는 아직 연결만 해둔 상태입니다. ChangePasswordPage 컴포넌트가 준비되면 여기 대신 라우트
-        element를 교체하면 됩니다.
-      </p>
-    </main>
-  );
-}
-
 export default function AppRoutes() {
   return (
     <Routes>
@@ -82,11 +81,20 @@ export default function AppRoutes() {
         <Route path="auth/signup" element={<SignUpPage />} />
         <Route path="auth/signup/success" element={<SignUpSuccessPage />} />
 
+        <Route path="auth/find-id" element={<FindIdPage />} />
+        <Route path="auth/find-id/fail" element={<FindIdResultFailPage />} />
+        <Route path="auth/find-id/success" element={<FindIdResultSuccessPage />} />
+
+        <Route path="auth/find-password" element={<FindPasswordPage />} />
+        <Route path="auth/find-password/fail" element={<FindPasswordResultFailPage />} />
+        <Route path="auth/find-password/success" element={<FindPasswordResultSuccessPage />} />
+
+        {/* ✅ 플레이스홀더 제거 + 실제 페이지 연결 */}
         <Route
           path="auth/change-password"
           element={
             <RequireAuth>
-              <ChangePasswordPlaceholder />
+              <ChangePasswordPage />
             </RequireAuth>
           }
         />
@@ -100,7 +108,6 @@ export default function AppRoutes() {
           }
         />
 
-        {/* SUPER_ADMIN 전용: 회원 관리 */}
         <Route
           path="admin/users"
           element={

@@ -432,7 +432,10 @@ export default function AdminDashboardPage() {
                           <span className={logStatusClass(s)}>{row.isSuccess ? "성공" : "실패"}</span>
                         </td>
                         <td>{row.ipAddress}</td>
-                        <td>{row.userSeq}</td>
+
+                        {/* 성공일 때만 회원일련번호 표시 */}
+                        <td>{row.isSuccess ? row.userSeq ?? "—" : "—"}</td>
+
                         <td className={styles.cellWrap}>{row.userAgent ?? "—"}</td>
                       </tr>
                     );

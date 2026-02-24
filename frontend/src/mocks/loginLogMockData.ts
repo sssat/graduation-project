@@ -7,7 +7,7 @@ export type LoginAttemptLogItem = {
   isSuccess: boolean;
   ipAddress: string;
   userAgent?: string | null;
-  userSeq: number;
+  userSeq: number | null;
 };
 
 function pad2(n: number) {
@@ -48,7 +48,8 @@ export function getAllLoginAttemptLogs(): LoginAttemptLogItem[] {
     const ipAddress = i % 2 === 0 ? "203.0.113.10" : "198.51.100.24";
     const userAgent = agents[i % agents.length];
 
-    const userSeq = isSuccess ? (inputId === "admin" ? 1 : 40 + (i % 7)) : 0;
+    // 성공일 때만 회원일련번호를 부여, 실패면 null
+    const userSeq = isSuccess ? (inputId === "admin" ? 1 : 40 + (i % 7)) : null;
 
     rows.push({
       loginLogSeq,
