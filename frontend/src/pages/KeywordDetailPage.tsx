@@ -338,6 +338,7 @@ type GraphNode = SimulationNodeDatum & {
   group: number;
   value: number;
   pinned?: boolean;
+  seedLocked?: boolean;
 };
 
 type GraphLink = SimulationLinkDatum<GraphNode> & {
@@ -345,6 +346,25 @@ type GraphLink = SimulationLinkDatum<GraphNode> & {
   source: string | GraphNode;
   target: string | GraphNode;
 };
+
+const COOC_RENDER_MAX_NODES = 18;
+const COOC_RENDER_MAX_LINKS = 45;
+const COOC_LABEL_TOP_N = 8;
+const COOC_SEED_RADIUS_MULTIPLIER = 1.25;
+
+function normalizeGraphLabel(label: unknown): string {
+  return String(label ?? "")
+    .replace(/[\s\u200B-\u200D\uFEFF]+/g, " ")
+    .trim();
+}
+
+function getGraphNodeRadius(node: Pick<GraphNode, "group" | "value">) {
+  const base = clamp(10 + (node.value ?? 0) * 2.0, 14, 34);
+  if (node.group === 0) {
+    return clamp(base * COOC_SEED_RADIUS_MULTIPLIER, 16, 44);
+  }
+  return base;
+}
 
 function buildApiCoMentionGraph(
   keyword: string,
@@ -355,33 +375,75 @@ function buildApiCoMentionGraph(
   nodes: GraphNode[];
   links: GraphLink[];
 } {
-  const seedValue = hashInt(`graph-${seed}-${keyword}`);
+  const normalizedKeyword = String(keyword ?? "").trim();
+  const seedValue = hashInt(`graph-${seed}-${normalizedKeyword}`);
   const rand = mulberry32(seedValue);
 
-  const maxNodeSize = apiNodes.length ? Math.max(...apiNodes.map((n) => n.size || 0)) : 1;
+  const validApiNodes = (apiNodes ?? []).filter((n) => normalizeGraphLabel(n.label));
+  const validNodeIdSet = new Set(validApiNodes.map((n) => String(n.id)));
+  const validApiEdges = (apiEdges ?? []).filter(
+    (e) => validNodeIdSet.has(String(e.source)) && validNodeIdSet.has(String(e.target))
+  );
+
+  const maxNodeSize = validApiNodes.length ? Math.max(...validApiNodes.map((n) => n.size || 0)) : 1;
   const safeMaxNodeSize = maxNodeSize > 0 ? maxNodeSize : 1;
 
-  const nodeIdSet = new Set(apiNodes.map((n) => String(n.id)));
+  const sortedNodes = [...validApiNodes].sort((a, b) => (b.size || 0) - (a.size || 0));
+  const keywordNodeIds = sortedNodes
+    .filter((n) => normalizeGraphLabel(n.label) === normalizedKeyword)
+    .map((n) => String(n.id));
 
-  const nodes: GraphNode[] = apiNodes.map((n) => {
-    const isKeywordNode = n.label === keyword;
+  const selectedNodeIds = new Set<string>();
+  for (const id of keywordNodeIds) selectedNodeIds.add(id);
+  for (const n of sortedNodes) {
+    if (selectedNodeIds.size >= COOC_RENDER_MAX_NODES) break;
+    selectedNodeIds.add(String(n.id));
+  }
+
+  const filteredEdges = [...validApiEdges]
+    .filter((e) => selectedNodeIds.has(String(e.source)) && selectedNodeIds.has(String(e.target)))
+    .sort((a, b) => (b.weight || 0) - (a.weight || 0))
+    .slice(0, COOC_RENDER_MAX_LINKS);
+
+  const linkedNodeIds = new Set<string>();
+  for (const e of filteredEdges) {
+    linkedNodeIds.add(String(e.source));
+    linkedNodeIds.add(String(e.target));
+  }
+  for (const id of keywordNodeIds) linkedNodeIds.add(id);
+
+  let finalApiNodes = sortedNodes.filter(
+    (n) => selectedNodeIds.has(String(n.id)) && linkedNodeIds.has(String(n.id))
+  );
+
+  if (!finalApiNodes.length) {
+    finalApiNodes = sortedNodes.slice(0, Math.min(sortedNodes.length, COOC_RENDER_MAX_NODES));
+  }
+
+  const nodeIdSet = new Set(finalApiNodes.map((n) => String(n.id)));
+
+  const nodes: GraphNode[] = finalApiNodes.map((n) => {
+    const normalizedLabel = normalizeGraphLabel(n.label);
+    const isKeywordNode = normalizedLabel === normalizedKeyword;
     const size = Number.isFinite(n.size) ? n.size : 0;
     const normalizedValue = clamp(3 + (size / safeMaxNodeSize) * 7, 3, 10);
 
     return {
       id: String(n.id),
-      label: n.label,
-      group: isKeywordNode ? 0 : 1 + (hashInt(n.label) % 3),
+      label: normalizedLabel,
+      group: isKeywordNode ? 0 : 1 + (hashInt(normalizedLabel) % 3),
       value: normalizedValue,
+      pinned: isKeywordNode ? true : undefined,
+      seedLocked: isKeywordNode ? true : undefined,
       x: (rand() - 0.5) * 80,
       y: (rand() - 0.5) * 80,
     };
   });
 
-  const maxEdgeWeight = apiEdges.length ? Math.max(...apiEdges.map((e) => e.weight || 0)) : 1;
+  const maxEdgeWeight = filteredEdges.length ? Math.max(...filteredEdges.map((e) => e.weight || 0)) : 1;
   const safeMaxEdgeWeight = maxEdgeWeight > 0 ? maxEdgeWeight : 1;
 
-  const links: GraphLink[] = apiEdges
+  const links: GraphLink[] = filteredEdges
     .filter((e) => nodeIdSet.has(String(e.source)) && nodeIdSet.has(String(e.target)))
     .map((e) => {
       const weight = Number.isFinite(e.weight) ? e.weight : 0;
@@ -468,11 +530,37 @@ function NetworkGraph({
     for (const n of nodes) {
       if (typeof n.x !== "number") n.x = width / 2 + (randPos() - 0.5) * 40;
       if (typeof n.y !== "number") n.y = height / 2 + (randPos() - 0.5) * 40;
+
+      if (n.group === 0) {
+        n.pinned = true;
+        n.seedLocked = true;
+        n.x = width / 2;
+        n.y = height / 2;
+        n.fx = width / 2;
+        n.fy = height / 2;
+      }
     }
 
     const nodeMap = new Map(nodes.map((n) => [n.id, n] as const));
     return { nodes, links, nodeMap };
   }, [keyword, apiNodes, apiEdges, seed, width, height]);
+
+  const labelVisibleIds = useMemo(() => {
+    const sorted = [...simData.nodes].sort((a, b) => (b.value ?? 0) - (a.value ?? 0));
+    const ids = new Set<string>();
+
+    for (const n of simData.nodes) {
+      if (n.group === 0) ids.add(n.id);
+    }
+    for (const n of sorted.slice(0, COOC_LABEL_TOP_N)) {
+      ids.add(n.id);
+    }
+
+    return ids;
+  }, [simData.nodes]);
+
+  // 라벨 비표시 노드는 원/텍스트 자체를 렌더링하지 않아 "빈 노드"처럼 보이는 현상을 방지한다.
+  const renderedNodeIds = labelVisibleIds;
 
   const resolveNode = (x: string | GraphNode) => {
     if (typeof x === "string") return simData.nodeMap.get(x) ?? null;
@@ -487,6 +575,8 @@ function NetworkGraph({
   };
 
   const onNodePointerDown = (e: React.PointerEvent, node: GraphNode) => {
+    if (node.seedLocked) return;
+
     const sim = simRef.current;
     const svg = svgRef.current;
     if (!sim || !svg) return;
@@ -524,7 +614,13 @@ function NetworkGraph({
 
     if (d.pointerId === e.pointerId) {
       const n = d.node;
-      if (n.pinned) {
+      if (n.seedLocked) {
+        n.pinned = true;
+        n.fx = width / 2;
+        n.fy = height / 2;
+        n.x = width / 2;
+        n.y = height / 2;
+      } else if (n.pinned) {
         n.pinned = false;
         n.fx = null;
         n.fy = null;
@@ -553,18 +649,18 @@ function NetworkGraph({
           .id((d: GraphNode) => d.id)
           .distance((l: GraphLink) => {
             const v = l.value ?? 1;
-            return clamp(140 - v * 30, 70, 160);
+            return clamp(180 - v * 30, 96, 210);
           })
           .strength((l: GraphLink) => {
             const v = l.value ?? 1;
-            return clamp(0.25 + v * 0.08, 0.2, 0.6);
+            return clamp(0.22 + v * 0.06, 0.18, 0.45);
           })
       )
-      .force("charge", forceManyBody().strength(-240))
+      .force("charge", forceManyBody().strength(-420))
       .force("center", forceCenter(width / 2, height / 2))
       .force(
         "collide",
-        forceCollide<GraphNode>().radius((d: GraphNode) => clamp(10 + d.value * 1.8, 14, 34) + 6)
+        forceCollide<GraphNode>().radius((d: GraphNode) => getGraphNodeRadius(d) + 12)
       );
 
     let raf = 0;
@@ -586,7 +682,7 @@ function NetworkGraph({
 
   void tick;
 
-  if (!apiNodes.length) {
+  if (!simData.nodes.length) {
     return (
       <div ref={wrapRef} className={styles.networkWrap}>
         <div className={styles.emptyBox}>표시할 공동 언급 네트워크 데이터가 없습니다.</div>
@@ -612,6 +708,7 @@ function NetworkGraph({
             const s = resolveNode(l.source);
             const t = resolveNode(l.target);
             if (!s || !t) return null;
+            if (!renderedNodeIds.has(s.id) || !renderedNodeIds.has(t.id)) return null;
 
             const w = clamp(l.value ?? 1, 0.6, 3.0);
             const strokeW = clamp(1.4 + w * 0.9, 1.4, 4.2);
@@ -633,10 +730,13 @@ function NetworkGraph({
 
         <g className={styles.networkNodes}>
           {simData.nodes.map((n) => {
+            if (!renderedNodeIds.has(n.id)) return null;
+
             const idx = n.group;
             const c = palette[idx % palette.length];
+            const isSeedNode = n.group === 0;
 
-            const r = clamp(10 + n.value * 2.0, 14, 34);
+            const r = getGraphNodeRadius(n);
             const x = n.x ?? width / 2;
             const y = n.y ?? height / 2;
 
@@ -653,14 +753,17 @@ function NetworkGraph({
                   r={r}
                   className={styles.networkCircle}
                   style={{
-                    fill: c.fill,
-                    stroke: c.stroke,
-                    strokeWidth: n.group === 0 ? 2.2 : 1.6,
+                    fill: isSeedNode ? "#ffffff" : c.fill,
+                    stroke: isSeedNode ? "rgba(148,163,184,0.95)" : c.stroke,
+                    strokeWidth: isSeedNode ? 2.8 : 1.6,
+                    opacity: 1,
                   }}
                 />
-                <text className={styles.networkLabel} textAnchor="middle" y={r + 16}>
-                  {n.label}
-                </text>
+                {n.label ? (
+                  <text className={styles.networkLabel} textAnchor="middle" y={r + 16}>
+                    {n.label}
+                  </text>
+                ) : null}
               </g>
             );
           })}
@@ -668,7 +771,7 @@ function NetworkGraph({
       </svg>
 
       <div className={styles.networkHint}>
-        노드를 드래그해 배치할 수 있습니다. 놓으면 고정되고, 다시 누르면 고정이 해제됩니다.
+        상위 핵심 노드/연결만 표시합니다(라벨 비표시 노드는 화면에서 제외). 노드를 드래그해 배치할 수 있고, 놓으면 고정되며 다시 누르면 고정이 해제됩니다.
       </div>
     </div>
   );
@@ -1226,7 +1329,7 @@ export default function KeywordDetailPage() {
             keyword={displayKeyword}
             apiNodes={viewData.coocNodes}
             apiEdges={viewData.coocEdges}
-            height={260}
+            height={340}
             seed={`${displayKeyword}-${period}-cooc`}
           />
         </article>
