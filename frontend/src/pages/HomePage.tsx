@@ -1,19 +1,27 @@
 // frontend/src/pages/HomePage.tsx
 
+import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import styles from "./HomePage.module.css";
-import { getTopKeywords, type TopKeywordItem } from "../mocks/keywordMockData";
+import {
+  getAnalyticsOverview,
+  getMediaCompareTopKeywords,
+  type AnalyticsOverviewTopKeywordItem,
+} from "../api/analytics";
+import { getErrorMessage } from "../api/types";
 
-export default function HomePage() {
-  const collectedNewsCount = 12300;
-  const keywordCount = 10;
+type HomeTopKeywordItem = {
+  rank: number;
+  keywordSeq: number | null;
+  label: string;
+  count: number;
+  isAnalyzable: boolean;
+};
 
-  const topKeywords: TopKeywordItem[] = getTopKeywords();
-  const left = topKeywords.slice(0, 5);
-  const right = topKeywords.slice(5, 10);
+const TOP_KEYWORD_LIMIT = 10;
+const TOP_KEYWORD_LEFT_COLUMN_COUNT = 5;
 
-  const now = new Date();
-
+function formatTodayKoreanDate(now: Date): string {
   const parts = new Intl.DateTimeFormat("ko-KR", {
     year: "numeric",
     month: "long",
@@ -26,38 +34,201 @@ export default function HomePage() {
   const day = parts.find((p) => p.type === "day")?.value ?? "";
   const weekday = parts.find((p) => p.type === "weekday")?.value ?? "";
 
-  const dateText = `${year}년 ${month} ${day}일 (${weekday})`;
+  return `${year}년 ${month} ${day}일 (${weekday})`;
+}
 
-  const kstDateYmd = new Intl.DateTimeFormat("en-CA", {
+function formatKstUpdatedBase(now: Date): string {
+  return new Intl.DateTimeFormat("en-CA", {
     timeZone: "Asia/Seoul",
     year: "numeric",
     month: "2-digit",
     day: "2-digit",
   }).format(now);
+}
 
+function toPositiveIntOrNull(value: unknown): number | null {
+  if (typeof value !== "number" || !Number.isFinite(value)) return null;
+  if (!Number.isInteger(value) || value <= 0) return null;
+  return value;
+}
+
+function readKeywordSeqFromOverviewItem(item: AnalyticsOverviewTopKeywordItem): number | null {
+  // 명세서상 overview TopKeywordItem에는 keyword_seq가 없을 수 있으므로 안전하게 optional 처리
+  const candidate = (item as AnalyticsOverviewTopKeywordItem & { keyword_seq?: unknown }).keyword_seq;
+  return toPositiveIntOrNull(candidate);
+}
+
+function mapTopKeywordItem(
+  item: AnalyticsOverviewTopKeywordItem,
+  keywordSeqByName: Map<string, number>,
+): HomeTopKeywordItem {
+  const seqFromOverview = readKeywordSeqFromOverviewItem(item);
+  const seqFromFallback = keywordSeqByName.get(item.keyword) ?? null;
+
+  return {
+    rank: item.rank_no,
+    keywordSeq: seqFromOverview ?? seqFromFallback,
+    label: item.keyword,
+    count: item.article_count,
+    isAnalyzable: item.is_analyzable,
+  };
+}
+
+function showNotAnalyzableAlert(keyword: string, count: number): void {
+  window.alert(
+    `'${keyword}' 키워드는 기사 수가 ${count.toLocaleString(
+      "ko-KR",
+    )}건으로 10건 미만이라 분석 결과를 제공하지 않습니다.\n\n분석 제공 기준: 기사 10건 이상`,
+  );
+}
+
+function showMissingKeywordSeqAlert(keyword: string): void {
+  window.alert(
+    `'${keyword}' 키워드의 상세 분석 링크 정보(keyword_seq)를 찾지 못했습니다.\n\n` +
+      "백엔드 overview 응답 또는 프론트 매핑을 확인해주세요.",
+  );
+}
+
+export default function HomePage() {
+  const [collectedNewsCount, setCollectedNewsCount] = useState<number>(0);
+  const [topKeywords, setTopKeywords] = useState<HomeTopKeywordItem[]>([]);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const fetchOverview = async (): Promise<void> => {
+      setIsLoading(true);
+      setErrorMessage(null);
+
+      try {
+        const [overviewData, mediaCompareTopKeywordData] = await Promise.all([
+          getAnalyticsOverview(),
+          // overview 명세에는 keyword_seq가 없어서 상세 페이지 이동용 seq를 보완 매핑으로 가져온다.
+          // 이 호출이 실패해도 홈 화면 자체는 계속 보여주기 위해 개별적으로 무시 가능하게 처리한다.
+          getMediaCompareTopKeywords({ period: "D7", limit: TOP_KEYWORD_LIMIT }).catch(() => null),
+        ]);
+
+        if (cancelled) return;
+
+        const keywordSeqByName = new Map<string, number>();
+        for (const item of mediaCompareTopKeywordData?.items ?? []) {
+          if (
+            typeof item.keyword === "string" &&
+            typeof item.keyword_seq === "number" &&
+            Number.isInteger(item.keyword_seq) &&
+            item.keyword_seq > 0
+          ) {
+            keywordSeqByName.set(item.keyword, item.keyword_seq);
+          }
+        }
+
+        const mapped = overviewData.top_keywords
+          .slice(0, TOP_KEYWORD_LIMIT)
+          .map((item) => mapTopKeywordItem(item, keywordSeqByName));
+
+        setCollectedNewsCount(overviewData.collected_article_count);
+        setTopKeywords(mapped);
+      } catch (error: unknown) {
+        if (cancelled) return;
+
+        setErrorMessage(getErrorMessage(error, "홈 화면 데이터를 불러오지 못했습니다."));
+      } finally {
+        if (!cancelled) {
+          setIsLoading(false);
+        }
+      }
+    };
+
+    void fetchOverview();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const left = useMemo(
+    () => topKeywords.slice(0, TOP_KEYWORD_LEFT_COLUMN_COUNT),
+    [topKeywords],
+  );
+  const right = useMemo(
+    () => topKeywords.slice(TOP_KEYWORD_LEFT_COLUMN_COUNT, TOP_KEYWORD_LIMIT),
+    [topKeywords],
+  );
+
+  const now = new Date();
+  const dateText = formatTodayKoreanDate(now);
+  const kstDateYmd = formatKstUpdatedBase(now);
   const updatedAtText = `${kstDateYmd} 06:00`;
 
-  const MIN_REQUIRED_COUNT = 10;
+  const renderItem = (item: HomeTopKeywordItem) => {
+    if (!item.isAnalyzable) {
+      return (
+        <button
+          key={item.rank}
+          type="button"
+          className={styles.statItem}
+          onClick={() => showNotAnalyzableAlert(item.label, item.count)}
+          aria-label={`${item.label} 키워드: 데이터 부족으로 분석 제공 불가 안내 보기`}
+          style={{
+            background: "transparent",
+            border: "none",
+            cursor: "pointer",
+            textAlign: "left",
+            color: "inherit",
+            font: "inherit",
+          }}
+        >
+          <div className={styles.statLabel}>
+            <span className={styles.statIndex}>{item.rank}</span>
+            {item.label}
+          </div>
+          <div className={styles.statCount}>
+            {item.count.toLocaleString("ko-KR")}
+            <span className={styles.statUnit}>건</span>
+          </div>
+        </button>
+      );
+    }
 
-  const renderItem = (item: TopKeywordItem) => {
-    const isInsufficient = item.count < MIN_REQUIRED_COUNT;
+    if (!item.keywordSeq) {
+      return (
+        <button
+          key={item.rank}
+          type="button"
+          className={styles.statItem}
+          onClick={() => showMissingKeywordSeqAlert(item.label)}
+          aria-label={`${item.label} 키워드 상세 분석 링크 정보 없음 안내 보기`}
+          style={{
+            background: "transparent",
+            border: "none",
+            cursor: "pointer",
+            textAlign: "left",
+            color: "inherit",
+            font: "inherit",
+          }}
+        >
+          <div className={styles.statLabel}>
+            <span className={styles.statIndex}>{item.rank}</span>
+            {item.label}
+          </div>
+          <div className={styles.statCount}>
+            {item.count.toLocaleString("ko-KR")}
+            <span className={styles.statUnit}>건</span>
+          </div>
+        </button>
+      );
+    }
 
     return (
       <Link
         key={item.rank}
-        to={isInsufficient ? "#" : `/keywords/${encodeURIComponent(item.label)}`}
+        // 기존 라우트 패턴(/keywords/:keyword)을 유지하면서 숫자 keyword_seq를 path param으로 전달
+        // KeywordDetailPage.updated.v3.tsx는 route param 숫자를 keyword_seq로 인식 가능
+        to={`/keywords/${item.keywordSeq}?keyword=${encodeURIComponent(item.label)}`}
         className={styles.statItem}
-        aria-label={
-          isInsufficient
-            ? `${item.label} 키워드: 데이터 부족으로 분석 제공 불가`
-            : `${item.label} 키워드 상세 보기`
-        }
-        onClick={(e) => {
-          if (!isInsufficient) return;
-
-          e.preventDefault();
-          alert("데이터가 부족하여 분석을 제공하지 않습니다. (기사 10건 이상 필요)");
-        }}
+        aria-label={`${item.label} 키워드 상세 보기`}
       >
         <div className={styles.statLabel}>
           <span className={styles.statIndex}>{item.rank}</span>
@@ -103,11 +274,12 @@ export default function HomePage() {
             <article className={`${styles.heroCard} ${styles.secondary}`}>
               <div className={styles.heroCardLabel}>분석 대상 키워드</div>
               <div className={styles.heroCardCount}>
-                {keywordCount.toLocaleString("ko-KR")}
+                {TOP_KEYWORD_LIMIT.toLocaleString("ko-KR")}
                 <span className={styles.unit}>개</span>
               </div>
               <div className={styles.heroCardCaption}>
-                오늘의 상위 키워드 10개 기준으로 수집된 뉴스 데이터를 바탕으로 다양한 지표 분석과 인사이트를 제공합니다.
+                오늘의 상위 키워드 10개 기준으로 수집된 뉴스 데이터를 바탕으로 다양한 지표
+                분석과 인사이트를 제공합니다.
               </div>
             </article>
           </div>
@@ -126,10 +298,35 @@ export default function HomePage() {
               <div className={styles.statsPill}>단위: 기사 건수</div>
             </div>
 
-            <div className={styles.statsGrid}>
-              <div className={styles.statsCol}>{left.map(renderItem)}</div>
-              <div className={styles.statsCol}>{right.map(renderItem)}</div>
-            </div>
+            {isLoading && (
+              <div style={{ padding: "12px 4px", fontSize: "14px" }} aria-live="polite">
+                데이터를 불러오는 중...
+              </div>
+            )}
+
+            {!isLoading && errorMessage && (
+              <div
+                role="alert"
+                style={{ padding: "12px 4px", fontSize: "14px", color: "#b42318" }}
+              >
+                {errorMessage}
+              </div>
+            )}
+
+            {!isLoading && !errorMessage && (
+              <>
+                <div className={styles.statsGrid}>
+                  <div className={styles.statsCol}>{left.map(renderItem)}</div>
+                  <div className={styles.statsCol}>{right.map(renderItem)}</div>
+                </div>
+
+                {topKeywords.length === 0 && (
+                  <div style={{ padding: "12px 4px", fontSize: "14px" }}>
+                    표시할 키워드 데이터가 없습니다.
+                  </div>
+                )}
+              </>
+            )}
 
             <div className={styles.statsFooterNote}>데이터 기준 시각: {updatedAtText} KST</div>
           </div>

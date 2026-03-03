@@ -3,34 +3,48 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, Navigate, useLocation } from "react-router-dom";
 import styles from "./InquiryBoardPage.module.css";
-import {
-  INQUIRY_STATUS_FILTERS,
-  INQUIRY_TYPE_FILTERS,
-  addInquiryToStorage,
-  getAllInquiries,
-  getNextInquiryId,
-  type InquiryItem,
+import InquiryCreateModal, {
+  type InquiryCreateFormPayload,
   type InquiryTypeKey,
-  type StatusKey,
-} from "../mocks/inquiryMockData";
-import InquiryCreateModal from "../components/inquiries/InquiryCreateModal";
+} from "../components/inquiries/InquiryCreateModal";
+import { createInquiry, listInquiries, type InquiryListItem } from "../api/inquiries";
 import { useAuth } from "../hooks/useAuth";
+
+type StatusKey = "all" | "processing" | "done";
+type InquiryTypeFilterKey = "all" | InquiryTypeKey;
+
+type InquiryRowView = {
+  id: number;
+  typeKey: InquiryTypeKey;
+  typeLabel: string;
+  title: string;
+  date: string;
+  createdAt: string;
+  status: Exclude<StatusKey, "all">;
+  statusLabel: string;
+  isPrivate: boolean;
+  author: string;
+  isMine: boolean;
+};
 
 const PAGE_SIZE = 10;
 
-function pad2(n: number) {
-  return String(n).padStart(2, "0");
-}
+const INQUIRY_TYPE_FILTERS: Array<{ key: InquiryTypeFilterKey; label: string }> = [
+  { key: "all", label: "전체" },
+  { key: "bug", label: "오류 제보" },
+  { key: "idea", label: "기능 제안" },
+  { key: "data", label: "데이터 문의" },
+  { key: "account", label: "계정/로그인" },
+  { key: "etc", label: "기타" },
+];
 
-function formatDate(d: Date) {
-  return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
-}
+const INQUIRY_STATUS_FILTERS: Array<{ key: StatusKey; label: string }> = [
+  { key: "all", label: "전체" },
+  { key: "processing", label: "처리 중" },
+  { key: "done", label: "답변 완료" },
+];
 
-function formatDateTime(d: Date) {
-  return `${formatDate(d)} ${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
-}
-
-const TYPE_LABEL: Record<InquiryItem["typeKey"], string> = {
+const TYPE_LABEL: Record<InquiryTypeKey, string> = {
   bug: "오류 제보",
   idea: "기능 제안",
   data: "데이터 문의",
@@ -38,36 +52,213 @@ const TYPE_LABEL: Record<InquiryItem["typeKey"], string> = {
   etc: "기타",
 };
 
+const INQUIRY_TYPE_TO_BACKEND_CODE: Record<InquiryTypeKey, string> = {
+  // 백엔드 enum/string 코드 기준 (필요시 이 매핑만 맞추면 됨)
+  bug: "BUG_REPORT",
+  idea: "FEATURE_REQUEST",
+  data: "DATA_INQUIRY",
+  account: "ACCOUNT_LOGIN",
+  etc: "ETC",
+};
+
+const STATUS_FILTER_TO_BACKEND_CODE: Record<Exclude<StatusKey, "all">, string> = {
+  // 현재 백엔드가 대문자 enum 코드를 쓰는 경우를 기준으로 전송
+  processing: "PROCESSING",
+  done: "DONE",
+};
+
+function getErrorMessage(error: unknown, fallback = "요청 처리 중 오류가 발생했습니다.") {
+  if (error instanceof Error && error.message) return error.message;
+
+  if (typeof error === "object" && error !== null) {
+    const anyErr = error as {
+      response?: { data?: { message?: string; details?: string } };
+      message?: string;
+    };
+    const serverMessage = anyErr.response?.data?.message ?? anyErr.response?.data?.details;
+    if (typeof serverMessage === "string" && serverMessage.trim()) return serverMessage.trim();
+    if (typeof anyErr.message === "string" && anyErr.message.trim()) return anyErr.message.trim();
+  }
+
+  return fallback;
+}
+
+function pad2(n: number) {
+  return String(n).padStart(2, "0");
+}
+
+function formatDateOnly(value: string) {
+  if (!value) return "-";
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) {
+    return value.length >= 10 ? value.slice(0, 10) : value;
+  }
+  return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
+}
+
+function formatDateTime(value: string) {
+  if (!value) return "-";
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return value;
+  return `${formatDateOnly(value)} ${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
+}
+
+function normalizeTypeKey(raw: string): InquiryTypeKey {
+  const v = (raw ?? "").trim().toLowerCase();
+  if (v === "bug" || v === "idea" || v === "data" || v === "account" || v === "etc") return v;
+
+  if (v.includes("오류") || v.includes("bug") || v.includes("error")) return "bug";
+  if (v.includes("기능") || v.includes("feature") || v.includes("idea") || v.includes("suggest")) return "idea";
+  if (v.includes("데이터") || v.includes("data")) return "data";
+  if (v.includes("계정") || v.includes("로그인") || v.includes("account") || v.includes("login")) {
+    return "account";
+  }
+  return "etc";
+}
+
+function normalizeStatusKey(raw: string): Exclude<StatusKey, "all"> {
+  const v = (raw ?? "").trim().toLowerCase();
+
+  if (
+    v === "done" ||
+    v === "completed" ||
+    v === "complete" ||
+    v === "processed" ||
+    v === "resolved" ||
+    v === "answer_completed" ||
+    v === "답변완료" ||
+    v === "처리완료"
+  ) {
+    return "done";
+  }
+
+  return "processing";
+}
+
+function buildAuthorTokens(auth: { userId: string | null; userName: string | null }) {
+  const set = new Set<string>();
+  if (auth.userId?.trim()) set.add(auth.userId.trim());
+  if (auth.userName?.trim()) set.add(auth.userName.trim());
+  set.add("newsight_user_me");
+  return set;
+}
+
+function mapListItemToView(item: InquiryListItem, myAuthorTokens: Set<string>): InquiryRowView {
+  const typeKey = normalizeTypeKey(item.inquiry_type);
+  const status = normalizeStatusKey(item.status);
+  const author = (item.writer_user_id ?? "").trim();
+
+  return {
+    id: Number(item.inquiry_seq),
+    typeKey,
+    typeLabel: TYPE_LABEL[typeKey],
+    title: item.title ?? "(제목 없음)",
+    date: formatDateOnly(item.created_at),
+    createdAt: formatDateTime(item.created_at),
+    status,
+    statusLabel: status === "processing" ? "처리 중" : "답변 완료",
+    isPrivate: Boolean(item.is_private),
+    author,
+    isMine: author !== "" && myAuthorTokens.has(author),
+  };
+}
+
+function readPageItems<T>(data: unknown): T[] {
+  if (!data || typeof data !== "object") return [];
+  const d = data as { items?: unknown; content?: unknown; list?: unknown };
+  if (Array.isArray(d.items)) return d.items as T[];
+  if (Array.isArray(d.content)) return d.content as T[];
+  if (Array.isArray(d.list)) return d.list as T[];
+  return [];
+}
+
+function readPageMeta(data: unknown) {
+  const d = (data ?? {}) as {
+    page?: number;
+    size?: number;
+    total_count?: number;
+    total_pages?: number;
+    totalPages?: number;
+    totalElements?: number;
+  };
+
+  const totalCount = Number(
+    d.total_count ?? d.totalElements ?? (Number.isFinite(Number(d.size)) ? 0 : 0),
+  );
+  const totalPages = Number(d.total_pages ?? d.totalPages ?? 1);
+  const page = Number(d.page ?? 1);
+  const size = Number(d.size ?? PAGE_SIZE);
+
+  return {
+    totalCount: Number.isFinite(totalCount) ? totalCount : 0,
+    totalPages: Number.isFinite(totalPages) && totalPages > 0 ? totalPages : 1,
+    page: Number.isFinite(page) && page > 0 ? page : 1,
+    size: Number.isFinite(size) && size > 0 ? size : PAGE_SIZE,
+  };
+}
+
 export default function InquiryBoardPage() {
   const { auth } = useAuth();
   const location = useLocation();
 
-  const [typeFilter, setTypeFilter] = useState<InquiryTypeKey>("all");
+  const [typeFilter, setTypeFilter] = useState<InquiryTypeFilterKey>("all");
   const [statusFilter, setStatusFilter] = useState<StatusKey>("all");
   const [mineOnly, setMineOnly] = useState(false);
   const [page, setPage] = useState(1);
 
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [items, setItems] = useState<InquiryItem[]>(() => getAllInquiries());
+  const [isListLoading, setIsListLoading] = useState(false);
+  const [listError, setListError] = useState<string | null>(null);
+  const [items, setItems] = useState<InquiryRowView[]>([]);
+  const [totalCount, setTotalCount] = useState(0);
+  const [totalPages, setTotalPages] = useState(1);
+  const [currentPage, setCurrentPage] = useState(1);
 
   // 내 문의만 켤 때, 기존에 선택했던 유형을 기억해뒀다가 끌 때 복원
-  const lastTypeBeforeMineRef = useRef<InquiryTypeKey>("all");
+  const lastTypeBeforeMineRef = useRef<InquiryTypeFilterKey>("all");
 
-  const myAuthorTokens = useMemo(() => {
-    const set = new Set<string>();
-    if (auth.userId?.trim()) set.add(auth.userId.trim());
-    if (auth.userName?.trim()) set.add(auth.userName.trim());
-    set.add("newsight_user_me");
-    return set;
-  }, [auth.userId, auth.userName]);
-
-  const isMine = useCallback(
-    (item: InquiryItem) => {
-      const a = (item.author ?? "").trim();
-      return a !== "" && myAuthorTokens.has(a);
-    },
-    [myAuthorTokens]
+  const myAuthorTokens = useMemo(
+    () => buildAuthorTokens({ userId: auth.userId, userName: auth.userName }),
+    [auth.userId, auth.userName],
   );
+
+  const fetchList = useCallback(async () => {
+    if (!auth.isAuthed) return;
+
+    setIsListLoading(true);
+    setListError(null);
+
+    try {
+      const data = await listInquiries({
+        page,
+        size: PAGE_SIZE,
+        inquiry_type:
+          typeFilter === "all" ? undefined : INQUIRY_TYPE_TO_BACKEND_CODE[typeFilter],
+        status:
+          statusFilter === "all" ? undefined : STATUS_FILTER_TO_BACKEND_CODE[statusFilter],
+        mine: mineOnly || undefined,
+      });
+
+      const rawItems = readPageItems<InquiryListItem>(data);
+      const meta = readPageMeta(data);
+
+      setItems(rawItems.map((item) => mapListItemToView(item, myAuthorTokens)));
+      setTotalCount(meta.totalCount);
+      setTotalPages(meta.totalPages);
+      setCurrentPage(meta.page);
+
+      if (meta.totalPages > 0 && page > meta.totalPages) {
+        setPage(meta.totalPages);
+      }
+    } catch (error) {
+      setItems([]);
+      setTotalCount(0);
+      setTotalPages(1);
+      setListError(getErrorMessage(error, "문의 목록을 불러오지 못했습니다."));
+    } finally {
+      setIsListLoading(false);
+    }
+  }, [auth.isAuthed, mineOnly, myAuthorTokens, page, statusFilter, typeFilter]);
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -77,36 +268,27 @@ export default function InquiryBoardPage() {
     return () => document.removeEventListener("keydown", onKeyDown);
   }, [isModalOpen]);
 
-  const filtered = useMemo(() => {
-    return items.filter((item) => {
-      const typeOk = typeFilter === "all" ? true : item.typeKey === typeFilter;
-      const statusOk = statusFilter === "all" ? true : item.status === statusFilter;
-      const mineOk = !mineOnly ? true : isMine(item);
-      return typeOk && statusOk && mineOk;
-    });
-  }, [items, typeFilter, statusFilter, mineOnly, isMine]);
-
-  const totalPages = useMemo(
-    () => Math.max(1, Math.ceil(filtered.length / PAGE_SIZE)),
-    [filtered.length]
-  );
-
-  const safePage = Math.min(Math.max(1, page), totalPages);
-
-  const pagedItems = useMemo(() => {
-    const start = (safePage - 1) * PAGE_SIZE;
-    return filtered.slice(start, start + PAGE_SIZE);
-  }, [filtered, safePage]);
+  useEffect(() => {
+    void fetchList();
+  }, [fetchList]);
 
   const pageNumbers = useMemo(() => {
     const maxButtons = 5;
-    const count = Math.min(totalPages, maxButtons);
-    return Array.from({ length: count }, (_, i) => i + 1);
-  }, [totalPages]);
+    const safeTotal = Math.max(1, totalPages);
+    const safeCurrent = Math.min(Math.max(1, currentPage || page), safeTotal);
 
-  const showEllipsis = totalPages > 5;
+    let start = Math.max(1, safeCurrent - 2);
+    const end = Math.min(safeTotal, start + maxButtons - 1);
+    start = Math.max(1, end - maxButtons + 1);
 
-  const pillClassByType = (typeKey: InquiryItem["typeKey"]) => {
+    const result: number[] = [];
+    for (let p = start; p <= end; p += 1) result.push(p);
+    return result;
+  }, [currentPage, page, totalPages]);
+
+  const showEllipsis = totalPages > 5 && pageNumbers[pageNumbers.length - 1] !== totalPages;
+
+  const pillClassByType = (typeKey: InquiryTypeKey) => {
     if (typeKey === "bug") return `${styles.inquiryTypePill} ${styles.bug}`;
     if (typeKey === "idea") return `${styles.inquiryTypePill} ${styles.idea}`;
     if (typeKey === "data") return `${styles.inquiryTypePill} ${styles.data}`;
@@ -115,7 +297,7 @@ export default function InquiryBoardPage() {
     return styles.inquiryTypePill;
   };
 
-  const applyTypeFilter = (next: InquiryTypeKey) => {
+  const applyTypeFilter = (next: InquiryTypeFilterKey) => {
     if (mineOnly) setMineOnly(false);
     setTypeFilter(next);
     setPage(1);
@@ -143,34 +325,20 @@ export default function InquiryBoardPage() {
     setPage(1);
   };
 
-  const handleCreateInquiry = (payload: {
-    typeKey: InquiryItem["typeKey"];
-    title: string;
-    body: string;
-    isPrivate: boolean;
-  }) => {
-    const now = new Date();
-    const newId = getNextInquiryId();
-
-    const author = (auth.userId?.trim() || auth.userName?.trim() || "newsight_user_me").trim();
-
-    const newItem: InquiryItem = {
-      id: newId,
-      typeKey: payload.typeKey,
-      typeLabel: TYPE_LABEL[payload.typeKey],
+  const handleCreateInquiry = async (payload: InquiryCreateFormPayload) => {
+    await createInquiry({
+      inquiry_type: INQUIRY_TYPE_TO_BACKEND_CODE[payload.typeKey],
       title: payload.title,
-      date: formatDate(now),
-      status: "processing",
-      isPrivate: payload.isPrivate,
-      author,
-      createdAt: formatDateTime(now),
-      body: payload.body,
-    };
+      message: payload.body,
+      is_private: payload.isPrivate,
+    });
 
-    addInquiryToStorage(newItem);
-
-    setItems(getAllInquiries());
-    setPage(1);
+    // 등록 후 첫 페이지로 이동해 최신 문의를 다시 조회
+    if (page !== 1) {
+      setPage(1);
+      return;
+    }
+    await fetchList();
   };
 
   if (!auth.isAuthed) {
@@ -258,49 +426,73 @@ export default function InquiryBoardPage() {
             <div>처리 상태</div>
           </div>
 
-          {pagedItems.map((row, idx) => {
-          // 필터링된 전체 결과(filtered) 기준으로 내림차순 번호 표시
-          // 예: filtered.length=14이면 첫 행 14, 다음 13 ... (페이지 이동도 반영)
-          const displayNo = filtered.length - ((safePage - 1) * PAGE_SIZE + idx);
+          {isListLoading ? (
+            <div className={styles.inquiryRow}>
+              <div className={styles.inquiryIndex}>-</div>
+              <div>-</div>
+              <div className={styles.inquiryTitleCell}>문의 목록을 불러오는 중입니다...</div>
+              <div className={styles.inquiryDate}>-</div>
+              <div>-</div>
+            </div>
+          ) : listError ? (
+            <div className={styles.inquiryRow}>
+              <div className={styles.inquiryIndex}>!</div>
+              <div>-</div>
+              <div className={styles.inquiryTitleCell}>{listError}</div>
+              <div className={styles.inquiryDate}>-</div>
+              <div>-</div>
+            </div>
+          ) : items.length === 0 ? (
+            <div className={styles.inquiryRow}>
+              <div className={styles.inquiryIndex}>-</div>
+              <div>-</div>
+              <div className={styles.inquiryTitleCell}>조건에 맞는 문의가 없습니다.</div>
+              <div className={styles.inquiryDate}>-</div>
+              <div>-</div>
+            </div>
+          ) : (
+            items.map((row, idx) => {
+              const displayNo = Math.max(1, totalCount - ((currentPage - 1) * PAGE_SIZE + idx));
 
-          return (
-            <div key={row.id} className={styles.inquiryRow}>
-              <div className={styles.inquiryIndex}>{displayNo}</div>
+              return (
+                <div key={row.id} className={styles.inquiryRow}>
+                  <div className={styles.inquiryIndex}>{displayNo}</div>
 
-                <div>
-                  <span className={pillClassByType(row.typeKey)}>{row.typeLabel}</span>
+                  <div>
+                    <span className={pillClassByType(row.typeKey)}>{row.typeLabel}</span>
+                  </div>
+
+                  <div className={styles.inquiryTitleCell}>
+                    {row.isMine ? <span className={styles.myPill}>MY</span> : null}
+                    {row.isPrivate ? <span className={styles.lockPill}>🔒비공개</span> : null}
+
+                    <Link to={`/inquiries/${row.id}`} className={styles.inquiryTitleLink}>
+                      {row.title}
+                    </Link>
+                  </div>
+
+                  <div className={styles.inquiryDate}>{row.date}</div>
+
+                  <div>
+                    <span className={styles.statusBadge} title={row.createdAt}>
+                      <span
+                        className={`${styles.statusDot} ${
+                          row.status === "processing" ? styles.processing : styles.done
+                        }`}
+                      />
+                      {row.statusLabel}
+                    </span>
+                  </div>
                 </div>
-
-                <div className={styles.inquiryTitleCell}>
-                  {isMine(row) ? <span className={styles.myPill}>MY</span> : null}
-                  {row.isPrivate ? <span className={styles.lockPill}>🔒비공개</span> : null}
-
-                  <Link to={`/inquiries/${row.id}`} className={styles.inquiryTitleLink}>
-                    {row.title}
-                  </Link>
-                </div>
-
-                <div className={styles.inquiryDate}>{row.date}</div>
-
-                <div>
-                  <span className={styles.statusBadge}>
-                    <span
-                      className={`${styles.statusDot} ${
-                        row.status === "processing" ? styles.processing : styles.done
-                      }`}
-                    />
-                    {row.status === "processing" ? "처리 중" : "답변 완료"}
-                  </span>
-                </div>
-              </div>
-            );
-          })}
+              );
+            })
+          )}
 
           <div className={styles.inquiryPagination}>
             <button
               className={styles.pageBtn}
               onClick={() => setPage(1)}
-              disabled={safePage <= 1}
+              disabled={page <= 1 || isListLoading}
               aria-label="첫 페이지"
             >
               {"<<"}
@@ -309,7 +501,7 @@ export default function InquiryBoardPage() {
             <button
               className={styles.pageBtn}
               onClick={() => setPage((p) => Math.max(1, p - 1))}
-              disabled={safePage <= 1}
+              disabled={page <= 1 || isListLoading}
               aria-label="이전 페이지"
             >
               {"<"}
@@ -318,9 +510,10 @@ export default function InquiryBoardPage() {
             {pageNumbers.map((p) => (
               <button
                 key={p}
-                className={`${styles.pageBtn} ${safePage === p ? styles.pageActive : ""}`}
+                className={`${styles.pageBtn} ${page === p ? styles.pageActive : ""}`}
                 onClick={() => setPage(p)}
-                aria-current={safePage === p ? "page" : undefined}
+                aria-current={page === p ? "page" : undefined}
+                disabled={isListLoading}
               >
                 {p}
               </button>
@@ -335,7 +528,7 @@ export default function InquiryBoardPage() {
             <button
               className={styles.pageBtn}
               onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-              disabled={safePage >= totalPages}
+              disabled={page >= totalPages || isListLoading}
               aria-label="다음 페이지"
             >
               {">"}
@@ -344,7 +537,7 @@ export default function InquiryBoardPage() {
             <button
               className={styles.pageBtn}
               onClick={() => setPage(totalPages)}
-              disabled={safePage >= totalPages}
+              disabled={page >= totalPages || isListLoading}
               aria-label="마지막 페이지"
             >
               {">>"}

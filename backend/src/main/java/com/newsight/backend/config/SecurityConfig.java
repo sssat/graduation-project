@@ -8,9 +8,12 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import javax.crypto.SecretKey;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -36,23 +39,36 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 @Configuration
 public class SecurityConfig {
 
+    private static final Logger log = LoggerFactory.getLogger(SecurityConfig.class);
+
     @Bean
     public CorsConfigurationSource corsConfigurationSource(
-            @Value("${app.cors.allowed-origins:}") List<String> allowedOrigins,
-            @Value("${app.cors.allowed-origin-patterns:}") List<String> allowedOriginPatterns,
+            @Value("${app.cors.allowed-origins:}") String allowedOriginsRaw,
+            @Value("${app.cors.allowed-origin-patterns:}") String allowedOriginPatternsRaw,
             @Value("${app.cors.allow-credentials:true}") boolean allowCredentials
     ) {
+        List<String> allowedOrigins = normalizeListProperty(allowedOriginsRaw);
+        List<String> allowedOriginPatterns = normalizeListProperty(allowedOriginPatternsRaw);
+
+        // 개발 중 설정 실수(빈 값/파싱 꼬임) 방지용 안전망
+        // 둘 다 비어 있으면 localhost 계열을 패턴으로 기본 허용
+        if (allowedOrigins.isEmpty() && allowedOriginPatterns.isEmpty()) {
+            allowedOriginPatterns = List.of("http://localhost:*", "http://127.0.0.1:*");
+            log.warn("CORS 설정이 비어 있어 개발용 기본 패턴을 적용합니다: {}", allowedOriginPatterns);
+        }
+
         CorsConfiguration config = new CorsConfiguration();
-        if (allowedOrigins != null && !allowedOrigins.isEmpty()) {
-            config.setAllowedOrigins(allowedOrigins);
-        }
-        if (allowedOriginPatterns != null && !allowedOriginPatterns.isEmpty()) {
-            config.setAllowedOriginPatterns(allowedOriginPatterns);
-        }
+        config.setAllowedOrigins(allowedOrigins);
+        config.setAllowedOriginPatterns(allowedOriginPatterns);
         config.setAllowCredentials(allowCredentials);
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
         config.setAllowedHeaders(List.of("*"));
+        config.setExposedHeaders(List.of("Set-Cookie"));
         config.setMaxAge(3600L);
+
+        log.info("CORS allowedOrigins={}", allowedOrigins);
+        log.info("CORS allowedOriginPatterns={}", allowedOriginPatterns);
+        log.info("CORS allowCredentials={}", allowCredentials);
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", config);
@@ -128,6 +144,9 @@ public class SecurityConfig {
         );
 
         http.authorizeHttpRequests(auth -> auth
+                // CORS preflight 허용
+                .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+
                 .requestMatchers("/actuator/health").permitAll()
 
                 // accounts (public)
@@ -166,5 +185,40 @@ public class SecurityConfig {
                 GlobalExceptionHandler.ApiErrorResponse.of(status, message, null, req.getRequestURI());
 
         objectMapper.writeValue(res.getOutputStream(), body);
+    }
+
+    // YAML 리스트 / 쉼표 문자열 / [] / 따옴표 포함 케이스를 모두 정규화
+    private List<String> normalizeListProperty(String raw) {
+        if (raw == null) return List.of();
+
+        String text = raw.trim();
+        if (text.isEmpty() || "[]".equals(text)) return List.of();
+
+        // [a, b] 형태면 바깥 대괄호 제거
+        if (text.startsWith("[") && text.endsWith("]") && text.length() >= 2) {
+            text = text.substring(1, text.length() - 1).trim();
+        }
+
+        if (text.isEmpty()) return List.of();
+
+        String[] tokens = text.split(",");
+        List<String> result = new ArrayList<>();
+
+        for (String token : tokens) {
+            String v = token.trim();
+
+            // 양끝 따옴표 제거
+            if ((v.startsWith("\"") && v.endsWith("\"")) || (v.startsWith("'") && v.endsWith("'"))) {
+                if (v.length() >= 2) {
+                    v = v.substring(1, v.length() - 1).trim();
+                }
+            }
+
+            if (!v.isEmpty() && !"[]".equals(v)) {
+                result.add(v);
+            }
+        }
+
+        return result;
     }
 }

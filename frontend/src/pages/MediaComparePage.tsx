@@ -4,8 +4,22 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import Chart from "chart.js/auto";
 import styles from "./MediaComparePage.module.css";
+import {
+  getAiSummary,
+  getMediaArticleCounts,
+  getMediaCompareContentSentiment,
+  getMediaCompareTitleTopWords,
+  getMediaCompareTopKeywords,
+  getTitleBiasByMedia,
+  type MediaArticleCountsResponse,
+  type MediaCompareTopKeywordsResponse,
+  type MediaContentSentimentCompareResponse,
+  type MediaTitleTopWordsResponse,
+  type TitleBiasByMediaResponse,
+} from "../api/analytics";
 
 type Period = "7d" | "14d";
+type ApiPeriod = "D7" | "D14";
 
 type MediaRow = {
   key: string;
@@ -15,24 +29,6 @@ type MediaRow = {
   sentiment: { positive: number; neutral: number; negative: number }; // 합 100
   topWords: string[];
 };
-
-function hashInt(text: string) {
-  let h = 2166136261;
-  for (let i = 0; i < text.length; i += 1) {
-    h ^= text.charCodeAt(i);
-    h = Math.imul(h, 16777619);
-  }
-  return h >>> 0;
-}
-
-function mulberry32(seed: number) {
-  return function rand() {
-    let t = (seed += 0x6d2b79f5);
-    t = Math.imul(t ^ (t >>> 15), t | 1);
-    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-  };
-}
 
 function clamp(n: number, min: number, max: number) {
   return Math.max(min, Math.min(max, n));
@@ -50,417 +46,351 @@ function readCssVar(varName: string, fallback: string) {
   return v || fallback;
 }
 
-function pickTopWords(mediaKey: string, keyword: string, rand: () => number) {
-  const pools: Record<string, string[]> = {
-    overall: ["종합", "분석", "쟁점", "논의", "현안", "대응", "확대", "전망", "검증"],
-    yonhap: ["속보", "발표", "공식", "현안", "논의", "쟁점", "동향", "점검", "대응"],
-    pressian: ["비판", "논평", "쟁점", "정책", "현장", "논란", "검증", "대응", "분석"],
-    donga: ["단독", "취재", "파장", "대책", "혼선", "현안", "발언", "후속", "검증"],
-    chosun: ["의사", "파업", "반발", "혼란", "쟁점", "논란", "현장", "확대", "갈등"],
-    joongang: ["진통", "협상", "조정", "갈등", "분석", "쟁점", "속보", "대응", "논의"],
-    hani: ["공공의료", "확대", "지역", "불균형", "현장", "권리", "책임", "논의", "쟁점"],
-    kyunghyang: ["현장", "증언", "쟁점", "후속", "점검", "문제", "대응", "논란", "기준"],
-    seoul: ["정책", "논의", "쟁점", "해명", "대책", "점검", "현안", "조정", "갈등"],
-    hankookilbo: ["분석", "여론", "쟁점", "논의", "대응", "검증", "현안", "조사", "파장"],
-  };
+function toApiPeriod(period: Period): ApiPeriod {
+  return period === "7d" ? "D7" : "D14";
+}
 
-  const base = pools[mediaKey] ?? pools.overall;
-  const uniq = new Set<string>();
+function normalizeMediaName(name: string) {
+  return String(name ?? "").trim();
+}
 
-  if (keyword.trim()) uniq.add(keyword.trim());
+function getErrorMessage(err: unknown) {
+  if (typeof err === "string") return err;
+  if (err && typeof err === "object") {
+    const maybe = err as {
+      response?: { data?: { message?: string; details?: string } };
+      message?: string;
+    };
 
-  while (uniq.size < 5) {
-    const w = base[Math.floor(rand() * base.length)];
-    uniq.add(w);
+    const apiMessage = maybe.response?.data?.message;
+    const apiDetails = maybe.response?.data?.details;
+    if (apiMessage && apiDetails) return `${apiMessage} (${apiDetails})`;
+    if (apiMessage) return apiMessage;
+    if (maybe.message) return maybe.message;
+  }
+  return "데이터를 불러오지 못했습니다.";
+}
+
+function normalizePercentTriplet(
+  positiveRaw: number,
+  neutralRaw: number,
+  negativeRaw: number
+): { positive: number; neutral: number; negative: number } {
+  const p = Number.isFinite(positiveRaw) ? Math.max(0, positiveRaw) : 0;
+  const n = Number.isFinite(neutralRaw) ? Math.max(0, neutralRaw) : 0;
+  const ng = Number.isFinite(negativeRaw) ? Math.max(0, negativeRaw) : 0;
+
+  const total = p + n + ng;
+  if (total <= 0) {
+    return { positive: 0, neutral: 0, negative: 0 };
   }
 
-  return Array.from(uniq).slice(0, 5);
+  const positive = Math.round((p / total) * 100);
+  let neutral = Math.round((n / total) * 100);
+  let negative = Math.round((ng / total) * 100);
+
+  const sum = positive + neutral + negative;
+  const diff = 100 - sum;
+
+  neutral = clamp(neutral + diff, 0, 100);
+
+  const finalSum = positive + neutral + negative;
+  if (finalSum !== 100) {
+    const remain = 100 - finalSum;
+    negative = clamp(negative + remain, 0, 100);
+  }
+
+  return { positive, neutral, negative };
 }
 
-/**
- * ✅ 기사수(volume)를 "랜덤/시드"가 아니라 "고정 매핑"으로 제공
- * - period별로 값이 다르게 나오도록 7d/14d를 따로 둠
- * - 키워드/언론사 조합별로 항상 동일한 기사수가 나오게 됨
- *
- * 필요하면 이 테이블만 백엔드 응답으로 교체하면 됨.
- */
-const FIXED_VOLUMES: Record<Period, Record<string, Record<string, number>>> = {
-  "7d": {
-    쿠팡: {
-      yonhap: 42,
-      pressian: 18,
-      donga: 31,
-      chosun: 28,
-      joongang: 26,
-      hani: 17,
-      kyunghyang: 15,
-      seoul: 19,
-      hankookilbo: 21,
-    },
-    문재인: {
-      yonhap: 22,
-      pressian: 14,
-      donga: 16,
-      chosun: 15,
-      joongang: 13,
-      hani: 12,
-      kyunghyang: 11,
-      seoul: 10,
-      hankookilbo: 12,
-    },
-    윤석열: {
-      yonhap: 38,
-      pressian: 20,
-      donga: 24,
-      chosun: 26,
-      joongang: 22,
-      hani: 19,
-      kyunghyang: 18,
-      seoul: 17,
-      hankookilbo: 20,
-    },
-    데이터: {
-      yonhap: 16,
-      pressian: 10,
-      donga: 11,
-      chosun: 12,
-      joongang: 10,
-      hani: 9,
-      kyunghyang: 8,
-      seoul: 9,
-      hankookilbo: 10,
-    },
-    "개인정보 유출": {
-      yonhap: 27,
-      pressian: 12,
-      donga: 18,
-      chosun: 16,
-      joongang: 15,
-      hani: 11,
-      kyunghyang: 10,
-      seoul: 12,
-      hankookilbo: 13,
-    },
-    삼성: {
-      yonhap: 33,
-      pressian: 12,
-      donga: 22,
-      chosun: 21,
-      joongang: 19,
-      hani: 10,
-      kyunghyang: 9,
-      seoul: 12,
-      hankookilbo: 14,
-    },
-    금리: {
-      yonhap: 25,
-      pressian: 10,
-      donga: 14,
-      chosun: 13,
-      joongang: 15,
-      hani: 9,
-      kyunghyang: 8,
-      seoul: 11,
-      hankookilbo: 12,
-    },
-    부동산: {
-      yonhap: 29,
-      pressian: 11,
-      donga: 16,
-      chosun: 17,
-      joongang: 15,
-      hani: 10,
-      kyunghyang: 9,
-      seoul: 12,
-      hankookilbo: 13,
-    },
-    AI: {
-      yonhap: 20,
-      pressian: 9,
-      donga: 12,
-      chosun: 11,
-      joongang: 10,
-      hani: 8,
-      kyunghyang: 7,
-      seoul: 9,
-      hankookilbo: 10,
-    },
-    전기차: {
-      yonhap: 1,
-      pressian: 1,
-      donga: 1,
-      chosun: 2,
-      joongang: 0,
-      hani: 0,
-      kyunghyang: 0,
-      seoul: 1,
-      hankookilbo: 1,
-    },
-  },
-  "14d": {
-    쿠팡: {
-      yonhap: 71,
-      pressian: 30,
-      donga: 52,
-      chosun: 47,
-      joongang: 44,
-      hani: 28,
-      kyunghyang: 25,
-      seoul: 31,
-      hankookilbo: 35,
-    },
-    문재인: {
-      yonhap: 36,
-      pressian: 22,
-      donga: 24,
-      chosun: 23,
-      joongang: 20,
-      hani: 19,
-      kyunghyang: 17,
-      seoul: 16,
-      hankookilbo: 18,
-    },
-    윤석열: {
-      yonhap: 64,
-      pressian: 34,
-      donga: 41,
-      chosun: 44,
-      joongang: 38,
-      hani: 33,
-      kyunghyang: 30,
-      seoul: 29,
-      hankookilbo: 33,
-    },
-    데이터: {
-      yonhap: 24,
-      pressian: 15,
-      donga: 17,
-      chosun: 18,
-      joongang: 15,
-      hani: 13,
-      kyunghyang: 12,
-      seoul: 13,
-      hankookilbo: 14,
-    },
-    "개인정보 유출": {
-      yonhap: 45,
-      pressian: 20,
-      donga: 29,
-      chosun: 27,
-      joongang: 25,
-      hani: 18,
-      kyunghyang: 16,
-      seoul: 19,
-      hankookilbo: 21,
-    },
-    삼성: {
-      yonhap: 55,
-      pressian: 20,
-      donga: 35,
-      chosun: 34,
-      joongang: 31,
-      hani: 17,
-      kyunghyang: 15,
-      seoul: 19,
-      hankookilbo: 22,
-    },
-    금리: {
-      yonhap: 40,
-      pressian: 16,
-      donga: 23,
-      chosun: 21,
-      joongang: 24,
-      hani: 14,
-      kyunghyang: 12,
-      seoul: 16,
-      hankookilbo: 18,
-    },
-    부동산: {
-      yonhap: 47,
-      pressian: 18,
-      donga: 25,
-      chosun: 27,
-      joongang: 24,
-      hani: 16,
-      kyunghyang: 14,
-      seoul: 18,
-      hankookilbo: 20,
-    },
-    AI: {
-      yonhap: 32,
-      pressian: 13,
-      donga: 19,
-      chosun: 18,
-      joongang: 16,
-      hani: 12,
-      kyunghyang: 11,
-      seoul: 13,
-      hankookilbo: 15,
-    },
-    전기차: {
-      yonhap: 29,
-      pressian: 12,
-      donga: 17,
-      chosun: 16,
-      joongang: 14,
-      hani: 11,
-      kyunghyang: 10,
-      seoul: 12,
-      hankookilbo: 13,
-    },
-  },
-};
+function buildRowsFromResponses(
+  articleCounts: MediaArticleCountsResponse,
+  biasByMedia: TitleBiasByMediaResponse,
+  sentiments: MediaContentSentimentCompareResponse,
+  framingWords: MediaTitleTopWordsResponse
+): MediaRow[] {
+  const rowMap = new Map<string, MediaRow>();
+  const orderedNames: string[] = [];
 
-function getFixedVolume(keyword: string, period: Period, mediaKey: string) {
-  const byPeriod = FIXED_VOLUMES[period];
-  const byKeyword = byPeriod?.[keyword];
-  const v = byKeyword?.[mediaKey];
-  // 테이블에 없으면 0으로(= 기사 수 부족/비표시 정책에 걸릴 수 있음)
-  return typeof v === "number" ? v : 0;
-}
+  const ensureRow = (mediaNameRaw: string) => {
+    const mediaName = normalizeMediaName(mediaNameRaw);
+    if (!mediaName) return null;
 
-function buildMockRows(keyword: string, period: Period): MediaRow[] {
-  const medias: { key: string; label: string }[] = [
-    { key: "yonhap", label: "연합뉴스" },
-    { key: "pressian", label: "프레시안" },
-    { key: "donga", label: "동아일보" },
-    { key: "chosun", label: "조선일보" },
-    { key: "joongang", label: "중앙일보" },
-    { key: "hani", label: "한겨레" },
-    { key: "kyunghyang", label: "경향신문" },
-    { key: "seoul", label: "서울신문" },
-    { key: "hankookilbo", label: "한국일보" },
-  ];
+    if (!rowMap.has(mediaName)) {
+      rowMap.set(mediaName, {
+        key: mediaName,
+        label: mediaName,
+        volume: 0,
+        bias: 0,
+        sentiment: { positive: 0, neutral: 0, negative: 0 },
+        topWords: [],
+      });
+      orderedNames.push(mediaName);
+    }
 
-  // ✅ volume은 고정값, 나머지(편향/감성/대표단어)는 기존처럼 시드 기반으로 유지
-  // (원하면 이것들도 고정 테이블로 바꿀 수 있음)
-  const seed = hashInt(`${keyword}-${period}-media-compare`);
-  const rand = mulberry32(seed);
+    return rowMap.get(mediaName)!;
+  };
 
-  return medias.map((m) => {
-    const volume = getFixedVolume(keyword, period, m.key);
-
-    const bias = clamp(Math.round((rand() * 12 - 6) * 10) / 10, -6, 6);
-
-    const p = Math.floor(15 + rand() * 30);
-    const n = Math.floor(20 + rand() * 25);
-    let neg = 100 - (p + n);
-
-    if (neg < 10) neg = 10;
-    if (neg > 70) neg = 70;
-
-    const neutral = clamp(100 - (p + neg), 10, 60);
-    const positive = clamp(p, 5, 70);
-    const negative = clamp(neg, 5, 80);
-
-    const sum = positive + neutral + negative;
-    const fix = 100 - sum;
-    const fixedNeutral = clamp(neutral + fix, 0, 100);
-
-    const wordRand = mulberry32(hashInt(`${keyword}-${period}-${m.key}-words`));
-    const topWords = pickTopWords(m.key, keyword, wordRand);
-
-    return {
-      key: m.key,
-      label: m.label,
-      volume,
-      bias,
-      sentiment: { positive, neutral: fixedNeutral, negative },
-      topWords,
-    };
+  (articleCounts.items ?? []).forEach((item) => {
+    const row = ensureRow(item.media_name);
+    if (!row) return;
+    row.volume = Number.isFinite(item.article_count) ? Math.max(0, Math.round(item.article_count)) : 0;
   });
+
+  (biasByMedia.items ?? []).forEach((item) => {
+    const row = ensureRow(item.media_name);
+    if (!row) return;
+
+    // "전체"는 프론트 정책상 0으로 고정(개별 언론사 비교용 행만 실제 점수 사용)
+    if (row.label === "전체") {
+      row.bias = 0;
+      return;
+    }
+
+    const score = Number(item.bias_score);
+    row.bias = Number.isFinite(score) ? clamp(Math.round(score * 10) / 10, -10, 10) : 0;
+  });
+
+  (sentiments.items ?? []).forEach((item) => {
+    const row = ensureRow(item.media_name);
+    if (!row) return;
+
+    row.sentiment = normalizePercentTriplet(
+      Number(item.positive),
+      Number(item.neutral),
+      Number(item.negative)
+    );
+  });
+
+  (framingWords.items ?? []).forEach((item) => {
+    const row = ensureRow(item.media_name);
+    if (!row) return;
+
+    row.topWords = Array.isArray(item.words)
+      ? item.words
+          .map((word) => String(word).trim())
+          .filter(Boolean)
+          .slice(0, 5)
+      : [];
+  });
+
+  return orderedNames
+    .map((name) => rowMap.get(name))
+    .filter((row): row is MediaRow => Boolean(row))
+    .filter((row) => row.label !== "전체")
+    // 기사량 0건인 언론사는 비교 화면 전반(차트/대표 단어 카드)에서 제외
+    .filter((row) => row.volume > 0);
 }
 
-function buildOverallRow(rows: MediaRow[], keyword: string, period: Period): MediaRow | null {
+function buildOverallRow(rows: MediaRow[]): MediaRow | null {
   if (rows.length === 0) return null;
 
   const totalVol = rows.reduce((acc, r) => acc + r.volume, 0);
+
   if (totalVol <= 0) return null;
 
-  const biasWeighted = rows.reduce((acc, r) => acc + r.bias * r.volume, 0) / Math.max(1, totalVol);
-  const bias = clamp(Math.round(biasWeighted * 10) / 10, -6, 6);
-
-  const posW = rows.reduce((acc, r) => acc + r.sentiment.positive * r.volume, 0) / totalVol;
-  const neuW = rows.reduce((acc, r) => acc + r.sentiment.neutral * r.volume, 0) / totalVol;
-  const negW = rows.reduce((acc, r) => acc + r.sentiment.negative * r.volume, 0) / totalVol;
-
-  const positive = clamp(Math.round(posW), 0, 100);
-  const negative = clamp(Math.round(negW), 0, 100);
-  let neutral = clamp(Math.round(neuW), 0, 100);
-
-  const sum = positive + neutral + negative;
-  const fix = 100 - sum;
-  neutral = clamp(neutral + fix, 0, 100);
-
-  const wordRand = mulberry32(hashInt(`${keyword}-${period}-overall-words`));
-  const topWords = pickTopWords("overall", keyword, wordRand);
+  const weightedPositive =
+    rows.reduce((acc, r) => acc + r.sentiment.positive * r.volume, 0) / Math.max(1, totalVol || 1);
+  const weightedNeutral =
+    rows.reduce((acc, r) => acc + r.sentiment.neutral * r.volume, 0) / Math.max(1, totalVol || 1);
+  const weightedNegative =
+    rows.reduce((acc, r) => acc + r.sentiment.negative * r.volume, 0) / Math.max(1, totalVol || 1);
 
   return {
     key: "overall",
     label: "전체",
     volume: totalVol,
-    bias,
-    sentiment: { positive, neutral, negative },
-    topWords,
+    // 프론트 정책: 전체 편향도는 항상 0으로 표시
+    bias: 0,
+    sentiment: normalizePercentTriplet(weightedPositive, weightedNeutral, weightedNegative),
+    topWords: [],
   };
+}
+
+function formatRangeLabelFromApi(header: MediaCompareTopKeywordsResponse | null, period: Period) {
+  if (header?.period_start && header?.period_end) {
+    return `${header.period_start} ~ ${header.period_end}`;
+  }
+
+  const end = new Date();
+  end.setHours(0, 0, 0, 0);
+
+  const start = new Date(end);
+  start.setDate(start.getDate() - (period === "7d" ? 6 : 13));
+
+  return `${formatDateYYYYMMDD(start)} ~ ${formatDateYYYYMMDD(end)}`;
 }
 
 export default function MediaComparePage() {
   const [period, setPeriod] = useState<Period>("7d");
 
-  // 키워드 후보(원본). 여기서 "기간별 기사 수"로 정렬/필터링해서 화면에 뿌린다.
-  const ALL_KEYWORDS = useMemo(
-    () => ["쿠팡", "문재인", "윤석열", "데이터", "개인정보 유출", "삼성", "금리", "부동산", "AI", "전기차"],
-    []
-  );
+  const [headerData, setHeaderData] = useState<MediaCompareTopKeywordsResponse | null>(null);
+  const [selectedKeywordSeq, setSelectedKeywordSeq] = useState<number | null>(null);
 
-  // period 기준으로 키워드별 총 기사 수(=9개 언론사 volume 합)를 계산
-  // - 기사 수 10 미만은 아예 숨김
-  // - 기사 수 내림차순으로 칩 배치
-  const keywordStats = useMemo(() => {
-    const stats = ALL_KEYWORDS.map((k) => {
-      const r = buildMockRows(k, period);
-      const totalArticles = r.reduce((acc, row) => acc + row.volume, 0);
-      return { keyword: k, totalArticles };
-    })
-      .filter((x) => x.totalArticles >= 10)
-      .sort((a, b) => b.totalArticles - a.totalArticles);
+  const [rows, setRows] = useState<MediaRow[]>([]);
+  const [isHeaderLoading, setIsHeaderLoading] = useState(false);
+  const [isDetailLoading, setIsDetailLoading] = useState(false);
+  const [headerError, setHeaderError] = useState<string | null>(null);
+  const [detailError, setDetailError] = useState<string | null>(null);
+  const [aiSummaryText, setAiSummaryText] = useState("");
+  const [isAiSummaryLoading, setIsAiSummaryLoading] = useState(false);
+  const [aiSummaryError, setAiSummaryError] = useState<string | null>(null);
 
-    return stats;
-  }, [ALL_KEYWORDS, period]);
+  const volumeCanvasRef = useRef<HTMLCanvasElement | null>(null);
+  const biasCanvasRef = useRef<HTMLCanvasElement | null>(null);
+  const sentimentCanvasRef = useRef<HTMLCanvasElement | null>(null);
 
-  const visibleKeywords = useMemo(() => keywordStats.map((x) => x.keyword), [keywordStats]);
+  // 상단 키워드 헤더(칩 목록/기간/선택 키워드 요약) 조회
+  useEffect(() => {
+    let cancelled = false;
 
-  // 사용자가 마지막으로 클릭한 "의도" 키워드
-  const [keyword, setKeyword] = useState<string>(() => ALL_KEYWORDS[0] ?? "");
+    async function loadHeader() {
+      setIsHeaderLoading(true);
+      setHeaderError(null);
 
-  // 실제로 화면/분석에 쓰는 키워드(목록에서 사라지면 자동으로 1등 키워드로 대체)
-  // useEffect에서 setState로 맞추지 않고, 파생값으로 처리해서 React 경고를 제거한다.
-  const selectedKeyword = useMemo(() => {
-    if (visibleKeywords.length === 0) return "";
-    if (visibleKeywords.includes(keyword)) return keyword;
-    return visibleKeywords[0];
-  }, [visibleKeywords, keyword]);
+      try {
+        const data = await getMediaCompareTopKeywords({
+          period: toApiPeriod(period),
+          limit: 10,
+        });
 
-  const rows = useMemo(() => {
-    if (!selectedKeyword) return [];
-    return buildMockRows(selectedKeyword, period);
-  }, [selectedKeyword, period]);
+        if (cancelled) return;
 
-  const overallRow = useMemo(
-    () => (selectedKeyword ? buildOverallRow(rows, selectedKeyword, period) : null),
-    [rows, selectedKeyword, period]
-  );
+        setHeaderData(data);
 
-  const biasRows = useMemo(() => (overallRow ? [overallRow, ...rows] : rows), [overallRow, rows]);
+        const items = Array.isArray(data.items) ? data.items : [];
+        setSelectedKeywordSeq((prev) => {
+          if (prev != null && items.some((item) => item.keyword_seq === prev)) return prev;
+
+          if (typeof data.selected_keyword_seq === "number") return data.selected_keyword_seq;
+          return items[0]?.keyword_seq ?? null;
+        });
+      } catch (err) {
+        if (cancelled) return;
+        setHeaderData(null);
+        setSelectedKeywordSeq(null);
+        setRows([]);
+        setHeaderError(getErrorMessage(err));
+      } finally {
+        if (!cancelled) setIsHeaderLoading(false);
+      }
+    }
+
+    loadHeader();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [period]);
+
+  // 선택 키워드 기준 상세 데이터(기사량/편향/감성/프레이밍) 조회
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadDetails(keywordSeq: number) {
+      setIsDetailLoading(true);
+      setDetailError(null);
+
+      try {
+        const apiPeriod = toApiPeriod(period);
+
+        const [articleCounts, biasByMedia, sentiments, framingWords] = await Promise.all([
+          getMediaArticleCounts(keywordSeq, { period: apiPeriod }),
+          getTitleBiasByMedia(keywordSeq, { period: apiPeriod }),
+          getMediaCompareContentSentiment(keywordSeq, { period: apiPeriod }),
+          getMediaCompareTitleTopWords(keywordSeq, { period: apiPeriod, top_n: 5 }),
+        ]);
+
+        if (cancelled) return;
+
+        const mergedRows = buildRowsFromResponses(articleCounts, biasByMedia, sentiments, framingWords);
+        setRows(mergedRows);
+      } catch (err) {
+        if (cancelled) return;
+        setRows([]);
+        setDetailError(getErrorMessage(err));
+      } finally {
+        if (!cancelled) setIsDetailLoading(false);
+      }
+    }
+
+    if (selectedKeywordSeq == null) {
+      setRows([]);
+      setDetailError(null);
+      setIsDetailLoading(false);
+      return;
+    }
+
+    loadDetails(selectedKeywordSeq);
+
+    return () => {
+      cancelled = true;
+    };
+  }, [period, selectedKeywordSeq]);
+
+  // 선택 키워드 기준 AI 요약 조회 (키워드 상세페이지와 동일 데이터)
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadAiSummary(keywordSeq: number) {
+      setIsAiSummaryLoading(true);
+      setAiSummaryError(null);
+
+      try {
+        const data = await getAiSummary(keywordSeq, { period: toApiPeriod(period) });
+
+        if (cancelled) return;
+
+        setAiSummaryText(String(data.summary_text ?? ""));
+      } catch (err) {
+        if (cancelled) return;
+        setAiSummaryText("");
+        setAiSummaryError(getErrorMessage(err));
+      } finally {
+        if (!cancelled) setIsAiSummaryLoading(false);
+      }
+    }
+
+    if (selectedKeywordSeq == null) {
+      setAiSummaryText("");
+      setAiSummaryError(null);
+      setIsAiSummaryLoading(false);
+      return;
+    }
+
+    loadAiSummary(selectedKeywordSeq);
+
+    return () => {
+      cancelled = true;
+    };
+  }, [period, selectedKeywordSeq]);
+
+  const keywordItems = useMemo(() => headerData?.items ?? [], [headerData]);
+
+  const selectedKeywordLabel = useMemo(() => {
+    if (selectedKeywordSeq == null) return "";
+    return (
+      keywordItems.find((item) => item.keyword_seq === selectedKeywordSeq)?.keyword ??
+      headerData?.selected_keyword ??
+      ""
+    );
+  }, [headerData?.selected_keyword, keywordItems, selectedKeywordSeq]);
+
+  const overallRow = useMemo(() => buildOverallRow(rows), [rows]);
+
+  const biasRows = useMemo(() => rows, [rows]);
   const sentimentRows = useMemo(() => (overallRow ? [overallRow, ...rows] : rows), [overallRow, rows]);
 
   const summary = useMemo(() => {
-    const mediaCount = rows.length; // 9개(키워드가 있으면)
     const totalArticles = rows.reduce((acc, r) => acc + r.volume, 0);
+    const mediaCount = rows.filter((r) => r.volume > 0).length;
 
     const sortedByVol = [...rows].sort((a, b) => b.volume - a.volume);
-    const topVol = sortedByVol.slice(0, 2).map((r) => r.label).join("·");
+    const topVol = sortedByVol
+      .filter((r) => r.volume > 0)
+      .slice(0, 2)
+      .map((r) => r.label)
+      .join("·");
 
     const sortedByAbsBias = [...rows].sort((a, b) => Math.abs(b.bias) - Math.abs(a.bias));
     const mostBiased = sortedByAbsBias[0]?.label ?? "-";
@@ -473,22 +403,11 @@ export default function MediaComparePage() {
     };
   }, [rows]);
 
-  const metaRangeLabel = useMemo(() => {
-    const end = new Date();
-    end.setHours(0, 0, 0, 0);
+  const metaRangeLabel = useMemo(() => formatRangeLabelFromApi(headerData, period), [headerData, period]);
 
-    const daysBack = period === "7d" ? 6 : 13;
-    const start = new Date(end);
-    start.setDate(start.getDate() - daysBack);
+  const rangeLabel = period === "7d" ? "최근 7일" : "최근 14일";
 
-    return `${formatDateYYYYMMDD(start)} ~ ${formatDateYYYYMMDD(end)}`;
-  }, [period]);
-
-  const volumeCanvasRef = useRef<HTMLCanvasElement | null>(null);
-  const biasCanvasRef = useRef<HTMLCanvasElement | null>(null);
-  const sentimentCanvasRef = useRef<HTMLCanvasElement | null>(null);
-
-  // 기사량 차트 (언론사 9개만)
+  // 기사량 차트 (언론사 행만)
   useEffect(() => {
     if (!volumeCanvasRef.current) return;
     const ctx = volumeCanvasRef.current.getContext("2d");
@@ -518,7 +437,11 @@ export default function MediaComparePage() {
         maintainAspectRatio: false,
         scales: {
           x: { grid: { display: false }, ticks: { color: "#9ca3af", font: { size: 11 } } },
-          y: { grid: { color: "rgba(55,65,81,0.5)" }, ticks: { color: "#9ca3af", font: { size: 11 } } },
+          y: {
+            beginAtZero: true,
+            grid: { color: "rgba(55,65,81,0.5)" },
+            ticks: { color: "#9ca3af", font: { size: 11 }, precision: 0 },
+          },
         },
         plugins: {
           legend: { display: false },
@@ -536,7 +459,7 @@ export default function MediaComparePage() {
     return () => chart.destroy();
   }, [rows]);
 
-  // 편향도 차트 (맨 왼쪽 "전체" 포함)
+  // 편향도 차트 (언론사 행만, "전체" 제외)
   useEffect(() => {
     if (!biasCanvasRef.current) return;
     const ctx = biasCanvasRef.current.getContext("2d");
@@ -559,7 +482,7 @@ export default function MediaComparePage() {
             borderWidth: 0,
             borderRadius: 6,
             backgroundColor(context) {
-              const raw = context.raw as number;
+              const raw = Number(context.raw ?? 0);
               return raw >= 0 ? posColor : negColor;
             },
           },
@@ -570,14 +493,20 @@ export default function MediaComparePage() {
         maintainAspectRatio: false,
         scales: {
           x: { grid: { display: false }, ticks: { color: "#9ca3af", font: { size: 11 } } },
-          y: { grid: { color: "rgba(55,65,81,0.5)" }, ticks: { color: "#9ca3af", font: { size: 11 } } },
+          y: {
+            suggestedMin: -10,
+            suggestedMax: 10,
+            grid: { color: "rgba(55,65,81,0.5)" },
+            ticks: { color: "#9ca3af", font: { size: 11 } },
+          },
         },
         plugins: {
           legend: { display: false },
           tooltip: {
             callbacks: {
               label(context) {
-                return `편향도 ${context.parsed.y}`;
+                const value = Number(context.parsed.y ?? 0);
+                return `편향도 ${value.toFixed(1)}`;
               },
             },
           },
@@ -620,6 +549,8 @@ export default function MediaComparePage() {
           x: { stacked: true, grid: { display: false }, ticks: { color: "#9ca3af", font: { size: 11 } } },
           y: {
             stacked: true,
+            beginAtZero: true,
+            max: 100,
             grid: { color: "rgba(55,65,81,0.5)" },
             ticks: {
               color: "#9ca3af",
@@ -646,7 +577,9 @@ export default function MediaComparePage() {
     return () => chart.destroy();
   }, [sentimentRows]);
 
-  const rangeLabel = period === "7d" ? "최근 7일" : "최근 14일";
+  const summaryCardError = headerError || aiSummaryError;
+  const isSummaryCardLoading = isHeaderLoading || isAiSummaryLoading;
+  const noKeywordAvailable = !isHeaderLoading && !headerError && keywordItems.length === 0;
 
   return (
     <main className={styles.pageRoot}>
@@ -669,16 +602,23 @@ export default function MediaComparePage() {
 
         <div className={styles.keywordFilterRow}>
           <div className={styles.keywordChipGroup} aria-label="TOP 키워드 선택">
-            {visibleKeywords.map((k) => (
+            {keywordItems.map((item) => (
               <button
-                key={k}
+                key={item.keyword_seq}
                 type="button"
-                className={`${styles.keywordChip} ${selectedKeyword === k ? styles.keywordChipActive : ""}`}
-                onClick={() => setKeyword(k)}
+                className={`${styles.keywordChip} ${
+                  selectedKeywordSeq === item.keyword_seq ? styles.keywordChipActive : ""
+                }`}
+                onClick={() => setSelectedKeywordSeq(item.keyword_seq)}
+                disabled={isHeaderLoading}
               >
-                {k}
+                {item.keyword}
               </button>
             ))}
+
+            {noKeywordAvailable && (
+              <div className={styles.statusText}>표시 가능한 키워드(ALL + 기간 기준 10건 이상)가 없습니다.</div>
+            )}
           </div>
 
           <div className={styles.periodFilterInline}>
@@ -711,23 +651,23 @@ export default function MediaComparePage() {
         <article className={styles.card}>
           <div className={styles.cardHeader}>
             <div>
-              <div className={styles.cardTitle}>오늘의 키워드 분석 요약</div>
+              <div className={styles.cardTitle}>키워드 분석 요약</div>
               <div className={styles.cardSub}>수집된 기사 내용을 바탕으로 생성한 AI 요약입니다.</div>
             </div>
             <span className={styles.badgeSoft}>요약 리포트</span>
           </div>
 
           <div className={styles.summaryText}>
-            {selectedKeyword ? (
-              <>
-                {rangeLabel} 기준 {summary.mediaCount}개 언론사가 키워드 {selectedKeyword}을(를) 다룬 기사량은 총{" "}
-                {summary.totalArticles}건입니다. 기사량 상위 언론사는 {summary.topVol}이며, 편향도 절댓값 기준으로
-                변동 폭이 큰 언론사는 {summary.mostBiased}입니다.
-              </>
+            {summaryCardError ? (
+              <span className={styles.statusError}>{summaryCardError}</span>
+            ) : isSummaryCardLoading ? (
+              "데이터를 불러오는 중입니다..."
+            ) : selectedKeywordSeq == null || !selectedKeywordLabel ? (
+              `${rangeLabel} 기준으로 비교 가능한 키워드가 없습니다.`
+            ) : aiSummaryText.trim() ? (
+              aiSummaryText
             ) : (
-              <>
-                {rangeLabel} 기준으로 기사 수 10건 이상인 키워드가 없어 목록에 표시할 키워드가 없습니다.
-              </>
+              "요약 데이터가 없습니다."
             )}
           </div>
         </article>
@@ -739,7 +679,7 @@ export default function MediaComparePage() {
             <div>
               <div className={styles.cardTitle}>언론사별 기사량 TOP</div>
               <div className={styles.cardSub}>
-                선택한 키워드에 대해 {rangeLabel} 기준 수집된 기사 건수를 언론사별로 정렬한 결과입니다.
+                선택한 키워드에 대해 {metaRangeLabel} 기준 수집된 기사 건수를 언론사별로 정렬한 결과입니다.
               </div>
             </div>
             <span className={styles.badgeSoft}>기사량 지표</span>
@@ -750,8 +690,9 @@ export default function MediaComparePage() {
           </div>
 
           <div className={styles.biasCaption}>
-            막대가 길수록 {rangeLabel} 선택 키워드에 대해 더 많은 기사를 보도한 언론사입니다.
+            막대가 길수록 {metaRangeLabel} 선택 키워드에 대해 더 많은 기사를 보도한 언론사입니다.
           </div>
+          {detailError && <div className={styles.statusError}>{detailError}</div>}
         </article>
 
         <article className={styles.card}>
@@ -772,6 +713,7 @@ export default function MediaComparePage() {
           <div className={styles.biasCaption}>
             <strong>양수</strong>일수록 긍정적인 톤, <strong>음수</strong>일수록 비판적인 톤이 강한 언론사입니다.
           </div>
+          {detailError && <div className={styles.statusError}>{detailError}</div>}
         </article>
       </section>
 
@@ -805,6 +747,7 @@ export default function MediaComparePage() {
               부정 (Negative)
             </div>
           </div>
+          {detailError && <div className={styles.statusError}>{detailError}</div>}
         </article>
 
         <article className={styles.card}>
@@ -818,21 +761,33 @@ export default function MediaComparePage() {
             <span className={styles.badgeSoft}>텍스트 프레이밍</span>
           </div>
 
-          <div className={styles.framingList}>
-            {rows.map((r) => (
-              <div key={r.key} className={styles.framingItem}>
-                <div className={styles.framingMedia}>{r.label}</div>
+          {isDetailLoading ? (
+            <div className={styles.statusText}>대표 단어 데이터를 불러오는 중입니다...</div>
+          ) : detailError ? (
+            <div className={styles.statusError}>{detailError}</div>
+          ) : rows.length === 0 ? (
+            <div className={styles.statusText}>표시할 대표 단어 데이터가 없습니다.</div>
+          ) : (
+            <div className={styles.framingList}>
+              {rows.map((r) => (
+                <div key={r.key} className={styles.framingItem}>
+                  <div className={styles.framingMedia}>{r.label}</div>
 
-                <div className={styles.framingKeywords} aria-label={`${r.label} 대표 단어`}>
-                  {r.topWords.map((w, i) => (
-                    <span key={`${r.key}-${w}-${i}`} className={styles.keywordTagNeutral}>
-                      {w}
-                    </span>
-                  ))}
+                  <div className={styles.framingKeywords} aria-label={`${r.label} 대표 단어`}>
+                    {r.topWords.length > 0 ? (
+                      r.topWords.map((w, i) => (
+                        <span key={`${r.key}-${w}-${i}`} className={styles.keywordTagNeutral}>
+                          {w}
+                        </span>
+                      ))
+                    ) : (
+                      <span className={styles.statusText}>단어 데이터 없음</span>
+                    )}
+                  </div>
                 </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
         </article>
       </section>
     </main>

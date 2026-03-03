@@ -33,7 +33,17 @@ public final class InquiryDetailDto {
             LocalDateTime createdAt,
             String status,
             @JsonProperty("is_private")
-            boolean isPrivate
+            boolean isPrivate,
+            @JsonProperty("admin_message")
+            String adminMessage,
+            @JsonProperty("processed_at")
+            LocalDateTime processedAt,
+            @JsonProperty("answer_updated_at")
+            LocalDateTime answerUpdatedAt,
+            @JsonProperty("answered_by")
+            String answeredBy,
+            @JsonProperty("answer_team_label")
+            String answerTeamLabel
     ) {
         public static InquiryDto from(InquiriesService.InquiryDetail detail) {
             return new InquiryDto(
@@ -44,7 +54,12 @@ public final class InquiryDetailDto {
                     detail.writerUserId(),
                     detail.createdAt(),
                     detail.status(),
-                    detail.isPrivate()
+                    detail.isPrivate(),
+                    detail.adminMessage(),
+                    detail.processedAt(),
+                    detail.answerUpdatedAt(),
+                    detail.answeredBy(),
+                    detail.answerTeamLabel()
             );
         }
     }

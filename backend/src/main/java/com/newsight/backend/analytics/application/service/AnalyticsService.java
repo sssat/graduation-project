@@ -182,7 +182,12 @@ public class AnalyticsService {
         TrendKeywordMasterRef keyword = getKeywordOrThrow(keywordSeq);
 
         TrendRunRef latestRun = getLatestTrendRunOrThrow();
-        PeriodRange range = toPeriodRange(latestRun.getBaseDate(), pf);
+        PeriodRange range = resolveActualPublishedRangeOrFallback(
+                latestRun.getTrendRunSeq(),
+                keywordSeq,
+                pf,
+                latestRun.getBaseDate()
+        );
 
         int articleCount = getFinalRankArticleCountLatest(keywordSeq, pf).orElse(0);
         long mediaCount = analyzeMediaStatRepository.countDistinctMediaCode(
@@ -336,7 +341,7 @@ public class AnalyticsService {
         int resolvedLimit = normalizePositive(limit, DEFAULT_LIMIT, 1, 50);    
 
         TrendRunRef latestRun = getLatestTrendRunOrThrow();
-        PeriodRange range = toPeriodRange(latestRun.getBaseDate(), pf);    
+        PeriodRange fallbackRange = toPeriodRange(latestRun.getBaseDate(), pf);    
 
         List<TrendKeywordFinalRank> ranks =
                 trendKeywordFinalRankRepository.findByTrendRunSeqAndPeriodFilterOrderByFinalRankAsc(
@@ -375,9 +380,18 @@ public class AnalyticsService {
             selectedMediaCount = (int) c;
         }    
 
+        PeriodRange displayRange = selectedKeywordSeq == null
+                ? fallbackRange
+                : resolveActualPublishedRangeOrFallback(
+                        latestRun.getTrendRunSeq(),
+                        selectedKeywordSeq,
+                        pf,
+                        latestRun.getBaseDate()
+                );
+
         return new MediaCompareTopKeywordsResult(
-                range.start().toString(),
-                range.end().toString(),
+                displayRange.start().toString(),
+                displayRange.end().toString(),
                 selectedKeyword,
                 selectedArticleCount,
                 selectedMediaCount,
@@ -707,6 +721,146 @@ public class AnalyticsService {
         return round1(((current - (double) base) / (double) base) * 100.0);
     }
 
+
+    private PeriodRange resolveActualPublishedRangeOrFallback(
+            Long trendRunSeq,
+            Long keywordSeq,
+            PeriodFilter pf,
+            LocalDate baseDate
+    ) {
+        PeriodRange fallback = toPeriodRange(baseDate, pf);
+
+        if (trendRunSeq == null || keywordSeq == null) {
+            return fallback;
+        }
+
+        return findActualPublishedDateRange(trendRunSeq, keywordSeq, fallback.start(), fallback.end())
+                .orElse(fallback);
+    }
+
+    /**
+     * 실제 기사 발행일 범위(MIN/MAX)를 조회한다.
+     * - 스키마/컬럼명이 프로젝트마다 다를 수 있어 대표 후보들을 순차 시도한다.
+     * - 조회 실패 시 Optional.empty()를 반환하고 상위에서 기존 기간(D7/D14 계산값)으로 fallback 한다.
+     */
+    private Optional<PeriodRange> findActualPublishedDateRange(
+            Long trendRunSeq,
+            Long keywordSeq,
+            LocalDate windowStart,
+            LocalDate windowEnd
+    ) {
+        List<ArticleDateRangeSqlCandidate> candidates = List.of(
+                new ArticleDateRangeSqlCandidate("T_NEWS_ARTICLE", "PUBLISHED_AT", "KEYWORD_SEQ", "TREND_RUN_SEQ"),
+                new ArticleDateRangeSqlCandidate("T_NEWS_ARTICLE", "PUBLISHED_DATE", "KEYWORD_SEQ", "TREND_RUN_SEQ"),
+                new ArticleDateRangeSqlCandidate("T_NEWS_ARTICLE_RAW", "PUBLISHED_AT", "KEYWORD_SEQ", "TREND_RUN_SEQ"),
+                new ArticleDateRangeSqlCandidate("T_NEWS_ARTICLE_RAW", "PUBLISHED_DATE", "KEYWORD_SEQ", "TREND_RUN_SEQ"),
+
+                // run_seq 컬럼이 없는 경우(키워드 + 날짜 범위로만 조회)도 대비
+                new ArticleDateRangeSqlCandidate("T_NEWS_ARTICLE", "PUBLISHED_AT", "KEYWORD_SEQ", null),
+                new ArticleDateRangeSqlCandidate("T_NEWS_ARTICLE", "PUBLISHED_DATE", "KEYWORD_SEQ", null),
+                new ArticleDateRangeSqlCandidate("T_NEWS_ARTICLE_RAW", "PUBLISHED_AT", "KEYWORD_SEQ", null),
+                new ArticleDateRangeSqlCandidate("T_NEWS_ARTICLE_RAW", "PUBLISHED_DATE", "KEYWORD_SEQ", null)
+        );
+
+        for (ArticleDateRangeSqlCandidate c : candidates) {
+            Optional<PeriodRange> found = tryFetchActualPublishedDateRange(c, trendRunSeq, keywordSeq, windowStart, windowEnd);
+            if (found.isPresent()) {
+                return found;
+            }
+        }
+
+        return Optional.empty();
+    }
+
+    private Optional<PeriodRange> tryFetchActualPublishedDateRange(
+            ArticleDateRangeSqlCandidate c,
+            Long trendRunSeq,
+            Long keywordSeq,
+            LocalDate windowStart,
+            LocalDate windowEnd
+    ) {
+        String sql;
+        if (c.trendRunSeqCol() == null) {
+            sql = String.format(
+                    "SELECT DATE(MIN(a.%1$s)) AS min_dt, DATE(MAX(a.%1$s)) AS max_dt " +
+                            "FROM %2$s a " +
+                            "WHERE a.%3$s = :keywordSeq " +
+                            "AND DATE(a.%1$s) BETWEEN :startDate AND :endDate",
+                    c.publishedAtCol(),
+                    c.tableName(),
+                    c.keywordSeqCol()
+            );
+        } else {
+            sql = String.format(
+                    "SELECT DATE(MIN(a.%1$s)) AS min_dt, DATE(MAX(a.%1$s)) AS max_dt " +
+                            "FROM %2$s a " +
+                            "WHERE a.%3$s = :trendRunSeq " +
+                            "AND a.%4$s = :keywordSeq " +
+                            "AND DATE(a.%1$s) BETWEEN :startDate AND :endDate",
+                    c.publishedAtCol(),
+                    c.tableName(),
+                    c.trendRunSeqCol(),
+                    c.keywordSeqCol()
+            );
+        }
+
+        try {
+            var query = em.createNativeQuery(sql);
+            query.setParameter("keywordSeq", keywordSeq);
+            query.setParameter("startDate", java.sql.Date.valueOf(windowStart));
+            query.setParameter("endDate", java.sql.Date.valueOf(windowEnd));
+
+            if (c.trendRunSeqCol() != null) {
+                query.setParameter("trendRunSeq", trendRunSeq);
+            }
+
+            Object rowObj = query.getSingleResult();
+            if (!(rowObj instanceof Object[] row) || row.length < 2) {
+                return Optional.empty();
+            }
+
+            LocalDate minDate = toLocalDate(row[0]);
+            LocalDate maxDate = toLocalDate(row[1]);
+
+            if (minDate == null || maxDate == null) {
+                return Optional.empty();
+            }
+
+            if (minDate.isAfter(maxDate)) {
+                LocalDate tmp = minDate;
+                minDate = maxDate;
+                maxDate = tmp;
+            }
+
+            return Optional.of(new PeriodRange(minDate, maxDate));
+        } catch (Exception ex) {
+            return Optional.empty();
+        }
+    }
+
+    private LocalDate toLocalDate(Object value) {
+        if (value == null) return null;
+        if (value instanceof LocalDate d) return d;
+        if (value instanceof LocalDateTime dt) return dt.toLocalDate();
+        if (value instanceof java.sql.Date d) return d.toLocalDate();
+        if (value instanceof java.sql.Timestamp ts) return ts.toLocalDateTime().toLocalDate();
+        if (value instanceof java.util.Date d) {
+            return d.toInstant().atZone(clock.getZone()).toLocalDate();
+        }
+
+        String text = String.valueOf(value).trim();
+        if (text.isBlank()) return null;
+        if (text.length() >= 10) {
+            text = text.substring(0, 10);
+        }
+
+        try {
+            return LocalDate.parse(text);
+        } catch (Exception ex) {
+            return null;
+        }
+    }
+
     private Double round1(double v) {
         return Math.round(v * 10.0) / 10.0;
     }
@@ -831,6 +985,13 @@ public class AnalyticsService {
     public record MediaTopWordsItem(
             String mediaName,
             List<String> words
+    ) {}
+
+    private record ArticleDateRangeSqlCandidate(
+            String tableName,
+            String publishedAtCol,
+            String keywordSeqCol,
+            String trendRunSeqCol
     ) {}
 
     private record PeriodRange(LocalDate start, LocalDate end) {}

@@ -4,6 +4,21 @@ import { useNavigate } from "react-router-dom";
 
 import SignUpCard from "../../../components/Auth/SignUp/SignUpCard/SignUpCard";
 import type { SignUpForm } from "../../../components/Auth/SignUp/SignUpCard/SignUpCard";
+import {
+  precheckEmail,
+  precheckUserId,
+  signUp,
+  type UserGender,
+} from "../../../api/accounts";
+import { getErrorMessage } from "../../../api/types";
+import {
+  validateBirth,
+  validateEmail,
+  validateGender,
+  validateName,
+  validatePassword,
+  validateUserId,
+} from "../../../utils/signupValidators";
 
 type FieldErrors = {
   username?: string;
@@ -17,62 +32,6 @@ type FieldErrors = {
   general?: string;
 };
 
-type UserRecord = {
-  user_id: string;
-  email: string;
-  user_name: string;
-  birth_date: string; // YYYY-MM-DD
-  gender: "M" | "F";
-};
-
-const USERS_KEY = "NS_USERS";
-
-function loadUsers(): UserRecord[] {
-  try {
-    const raw = localStorage.getItem(USERS_KEY);
-    if (!raw) return [];
-    const arr = JSON.parse(raw);
-    return Array.isArray(arr) ? (arr as UserRecord[]) : [];
-  } catch {
-    return [];
-  }
-}
-
-function saveUsers(users: UserRecord[]) {
-  localStorage.setItem(USERS_KEY, JSON.stringify(users));
-}
-
-function validateUserId(v: string): string | null {
-  const s = v.trim();
-  if (!s) return "아이디를 입력해주세요.";
-  if (/[A-Z]/.test(s)) return "아이디에는 대문자를 사용할 수 없습니다.";
-  if (!/^[a-z0-9]{5,20}$/.test(s)) return "아이디는 영문 소문자/숫자 5~20자만 가능합니다.";
-  return null;
-}
-
-function validateName(v: string): string | null {
-  const s = v.trim();
-  if (!s) return "이름을 입력해주세요.";
-  if (s.length < 2) return "이름은 2자 이상 입력해주세요.";
-  return null;
-}
-
-function validateEmail(v: string): string | null {
-  const s = v.trim();
-  if (!s) return "이메일을 입력해주세요.";
-  const ok = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s);
-  if (!ok) return "이메일 형식이 올바르지 않습니다.";
-  return null;
-}
-
-function validatePassword(pw: string, pw2: string, userId: string): string | null {
-  if (!pw) return "비밀번호를 입력해주세요.";
-  if (pw.length < 8) return "비밀번호는 8자 이상이어야 합니다.";
-  if (pw.includes(userId)) return "비밀번호에 아이디를 포함할 수 없습니다.";
-  if (pw !== pw2) return "비밀번호 확인이 일치하지 않습니다.";
-  return null;
-}
-
 function toBirthDate(y: string, m: string, d: string): string {
   if (!y || !m || !d) return "";
   const mm = m.padStart(2, "0");
@@ -80,30 +39,30 @@ function toBirthDate(y: string, m: string, d: string): string {
   return `${y}-${mm}-${dd}`;
 }
 
-function validateBirth(y: string, m: string, d: string): string | null {
-  const birth = toBirthDate(y, m, d);
-  if (!birth) return "생년월일을 입력해주세요.";
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(birth)) return "생년월일 형식이 올바르지 않습니다.";
-  return null;
-}
-
-function validateGender(g: SignUpForm["gender"]): string | null {
-  if (g !== "male" && g !== "female") return "성별을 선택하세요.";
-  return null;
-}
-
-function toServerGender(g: SignUpForm["gender"]): "M" | "F" | null {
+function toServerGender(g: SignUpForm["gender"]): UserGender | null {
   if (g === "male") return "M";
   if (g === "female") return "F";
   return null;
 }
 
-function issueToken(): string {
-  try {
-    return crypto.randomUUID();
-  } catch {
-    return `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+function getUserIdPrecheckMessage(status: string | undefined, valid: boolean | undefined): string {
+  if (valid === false || status === "invalid") {
+    return "사용할 수 없는 아이디 형식입니다.";
   }
+  if (status === "taken") {
+    return "이미 사용 중인 아이디입니다.";
+  }
+  return "아이디 확인에 실패했습니다.";
+}
+
+function getEmailPrecheckMessage(status: string | undefined, valid: boolean | undefined): string {
+  if (valid === false || status === "invalid") {
+    return "이메일 형식이 올바르지 않거나 허용되지 않은 도메인입니다.";
+  }
+  if (status === "taken") {
+    return "이미 사용 중인 이메일입니다.";
+  }
+  return "이메일 확인에 실패했습니다.";
 }
 
 export default function SignUpPage() {
@@ -126,13 +85,16 @@ export default function SignUpPage() {
     if (msg) throw new Error(msg);
 
     const userId = username.trim();
-    const users = loadUsers();
-    const taken = users.some((u) => u.user_id === userId);
 
-    if (taken) throw new Error("이미 사용 중인 아이디입니다.");
+    const res = await precheckUserId({ user_id: userId });
+    const status = res.user_id?.status;
+    const valid = res.user_id?.valid;
 
-    const token = issueToken();
-    setIdCheckToken(token);
+    if (status !== "available" || valid !== true || !res.id_check_token) {
+      throw new Error(getUserIdPrecheckMessage(status, valid));
+    }
+
+    setIdCheckToken(res.id_check_token);
     setCheckedUserId(userId);
     return true;
   };
@@ -142,13 +104,16 @@ export default function SignUpPage() {
     if (msg) throw new Error(msg);
 
     const email = emailInput.trim().toLowerCase();
-    const users = loadUsers();
-    const taken = users.some((u) => u.email.toLowerCase() === email);
 
-    if (taken) throw new Error("이미 사용 중인 이메일입니다.");
+    const res = await precheckEmail({ email });
+    const status = res.email?.status;
+    const valid = res.email?.valid;
 
-    const token = issueToken();
-    setEmailCheckToken(token);
+    if (status !== "available" || valid !== true || !res.email_check_token) {
+      throw new Error(getEmailPrecheckMessage(status, valid));
+    }
+
+    setEmailCheckToken(res.email_check_token);
     setCheckedEmail(email);
     return true;
   };
@@ -158,7 +123,7 @@ export default function SignUpPage() {
 
     const user_id = form.username.trim();
     const user_name = form.name.trim();
-    const email = form.email.trim();
+    const email = form.email.trim().toLowerCase();
     const password = form.password;
     const password2 = form.password2;
 
@@ -174,7 +139,13 @@ export default function SignUpPage() {
     if (e3) nextErrors.email = e3;
 
     const e4 = validatePassword(password, password2, user_id);
-    if (e4) nextErrors.password = e4;
+    if (e4) {
+      if (e4.includes("비밀번호 확인이 일치하지 않습니다")) {
+        nextErrors.password2 = e4;
+      } else {
+        nextErrors.password = e4;
+      }
+    }
 
     const e5 = validateBirth(form.birthYear, form.birthMonth, form.birthDay);
     if (e5) nextErrors.birth = e5;
@@ -188,47 +159,68 @@ export default function SignUpPage() {
     const birth_date = toBirthDate(form.birthYear, form.birthMonth, form.birthDay);
 
     if (!idCheckToken) nextErrors.username = nextErrors.username || "아이디 중복확인을 해주세요.";
-    else if (checkedUserId !== user_id) nextErrors.username = "아이디가 변경되었습니다. 아이디 중복확인을 다시 해주세요.";
+    else if (checkedUserId !== user_id) {
+      nextErrors.username = "아이디가 변경되었습니다. 아이디 중복확인을 다시 해주세요.";
+    }
 
-    const normalizedEmail = email.toLowerCase();
     if (!emailCheckToken) nextErrors.email = nextErrors.email || "이메일 중복확인을 해주세요.";
-    else if ((checkedEmail ?? "").toLowerCase() !== normalizedEmail) nextErrors.email = "이메일이 변경되었습니다. 이메일 중복확인을 다시 해주세요.";
+    else if ((checkedEmail ?? "").toLowerCase() !== email) {
+      nextErrors.email = "이메일이 변경되었습니다. 이메일 중복확인을 다시 해주세요.";
+    }
 
-    if (!gender) nextErrors.gender = nextErrors.gender || "성별을 선택하세요.";
+    if (!gender) nextErrors.gender = nextErrors.gender || "성별을 선택해야 합니다.";
 
     if (Object.keys(nextErrors).length > 0) {
       setErrors(nextErrors);
       return;
     }
 
+    // TypeScript 안전성 보강: 위 검증 로직상 여기 도달하면 gender는 반드시 존재해야 함
+    if (!gender) {
+      setErrors({ gender: "성별을 선택해야 합니다." });
+      return;
+    }
+
     try {
-      const users = loadUsers();
-
-      if (users.some((u) => u.user_id === user_id)) {
-        setErrors({ username: "이미 사용 중인 아이디입니다." });
-        return;
-      }
-      if (users.some((u) => u.email.toLowerCase() === normalizedEmail)) {
-        setErrors({ email: "이미 사용 중인 이메일입니다." });
-        return;
-      }
-
-      const newUser: UserRecord = {
+      await signUp({
         user_id,
-        email: normalizedEmail,
-        user_name,
+        email,
+        password,
+        password2,
+        username: user_name,
         birth_date,
-        gender: gender as "M" | "F",
-      };
-
-      saveUsers([newUser, ...users]);
+        gender,
+        agree_whether: Boolean(form.agree),
+        id_check_token: idCheckToken!,
+        email_check_token: emailCheckToken!,
+      });
 
       nav(`/auth/signup/success?name=${encodeURIComponent(user_name)}`, {
         state: { name: user_name },
         replace: true,
       });
-    } catch {
-      setErrors({ general: "회원가입에 실패했습니다." });
+    } catch (error) {
+      const msg = getErrorMessage(error, "회원가입에 실패했습니다.");
+
+      // 백엔드 메시지에 따라 필드 에러로 최대한 매핑
+      if (msg.includes("아이디") && (msg.includes("중복") || msg.includes("사용 중") || msg.includes("precheck"))) {
+        setErrors({ username: msg });
+        return;
+      }
+      if (msg.includes("이메일") && (msg.includes("중복") || msg.includes("사용 중") || msg.includes("precheck"))) {
+        setErrors({ email: msg });
+        return;
+      }
+      if (msg.includes("비밀번호")) {
+        setErrors({ password: msg });
+        return;
+      }
+      if (msg.includes("생년월일")) {
+        setErrors({ birth: msg });
+        return;
+      }
+
+      setErrors({ general: msg });
     }
   };
 

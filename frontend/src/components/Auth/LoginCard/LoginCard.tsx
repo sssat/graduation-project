@@ -27,8 +27,13 @@ export default function LoginCard({ onSubmit, cardWidth }: LoginCardProps) {
 
     const uid = username.trim();
 
+    if (!uid || !password) {
+      setError("아이디와 비밀번호를 입력하세요.");
+      return;
+    }
+
     if (/[A-Z]/.test(uid)) {
-      alert("아이디에는 대문자를 사용할 수 없습니다.");
+      setError("아이디에는 대문자를 사용할 수 없습니다.");
       return;
     }
 

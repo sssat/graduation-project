@@ -1,10 +1,53 @@
 // frontend/src/pages/InquiryDetailPage.tsx
 
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link, Navigate, useLocation, useParams } from "react-router-dom";
 import styles from "./InquiryDetailPage.module.css";
-import { getInquiryById } from "../mocks/inquiryMockData";
+import { getInquiryDetail, type InquiryDetail } from "../api/inquiries";
 import { useAuth } from "../hooks/useAuth";
+import type { InquiryTypeKey } from "../components/inquiries/InquiryCreateModal";
+
+type InquiryDetailView = {
+  inquirySeq: number;
+  title: string;
+  body: string;
+  author: string;
+  createdAt: string;
+  status: "processing" | "done";
+  statusLabel: string;
+  isPrivate: boolean;
+  typeKey: InquiryTypeKey;
+  typeLabel: string;
+  answer?: {
+    teamLabel: string;
+    answeredAt: string;
+    body: string;
+  };
+};
+
+const TYPE_LABEL: Record<InquiryTypeKey, string> = {
+  bug: "오류 제보",
+  idea: "기능 제안",
+  data: "데이터 문의",
+  account: "계정/로그인",
+  etc: "기타",
+};
+
+function getErrorMessage(error: unknown, fallback = "요청 처리 중 오류가 발생했습니다.") {
+  if (error instanceof Error && error.message) return error.message;
+
+  if (typeof error === "object" && error !== null) {
+    const anyErr = error as {
+      response?: { data?: { message?: string; details?: string } };
+      message?: string;
+    };
+    const serverMessage = anyErr.response?.data?.message ?? anyErr.response?.data?.details;
+    if (typeof serverMessage === "string" && serverMessage.trim()) return serverMessage.trim();
+    if (typeof anyErr.message === "string" && anyErr.message.trim()) return anyErr.message.trim();
+  }
+
+  return fallback;
+}
 
 function toNumberSafe(v: string | undefined) {
   const n = Number(v);
@@ -13,20 +56,101 @@ function toNumberSafe(v: string | undefined) {
 
 function splitParagraphs(text: string) {
   return (text ?? "")
-    .split(/\n{2,}/g)
+    .split(/\r?\n\s*\r?\n+/g)
     .map((s) => s.trim())
     .filter(Boolean);
 }
 
+function pad2(n: number) {
+  return String(n).padStart(2, "0");
+}
+
+function formatDateTime(value: string | null | undefined) {
+  if (!value) return "-";
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return value;
+  return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())} ${pad2(d.getHours())}:${pad2(
+    d.getMinutes(),
+  )}`;
+}
+
+function normalizeTypeKey(raw: string): InquiryTypeKey {
+  const v = (raw ?? "").trim().toLowerCase();
+  if (v === "bug" || v === "idea" || v === "data" || v === "account" || v === "etc") return v;
+
+  if (v.includes("오류") || v.includes("bug") || v.includes("error")) return "bug";
+  if (v.includes("기능") || v.includes("idea") || v.includes("suggest")) return "idea";
+  if (v.includes("데이터") || v.includes("data")) return "data";
+  if (v.includes("계정") || v.includes("로그인") || v.includes("account") || v.includes("login")) {
+    return "account";
+  }
+  return "etc";
+}
+
+function normalizeStatusKey(raw: string): "processing" | "done" {
+  const v = (raw ?? "").trim().toLowerCase();
+  if (
+    v === "done" ||
+    v === "completed" ||
+    v === "complete" ||
+    v === "processed" ||
+    v === "resolved" ||
+    v === "answer_completed" ||
+    v === "답변완료" ||
+    v === "처리완료"
+  ) {
+    return "done";
+  }
+  return "processing";
+}
+
+function mapInquiryDetailToView(item: InquiryDetail): InquiryDetailView {
+  const typeKey = normalizeTypeKey(item.inquiry_type);
+  const status = normalizeStatusKey(item.status);
+
+  const body = (typeof item.content === "string" && item.content.trim()
+    ? item.content
+    : typeof item.message === "string"
+    ? item.message
+    : ""
+  ).trim();
+
+  const answerBody = (item.admin_message ?? "").trim();
+  const answerAt = item.answered_at ?? item.answer_updated_at ?? item.processed_at ?? null;
+  const answerTeamLabel = (item.answer_team_label ?? item.answered_by ?? "운영팀").trim() || "운영팀";
+
+  return {
+    inquirySeq: Number(item.inquiry_seq),
+    title: item.title ?? "(제목 없음)",
+    body,
+    author: item.writer_user_id ?? "-",
+    createdAt: formatDateTime(item.created_at),
+    status,
+    statusLabel: status === "processing" ? "처리 중" : "답변 완료",
+    isPrivate: Boolean(item.is_private),
+    typeKey,
+    typeLabel: TYPE_LABEL[typeKey],
+    answer:
+      answerBody.length > 0
+        ? {
+            teamLabel: answerTeamLabel,
+            answeredAt: formatDateTime(answerAt),
+            body: answerBody,
+          }
+        : undefined,
+  };
+}
+
 export default function InquiryDetailPage() {
-  // Hook은 항상 최상단에서 동일한 순서로 호출되어야 함
   const { auth } = useAuth();
   const location = useLocation();
   const params = useParams();
 
   const inquiryId = toNumberSafe(params.inquiryId);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [inquiry, setInquiry] = useState<InquiryDetailView | null>(null);
 
-  // 로그인 여부와 상관없이 Hook은 "항상" 실행되도록 위로 올림 (rules-of-hooks 대응)
   const myAuthorTokens = useMemo(() => {
     const set = new Set<string>();
     if (auth.userId?.trim()) set.add(auth.userId.trim());
@@ -35,20 +159,77 @@ export default function InquiryDetailPage() {
     return set;
   }, [auth.userId, auth.userName]);
 
-  const inquiry = useMemo(() => {
-    if (!Number.isFinite(inquiryId)) return undefined;
-    return getInquiryById(inquiryId);
-  }, [inquiryId]);
+  useEffect(() => {
+    let cancelled = false;
 
-  // 1) 로그인한 사용자만 접속 가능 (Hook 아래에서 처리)
+    const run = async () => {
+      if (!auth.isAuthed) return;
+
+      if (!Number.isFinite(inquiryId)) {
+        setInquiry(null);
+        setError("잘못된 문의 번호입니다.");
+        setIsLoading(false);
+        return;
+      }
+
+      setIsLoading(true);
+      setError(null);
+
+      try {
+        const res = await getInquiryDetail(inquiryId);
+        if (cancelled) return;
+        setInquiry(mapInquiryDetailToView(res.inquiry));
+      } catch (e) {
+        if (cancelled) return;
+        setInquiry(null);
+        setError(getErrorMessage(e, "문의 상세 정보를 불러오지 못했습니다."));
+      } finally {
+        if (!cancelled) setIsLoading(false);
+      }
+    };
+
+    void run();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [auth.isAuthed, inquiryId]);
+
   if (!auth.isAuthed) {
     return <Navigate to="/auth/login" replace state={{ from: location.pathname }} />;
   }
 
-  // 추가: 관리자 여부
   const isAdmin = auth.role === "ADMIN" || auth.role === "SUPER_ADMIN";
+  const isMine = inquiry ? myAuthorTokens.has((inquiry.author ?? "").trim()) : false;
 
-  if (!inquiry) {
+  if (isLoading) {
+    return (
+      <main className={styles.pageRoot}>
+        <div className={styles.breadcrumb}>
+          <Link to="/">메인</Link>
+          <span className={styles.breadcrumbSep}>›</span>
+          <Link to="/inquiries">문의 게시판</Link>
+          <span className={styles.breadcrumbSep}>›</span>
+          <span>문의 상세</span>
+        </div>
+
+        <Link to="/inquiries" className={styles.backLink}>
+          <span className={styles.arrow}>←</span> 목록으로 돌아가기
+        </Link>
+
+        <article className={styles.card}>
+          <div className={styles.cardHeader}>
+            <div>
+              <div className={styles.cardTitle}>문의 상세를 불러오는 중입니다.</div>
+            </div>
+            <span className={styles.badgeSoft}>로딩</span>
+          </div>
+        </article>
+      </main>
+    );
+  }
+
+  if (error || !inquiry) {
     return (
       <main className={styles.pageRoot}>
         <div className={styles.breadcrumb}>
@@ -72,21 +253,17 @@ export default function InquiryDetailPage() {
         <article className={styles.card}>
           <div className={styles.cardHeader}>
             <div>
-              <div className={styles.cardTitle}>존재하지 않는 문의입니다.</div>
+              <div className={styles.cardTitle}>문의를 불러올 수 없습니다.</div>
             </div>
             <span className={styles.badgeSoft}>오류</span>
           </div>
 
-          <div className={styles.bodyText}>요청하신 문의 번호를 찾을 수 없습니다.</div>
+          <div className={styles.bodyText}>{error ?? "요청하신 문의를 찾을 수 없습니다."}</div>
         </article>
       </main>
     );
   }
 
-  const statusLabel = inquiry.status === "processing" ? "처리 중" : "답변 완료";
-  const isMine = myAuthorTokens.has((inquiry.author ?? "").trim());
-
-  // 수정: 비공개 글은 "작성자 또는 관리자"만 허용
   if (inquiry.isPrivate && !isMine && !isAdmin) {
     return (
       <main className={styles.pageRoot}>
@@ -116,7 +293,7 @@ export default function InquiryDetailPage() {
             <span className={styles.badgeSoft}>접근 제한</span>
           </div>
 
-          <div className={styles.bodyText}>작성자 본인만 확인할 수 있습니다.</div>
+          <div className={styles.bodyText}>작성자 본인 또는 관리자만 확인할 수 있습니다.</div>
         </article>
       </main>
     );
@@ -165,7 +342,7 @@ export default function InquiryDetailPage() {
                   inquiry.status === "processing" ? styles.dotProcessing : styles.dotDone
                 }`}
               />
-              {statusLabel}
+              {inquiry.statusLabel}
             </span>
           </div>
 
@@ -183,9 +360,11 @@ export default function InquiryDetailPage() {
           <div className={styles.dividerLine} />
 
           <div className={styles.inquiryBody}>
-            {splitParagraphs(inquiry.body).map((p, idx) => (
-              <p key={idx}>{p}</p>
-            ))}
+            {splitParagraphs(inquiry.body).length > 0 ? (
+              splitParagraphs(inquiry.body).map((p, idx) => <p key={idx}>{p}</p>)
+            ) : (
+              <p>문의 내용이 없습니다.</p>
+            )}
           </div>
         </article>
 

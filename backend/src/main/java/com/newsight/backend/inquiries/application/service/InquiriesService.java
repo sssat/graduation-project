@@ -108,7 +108,12 @@ public class InquiriesService {
             String writerUserId,
             LocalDateTime createdAt,
             String status,
-            boolean isPrivate
+            boolean isPrivate,
+            String adminMessage,
+            LocalDateTime processedAt,
+            LocalDateTime answerUpdatedAt,
+            String answeredBy,
+            String answerTeamLabel
     ) {}
 
     public record InquiryDetailResult(InquiryDetail inquiry) {}
@@ -263,6 +268,11 @@ public class InquiriesService {
             throw new AccessDeniedException("비공개 문의글은 작성자 또는 관리자만 열람할 수 있습니다.");
         }
 
+        String answeredBy = null;
+        if (inquiry.getProcessedBy() != null) {
+            answeredBy = inquiry.getProcessedBy().getUserId();
+        }
+
         InquiryDetail detail = new InquiryDetail(
                 inquiry.getInquirySeq(),
                 inquiry.getType().getTypeCode(),
@@ -271,7 +281,12 @@ public class InquiriesService {
                 inquiry.getInquirer().getUserId(),
                 inquiry.getSubmittedAt(),
                 inquiry.isProcessed() ? "DONE" : "PROCESSING",
-                inquiry.isPrivate()
+                inquiry.isPrivate(),
+                inquiry.getAdminMessage(),
+                inquiry.getProcessedAt(),
+                inquiry.getAnswerUpdatedAt(),
+                answeredBy,
+                "운영팀"
         );
 
         return new InquiryDetailResult(detail);

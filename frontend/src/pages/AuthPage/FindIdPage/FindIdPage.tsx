@@ -2,6 +2,8 @@
 import { useCallback, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import FindIdCard from "../../../components/Auth/FindID/FindIDCard/FindIdCard";
+import { findId } from "../../../api/accounts";
+import { getErrorMessage } from "../../../api/types";
 
 export default function FindIdPage() {
   const navigate = useNavigate();
@@ -17,29 +19,41 @@ export default function FindIdPage() {
       const trimmedEmail = (email ?? "").trim();
 
       if (!trimmedName || !trimmedEmail) {
-        alert("이름과 이메일을 모두 입력하세요.");
+        // 카드 컴포넌트의 클라이언트 검증이 먼저 동작하지만, 방어 코드로 유지
         return;
       }
 
-      // 목업 지연
-      await new Promise((r) => setTimeout(r, 600));
+      try {
+        const data = await findId({
+          name: trimmedName,
+          email: trimmedEmail,
+        });
 
-      // ✅ 목업 규칙:
-      // - 이름에 'fail' 포함 => 실패 페이지
-      // - 그 외 => 성공 페이지 (userId 전달)
-      if (trimmedName.toLowerCase().includes("fail")) {
+        const userId = typeof data.user_id === "string" ? data.user_id.trim() : "";
+
+        if (userId) {
+          navigate("/auth/find-id/success", {
+            state: { userId },
+            replace: false,
+          });
+          return;
+        }
+
+        const failMessage =
+          (typeof data.message === "string" && data.message.trim()) || "조회 결과가 없습니다.";
+
         navigate("/auth/find-id/fail", {
-          state: { message: "조회 결과가 없습니다." },
+          state: { message: failMessage },
           replace: false,
         });
-        return;
-      }
+      } catch (error) {
+        const message = getErrorMessage(error, "아이디 찾기 요청 중 오류가 발생했습니다.");
 
-      // ✅ 성공: alert 대신 성공 페이지로 이동
-      navigate("/auth/find-id/success", {
-        state: { userId: "newsight_user01" },
-        replace: false,
-      });
+        navigate("/auth/find-id/fail", {
+          state: { message },
+          replace: false,
+        });
+      }
     },
     [navigate]
   );

@@ -265,7 +265,14 @@ public class AccountsController {
                         x.user_id(),
                         x.user_name(),
                         x.grade_code(),
-                        x.grade_name()
+                        x.grade_name(),
+                        x.email(),
+                        x.birth_date(),
+                        x.gender(),
+                        x.last_login_at(),
+                        x.joined_at(),
+                        x.granted_at(),
+                        x.password_changed_at()
                 ))
                 .toList();
 

@@ -15,7 +15,38 @@ import {
   type SimulationNodeDatum,
 } from "d3-force";
 import styles from "./KeywordDetailPage.module.css";
-import { getKeywordDetailMock, type KeywordPeriod, type WordItem, type BiasItem } from "../mocks/keywordMockData";
+import {
+  getAiSummary,
+  getCommentWordcloud,
+  getContentSentiment,
+  getCoocNetwork,
+  getKeywordMeta,
+  getTitleBiasByMedia,
+  getTitleWordcloud,
+  type CoocNetworkEdge,
+  type CoocNetworkNode,
+  type ContentSentimentResponse,
+  type KeywordMetaResponse,
+  type TitleBiasByMediaItem,
+} from "../api/analytics";
+
+type KeywordPeriod = "D7" | "D14";
+
+type RenderWordItem = {
+  text: string;
+  weight: number;
+};
+
+type KeywordDetailViewData = {
+  meta: KeywordMetaResponse;
+  summaryText: string;
+  titleWordcloud: RenderWordItem[];
+  commentWordcloud: RenderWordItem[];
+  sentiment: ContentSentimentResponse;
+  biasItems: TitleBiasByMediaItem[];
+  coocNodes: CoocNetworkNode[];
+  coocEdges: CoocNetworkEdge[];
+};
 
 function safeDecode(s: string) {
   try {
@@ -45,6 +76,66 @@ function mulberry32(seed: number) {
 
 function clamp(n: number, min: number, max: number) {
   return Math.max(min, Math.min(max, n));
+}
+
+function toPeriodParam(raw: string | null | undefined): KeywordPeriod {
+  if (!raw) return "D7";
+  const normalized = raw.toUpperCase();
+  if (normalized === "D14" || normalized === "14D" || normalized === "14") return "D14";
+  return "D7";
+}
+
+function parsePositiveInt(raw: string | null | undefined): number | null {
+  if (!raw) return null;
+  const n = Number(raw);
+  if (!Number.isInteger(n) || n <= 0) return null;
+  return n;
+}
+
+function formatKoreanRange(start: string, end: string): string {
+  if (!start || !end) return "-";
+  return `${start} ~ ${end}`;
+}
+
+function toErrorMessage(error: unknown): string {
+  if (error instanceof Error && error.message) return error.message;
+
+  if (typeof error === "object" && error !== null) {
+    const anyErr = error as {
+      response?: { data?: { message?: string; details?: string } };
+      message?: string;
+    };
+
+    const message =
+      anyErr.response?.data?.message ||
+      anyErr.response?.data?.details ||
+      anyErr.message;
+
+    if (typeof message === "string" && message.trim()) {
+      return message;
+    }
+  }
+
+  return "요청 처리 중 오류가 발생했습니다.";
+}
+
+function normalizeWordcloudItems(items: Array<{ word: string; weight: number }>): RenderWordItem[] {
+  return (items ?? [])
+    .filter((item) => item && typeof item.word === "string" && item.word.trim())
+    .map((item) => ({
+      text: item.word.trim(),
+      weight: Number.isFinite(item.weight) ? Number(item.weight) : 0,
+    }))
+    .sort((a, b) => b.weight - a.weight)
+    .slice(0, 80);
+}
+
+function roundSentiment(sentiment: ContentSentimentResponse): ContentSentimentResponse {
+  return {
+    positive: Math.round(sentiment.positive ?? 0),
+    neutral: Math.round(sentiment.neutral ?? 0),
+    negative: Math.round(sentiment.negative ?? 0),
+  };
 }
 
 type ChartColors = {
@@ -87,7 +178,7 @@ function WordCloudD3({
   height = 220,
   seed = "default",
 }: {
-  items: WordItem[];
+  items: RenderWordItem[];
   height?: number;
   seed?: string;
 }) {
@@ -117,36 +208,54 @@ function WordCloudD3({
     if (!wrapRef.current) return;
 
     const el = wrapRef.current;
-
     const ro = new ResizeObserver(() => {
       const next = Math.max(260, Math.floor(el.clientWidth));
       setWidth(next);
     });
 
     ro.observe(el);
-    setWidth(Math.max(260, Math.floor(el.clientWidth)));
 
-    return () => ro.disconnect();
+    // eslint(react-hooks/set-state-in-effect) 경고 회피:
+    // effect 본문에서 동기 setState 대신 다음 프레임에 1회 초기 측정
+    const rafId = window.requestAnimationFrame(() => {
+      const next = Math.max(260, Math.floor(el.clientWidth));
+      setWidth(next);
+    });
+
+    return () => {
+      window.cancelAnimationFrame(rafId);
+      ro.disconnect();
+    };
   }, []);
 
   useEffect(() => {
     if (!width || !height) return;
+    if (!items.length) {
+      // 빈 데이터일 때는 렌더에서 empty UI를 보여주므로
+      // effect 본문에서 동기 setState를 호출하지 않는다.
+      return;
+    }
+
+    const maxWeight = Math.max(...items.map((w) => w.weight));
+    const minWeight = Math.min(...items.map((w) => w.weight));
+
+    const toPx = (weight: number) => {
+      if (!Number.isFinite(weight)) return 22;
+      if (maxWeight <= 0 && minWeight <= 0) return 24;
+      if (maxWeight === minWeight) return 30;
+      const ratio = (weight - minWeight) / (maxWeight - minWeight);
+      return clamp(18 + ratio * 38, 16, 58);
+    };
 
     const seedValue = hashInt(`${seed}-${width}-${height}`);
     const rand = mulberry32(seedValue);
-
-    const toPx = (s: 1 | 2 | 3) => {
-      if (s === 1) return 54;
-      if (s === 2) return 34;
-      return 20;
-    };
 
     const layout = cloud<CloudWord>()
       .size([width, height])
       .words(
         items.map((w) => ({
           text: w.text,
-          size: toPx(w.size),
+          size: toPx(w.weight),
           x: 0,
           y: 0,
           rotate: 0,
@@ -173,6 +282,14 @@ function WordCloudD3({
       layout.stop();
     };
   }, [items, width, height, seed]);
+
+  if (!items.length) {
+    return (
+      <div ref={wrapRef} className={styles.wordcloudClassic}>
+        <div className={styles.emptyBox}>표시할 워드클라우드 데이터가 없습니다.</div>
+      </div>
+    );
+  }
 
   return (
     <div ref={wrapRef} className={styles.wordcloudClassic} aria-label="워드 클라우드">
@@ -229,95 +346,67 @@ type GraphLink = SimulationLinkDatum<GraphNode> & {
   target: string | GraphNode;
 };
 
-function buildMockCoMentionGraph(
+function buildApiCoMentionGraph(
   keyword: string,
-  entities: string[],
+  apiNodes: CoocNetworkNode[],
+  apiEdges: CoocNetworkEdge[],
   seed: string
 ): {
   nodes: GraphNode[];
   links: GraphLink[];
-  kwId: string;
 } {
-  const seedValue = hashInt(`graph-${seed}-${keyword}-${entities.join("|")}`);
+  const seedValue = hashInt(`graph-${seed}-${keyword}`);
   const rand = mulberry32(seedValue);
 
-  const kwId = `kw:${keyword}`;
-  const kwNode: GraphNode = {
-    id: kwId,
-    label: keyword,
-    group: 0,
-    value: 10,
-    x: 0,
-    y: 0,
-  };
+  const maxNodeSize = apiNodes.length ? Math.max(...apiNodes.map((n) => n.size || 0)) : 1;
+  const safeMaxNodeSize = maxNodeSize > 0 ? maxNodeSize : 1;
 
-  const uniq = Array.from(new Set(entities)).filter(Boolean).slice(0, 18);
+  const nodeIdSet = new Set(apiNodes.map((n) => String(n.id)));
 
-  const nodes: GraphNode[] = [
-    kwNode,
-    ...uniq.map((name) => {
-      const h = hashInt(name);
-      const v = 3 + Math.floor(rand() * 6);
+  const nodes: GraphNode[] = apiNodes.map((n) => {
+    const isKeywordNode = n.label === keyword;
+    const size = Number.isFinite(n.size) ? n.size : 0;
+    const normalizedValue = clamp(3 + (size / safeMaxNodeSize) * 7, 3, 10);
+
+    return {
+      id: String(n.id),
+      label: n.label,
+      group: isKeywordNode ? 0 : 1 + (hashInt(n.label) % 3),
+      value: normalizedValue,
+      x: (rand() - 0.5) * 80,
+      y: (rand() - 0.5) * 80,
+    };
+  });
+
+  const maxEdgeWeight = apiEdges.length ? Math.max(...apiEdges.map((e) => e.weight || 0)) : 1;
+  const safeMaxEdgeWeight = maxEdgeWeight > 0 ? maxEdgeWeight : 1;
+
+  const links: GraphLink[] = apiEdges
+    .filter((e) => nodeIdSet.has(String(e.source)) && nodeIdSet.has(String(e.target)))
+    .map((e) => {
+      const weight = Number.isFinite(e.weight) ? e.weight : 0;
+      const normalizedWeight = clamp(0.6 + (weight / safeMaxEdgeWeight) * 2.4, 0.6, 3.0);
+
       return {
-        id: `ent:${name}`,
-        label: name,
-        group: 1 + (h % 3),
-        value: v,
-        x: (rand() - 0.5) * 80,
-        y: (rand() - 0.5) * 80,
+        source: String(e.source),
+        target: String(e.target),
+        value: normalizedWeight,
       };
-    }),
-  ];
-
-  const links: GraphLink[] = [];
-  for (const n of nodes) {
-    if (n.id === kwId) continue;
-    links.push({
-      source: kwId,
-      target: n.id,
-      value: clamp(0.8 + rand() * 2.2, 0.8, 3.0),
     });
-  }
 
-  const entityNodes = nodes.filter((n) => n.id !== kwId);
-  const extraEdges = Math.min(12, Math.floor(entityNodes.length * 1.2));
-  const used = new Set<string>();
-
-  const keyOf = (a: string, b: string) => (a < b ? `${a}::${b}` : `${b}::${a}`);
-
-  let guard = 0;
-  while (used.size < extraEdges && guard < 2000) {
-    guard += 1;
-    const a = entityNodes[Math.floor(rand() * entityNodes.length)];
-    const b = entityNodes[Math.floor(rand() * entityNodes.length)];
-    if (!a || !b || a.id === b.id) continue;
-
-    const k = keyOf(a.id, b.id);
-    if (used.has(k)) continue;
-
-    const sameGroup = a.group === b.group;
-    const p = sameGroup ? 0.55 : 0.22;
-    if (rand() > p) continue;
-
-    used.add(k);
-    links.push({
-      source: a.id,
-      target: b.id,
-      value: clamp(0.6 + rand() * 2.0, 0.6, 2.6),
-    });
-  }
-
-  return { nodes, links, kwId };
+  return { nodes, links };
 }
 
 function NetworkGraph({
   keyword,
-  entities,
+  apiNodes,
+  apiEdges,
   height = 260,
   seed = "default",
 }: {
   keyword: string;
-  entities: string[];
+  apiNodes: CoocNetworkNode[];
+  apiEdges: CoocNetworkEdge[];
   height?: number;
   seed?: string;
 }) {
@@ -353,13 +442,22 @@ function NetworkGraph({
     });
 
     ro.observe(el);
-    setWidth(Math.max(280, Math.floor(el.clientWidth)));
 
-    return () => ro.disconnect();
+    // eslint(react-hooks/set-state-in-effect) 경고 회피:
+    // effect 본문 동기 setState 대신 다음 프레임에서 초기 폭 측정
+    const rafId = window.requestAnimationFrame(() => {
+      const next = Math.max(280, Math.floor(el.clientWidth));
+      setWidth(next);
+    });
+
+    return () => {
+      window.cancelAnimationFrame(rafId);
+      ro.disconnect();
+    };
   }, []);
 
   const simData = useMemo(() => {
-    const baseGraph = buildMockCoMentionGraph(keyword, entities, seed);
+    const baseGraph = buildApiCoMentionGraph(keyword, apiNodes, apiEdges, seed);
 
     const nodes: GraphNode[] = baseGraph.nodes.map((n) => ({ ...n }));
     const links: GraphLink[] = baseGraph.links.map((l) => ({ ...l }));
@@ -374,7 +472,7 @@ function NetworkGraph({
 
     const nodeMap = new Map(nodes.map((n) => [n.id, n] as const));
     return { nodes, links, nodeMap };
-  }, [keyword, entities, seed, width, height]);
+  }, [keyword, apiNodes, apiEdges, seed, width, height]);
 
   const resolveNode = (x: string | GraphNode) => {
     if (typeof x === "string") return simData.nodeMap.get(x) ?? null;
@@ -446,6 +544,8 @@ function NetworkGraph({
       simRef.current = null;
     }
 
+    if (!simData.nodes.length) return;
+
     const sim = forceSimulation<GraphNode>(simData.nodes)
       .force(
         "link",
@@ -486,6 +586,14 @@ function NetworkGraph({
 
   void tick;
 
+  if (!apiNodes.length) {
+    return (
+      <div ref={wrapRef} className={styles.networkWrap}>
+        <div className={styles.emptyBox}>표시할 공동 언급 네트워크 데이터가 없습니다.</div>
+      </div>
+    );
+  }
+
   return (
     <div ref={wrapRef} className={styles.networkWrap} aria-label="관계도 네트워크">
       <svg
@@ -525,7 +633,7 @@ function NetworkGraph({
 
         <g className={styles.networkNodes}>
           {simData.nodes.map((n) => {
-            const idx = n.id.startsWith("kw:") ? 0 : n.group;
+            const idx = n.group;
             const c = palette[idx % palette.length];
 
             const r = clamp(10 + n.value * 2.0, 14, 34);
@@ -547,7 +655,7 @@ function NetworkGraph({
                   style={{
                     fill: c.fill,
                     stroke: c.stroke,
-                    strokeWidth: n.id.startsWith("kw:") ? 2.2 : 1.6,
+                    strokeWidth: n.group === 0 ? 2.2 : 1.6,
                   }}
                 />
                 <text className={styles.networkLabel} textAnchor="middle" y={r + 16}>
@@ -573,32 +681,33 @@ export default function KeywordDetailPage() {
   const params = useParams();
   const [searchParams] = useSearchParams();
 
-  const rawKeyword = params.keyword ?? searchParams.get("keyword") ?? searchParams.get("q") ?? "쿠팡";
-  const keyword = useMemo(() => safeDecode(rawKeyword), [rawKeyword]);
+  const routeParams = params as Record<string, string | undefined>;
 
-  const [period, setPeriod] = useState<KeywordPeriod>("7d");
+  const keywordSeq =
+    parsePositiveInt(routeParams.keywordSeq) ??
+    parsePositiveInt(routeParams.keyword_seq) ??
+    parsePositiveInt(routeParams.seq) ??
+    parsePositiveInt(routeParams.id) ??
+    parsePositiveInt(searchParams.get("keyword_seq")) ??
+    parsePositiveInt(searchParams.get("keywordSeq")) ??
+    parsePositiveInt(searchParams.get("seq")) ??
+    parsePositiveInt(routeParams.keyword);
 
-  // ✅ 언론사 필터 제거: 항상 전체 언론사("all")로 고정
-  const media = "all" as const;
+  const rawKeywordFallback =
+    routeParams.keyword ??
+    searchParams.get("keyword") ??
+    searchParams.get("q") ??
+    "";
 
-  const detail = useMemo(() => getKeywordDetailMock(keyword, period, media), [keyword, period]);
+  const keywordFallback = useMemo(() => safeDecode(rawKeywordFallback || ""), [rawKeywordFallback]);
 
-  const meta = useMemo(
-    () => ({
-      rangeLabel: detail.rangeLabel,
-      articleCount: detail.articleCount,
-      mediaCount: detail.mediaCount,
-    }),
-    [detail.rangeLabel, detail.articleCount, detail.mediaCount]
-  );
-
-  const titleWordCloud: WordItem[] = detail.titleWordCloud;
-  const sentiment = detail.sentiment;
-  const biasItems: BiasItem[] = detail.biasItems;
-  const entities = detail.entities;
-  const reactionWordCloud: WordItem[] = detail.reactionWordCloud;
+  const [period, setPeriod] = useState<KeywordPeriod>(() => toPeriodParam(searchParams.get("period")));
+  const [loading, setLoading] = useState(true);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [viewData, setViewData] = useState<KeywordDetailViewData | null>(null);
 
   const rootRef = useRef<HTMLElement | null>(null);
+  const redirectedInsufficientRef = useRef<string | null>(null);
 
   const sentimentCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const biasCanvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -606,26 +715,107 @@ export default function KeywordDetailPage() {
   const sentimentChartRef = useRef<Chart | null>(null);
   const biasChartRef = useRef<Chart | null>(null);
 
-  const isInsufficient = meta.articleCount < 10;
+  useEffect(() => {
+    if (!keywordSeq) {
+      // keywordSeq가 없으면 아래 렌더 분기에서 즉시 안내 UI를 보여준다.
+      // effect 본문에서 추가 setState를 호출하지 않는다.
+      return;
+    }
+
+    // TypeScript 좁히기용 로컬 상수 (async 함수 내부에서도 number로 유지)
+    const targetKeywordSeq = keywordSeq;
+
+    let cancelled = false;
+
+    async function load() {
+      setLoading(true);
+      setErrorMessage(null);
+
+      try {
+        const meta = await getKeywordMeta(targetKeywordSeq, { period });
+
+        if (cancelled) return;
+
+        if (!meta.is_analyzable) {
+          setViewData({
+            meta,
+            summaryText: "",
+            titleWordcloud: [],
+            commentWordcloud: [],
+            sentiment: { positive: 0, neutral: 0, negative: 0 },
+            biasItems: [],
+            coocNodes: [],
+            coocEdges: [],
+          });
+          setLoading(false);
+          return;
+        }
+
+        const [
+          summaryRes,
+          titleWordcloudRes,
+          sentimentRes,
+          biasRes,
+          coocRes,
+          commentWordcloudRes,
+        ] = await Promise.all([
+          getAiSummary(targetKeywordSeq, { period }),
+          getTitleWordcloud(targetKeywordSeq, { period }),
+          getContentSentiment(targetKeywordSeq, { period }),
+          getTitleBiasByMedia(targetKeywordSeq, { period }),
+          getCoocNetwork(targetKeywordSeq, { period }),
+          getCommentWordcloud(targetKeywordSeq, { period }),
+        ]);
+
+        if (cancelled) return;
+
+        setViewData({
+          meta,
+          summaryText: summaryRes.summary_text ?? "",
+          titleWordcloud: normalizeWordcloudItems(titleWordcloudRes.items ?? []),
+          commentWordcloud: normalizeWordcloudItems(commentWordcloudRes.items ?? []),
+          sentiment: roundSentiment(sentimentRes),
+          biasItems: (biasRes.items ?? []).slice(),
+          coocNodes: coocRes.nodes ?? [],
+          coocEdges: coocRes.edges ?? [],
+        });
+      } catch (error) {
+        if (cancelled) return;
+        setViewData(null);
+        setErrorMessage(toErrorMessage(error));
+      } finally {
+        if (!cancelled) {
+          setLoading(false);
+        }
+      }
+    }
+
+    void load();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [keywordSeq, period]);
+
+  const meta = viewData?.meta ?? null;
+  const displayKeyword = meta?.keyword || keywordFallback || `키워드 #${keywordSeq ?? "-"}`;
+  const rangeLabel = meta ? formatKoreanRange(meta.period_start, meta.period_end) : "-";
+
+  const isInsufficient = Boolean(meta && !meta.is_analyzable);
 
   useEffect(() => {
-    if (!isInsufficient) return;
+    if (!isInsufficient || !meta || !keywordSeq) return;
 
-    if (sentimentChartRef.current) {
-      sentimentChartRef.current.destroy();
-      sentimentChartRef.current = null;
-    }
-    if (biasChartRef.current) {
-      biasChartRef.current.destroy();
-      biasChartRef.current = null;
-    }
+    const key = `${keywordSeq}-${period}`;
+    if (redirectedInsufficientRef.current === key) return;
+    redirectedInsufficientRef.current = key;
 
-    window.alert("데이터가 부족하여 분석을 제공하지 않습니다. (기사 수 10건 미만)");
+    window.alert("데이터가 부족하여 분석을 제공하지 않습니다. (ALL + 최근 7일 기사 수 10건 미만)");
     navigate("/", { replace: true });
-  }, [isInsufficient, navigate]);
+  }, [isInsufficient, keywordSeq, meta, navigate, period]);
 
   useEffect(() => {
-    if (isInsufficient) return;
+    if (!viewData || isInsufficient) return;
     if (!sentimentCanvasRef.current) return;
 
     const ctx = sentimentCanvasRef.current.getContext("2d");
@@ -644,7 +834,11 @@ export default function KeywordDetailPage() {
         labels: ["긍정", "중립", "부정"],
         datasets: [
           {
-            data: [sentiment.positive, sentiment.neutral, sentiment.negative],
+            data: [
+              viewData.sentiment.positive,
+              viewData.sentiment.neutral,
+              viewData.sentiment.negative,
+            ],
             backgroundColor: [chartColors.sentPos, chartColors.sentNeu, chartColors.sentNeg],
             borderWidth: 0,
           },
@@ -675,10 +869,10 @@ export default function KeywordDetailPage() {
       chart.destroy();
       sentimentChartRef.current = null;
     };
-  }, [isInsufficient, sentiment.positive, sentiment.neutral, sentiment.negative]);
+  }, [isInsufficient, viewData]);
 
   useEffect(() => {
-    if (isInsufficient) return;
+    if (!viewData || isInsufficient) return;
     if (!biasCanvasRef.current) return;
 
     const ctx = biasCanvasRef.current.getContext("2d");
@@ -691,8 +885,8 @@ export default function KeywordDetailPage() {
       biasChartRef.current = null;
     }
 
-    const labels = biasItems.map((b) => b.label);
-    const data = biasItems.map((b) => b.value);
+    const labels = viewData.biasItems.map((b) => b.media_name);
+    const data = viewData.biasItems.map((b) => b.bias_score);
 
     const chart = new Chart(ctx, {
       type: "bar",
@@ -705,7 +899,7 @@ export default function KeywordDetailPage() {
             borderWidth: 0,
             borderRadius: 6,
             backgroundColor(context) {
-              const raw = context.raw as number;
+              const raw = Number(context.raw ?? 0);
               return raw >= 0 ? chartColors.biasPos : chartColors.biasNeg;
             },
           },
@@ -720,6 +914,8 @@ export default function KeywordDetailPage() {
             ticks: { color: "#9ca3af", font: { size: 11 } },
           },
           y: {
+            min: -10,
+            max: 10,
             grid: { color: "rgba(55,65,81,0.5)" },
             ticks: { color: "#9ca3af", font: { size: 11 } },
           },
@@ -743,11 +939,146 @@ export default function KeywordDetailPage() {
       chart.destroy();
       biasChartRef.current = null;
     };
-  }, [isInsufficient, biasItems]);
+  }, [isInsufficient, viewData]);
 
-  if (isInsufficient) {
+  useEffect(() => {
+    return () => {
+      if (sentimentChartRef.current) {
+        sentimentChartRef.current.destroy();
+        sentimentChartRef.current = null;
+      }
+      if (biasChartRef.current) {
+        biasChartRef.current.destroy();
+        biasChartRef.current = null;
+      }
+    };
+  }, []);
+
+  if (!keywordSeq) {
+    return (
+      <main className={styles.pageRoot}>
+        <section className={styles.keywordHeader}>
+          <div className={styles.breadcrumb}>
+            <Link to="/">메인</Link>
+            <span className={styles.breadcrumbSep}>›</span>
+            <span>키워드 상세 분석</span>
+          </div>
+        </section>
+
+        <section className={styles.grid1}>
+          <article className={`${styles.card} ${styles.statusCard}`}>
+            <div className={styles.statusTitle}>잘못된 접근입니다</div>
+            <div className={styles.statusText}>
+              URL에 <code>keyword_seq</code> 값이 필요합니다.
+            </div>
+            <div className={styles.statusActions}>
+              <Link to="/" className={styles.primaryLinkButton}>
+                메인으로 이동
+              </Link>
+            </div>
+          </article>
+        </section>
+      </main>
+    );
+  }
+
+  if (loading) {
+    return (
+      <main className={styles.pageRoot}>
+        <section className={styles.keywordHeader}>
+          <div className={styles.breadcrumb}>
+            <Link to="/">메인</Link>
+            <span className={styles.breadcrumbSep}>›</span>
+            <span>키워드 상세 분석</span>
+          </div>
+          <div className={styles.keywordTitleRow}>
+            <div className={styles.keywordTitleBlock}>
+              <div className={styles.keywordChip}>
+                키워드 <span className={styles.keywordChipStrong}>{displayKeyword}</span>
+              </div>
+              <h1 className={styles.keywordMainTitle}>{displayKeyword} 키워드 상세 분석</h1>
+              <div className={styles.keywordMeta}>데이터를 불러오는 중입니다...</div>
+            </div>
+
+            <div className={styles.filterBar}>
+              <div className={styles.filterLabel}>기간</div>
+              <div className={styles.filterChipGroup} role="tablist" aria-label="분석 기간 선택">
+                <button
+                  type="button"
+                  className={`${styles.filterChip} ${period === "D7" ? styles.active : ""}`}
+                  onClick={() => setPeriod("D7")}
+                  role="tab"
+                  aria-selected={period === "D7"}
+                >
+                  최근 7일
+                </button>
+                <button
+                  type="button"
+                  className={`${styles.filterChip} ${period === "D14" ? styles.active : ""}`}
+                  onClick={() => setPeriod("D14")}
+                  role="tab"
+                  aria-selected={period === "D14"}
+                >
+                  최근 14일
+                </button>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section className={styles.grid1}>
+          <article className={`${styles.card} ${styles.statusCard}`}>
+            <div className={styles.statusTitle}>분석 데이터를 불러오는 중입니다</div>
+            <div className={styles.statusText}>잠시 후 자동으로 표시됩니다.</div>
+          </article>
+        </section>
+      </main>
+    );
+  }
+
+  if (errorMessage) {
+    return (
+      <main className={styles.pageRoot}>
+        <section className={styles.keywordHeader}>
+          <div className={styles.breadcrumb}>
+            <Link to="/">메인</Link>
+            <span className={styles.breadcrumbSep}>›</span>
+            <span>키워드 상세 분석</span>
+          </div>
+          <div className={styles.keywordTitleRow}>
+            <div className={styles.keywordTitleBlock}>
+              <div className={styles.keywordChip}>
+                키워드 <span className={styles.keywordChipStrong}>{displayKeyword}</span>
+              </div>
+              <h1 className={styles.keywordMainTitle}>{displayKeyword} 키워드 상세 분석</h1>
+              <div className={styles.keywordMeta}>조회 실패</div>
+            </div>
+          </div>
+        </section>
+
+        <section className={styles.grid1}>
+          <article className={`${styles.card} ${styles.statusCard}`}>
+            <div className={styles.statusTitle}>데이터를 불러오지 못했습니다</div>
+            <div className={styles.statusText}>{errorMessage}</div>
+            <div className={styles.statusActions}>
+              <button type="button" className={styles.secondaryButton} onClick={() => window.location.reload()}>
+                새로고침
+              </button>
+              <Link to="/" className={styles.primaryLinkButton}>
+                메인으로 이동
+              </Link>
+            </div>
+          </article>
+        </section>
+      </main>
+    );
+  }
+
+  if (!viewData || !meta || isInsufficient) {
     return null;
   }
+
+  const sentiment = viewData.sentiment;
 
   return (
     <main ref={rootRef} className={styles.pageRoot}>
@@ -761,11 +1092,11 @@ export default function KeywordDetailPage() {
         <div className={styles.keywordTitleRow}>
           <div className={styles.keywordTitleBlock}>
             <div className={styles.keywordChip}>
-              키워드 <span className={styles.keywordChipStrong}>{keyword}</span>
+              키워드 <span className={styles.keywordChipStrong}>{displayKeyword}</span>
             </div>
-            <h1 className={styles.keywordMainTitle}>{keyword} 키워드 상세 분석</h1>
+            <h1 className={styles.keywordMainTitle}>{displayKeyword} 키워드 상세 분석</h1>
             <div className={styles.keywordMeta}>
-              분석 기간: {meta.rangeLabel} · 기사 수: {meta.articleCount}건 · 분석 언론사: {meta.mediaCount}개
+              분석 기간: {rangeLabel} · 기사 수: {meta.article_count}건 · 분석 언론사: {meta.media_count}개
             </div>
           </div>
 
@@ -774,25 +1105,23 @@ export default function KeywordDetailPage() {
             <div className={styles.filterChipGroup} role="tablist" aria-label="분석 기간 선택">
               <button
                 type="button"
-                className={`${styles.filterChip} ${period === "7d" ? styles.active : ""}`}
-                onClick={() => setPeriod("7d")}
+                className={`${styles.filterChip} ${period === "D7" ? styles.active : ""}`}
+                onClick={() => setPeriod("D7")}
                 role="tab"
-                aria-selected={period === "7d"}
+                aria-selected={period === "D7"}
               >
                 최근 7일
               </button>
               <button
                 type="button"
-                className={`${styles.filterChip} ${period === "14d" ? styles.active : ""}`}
-                onClick={() => setPeriod("14d")}
+                className={`${styles.filterChip} ${period === "D14" ? styles.active : ""}`}
+                onClick={() => setPeriod("D14")}
                 role="tab"
-                aria-selected={period === "14d"}
+                aria-selected={period === "D14"}
               >
                 최근 14일
               </button>
             </div>
-
-            {/* ✅ 언론사 필터 제거됨 (항상 전체 언론사) */}
           </div>
         </div>
       </section>
@@ -801,12 +1130,14 @@ export default function KeywordDetailPage() {
         <article className={styles.card}>
           <div className={styles.cardHeader}>
             <div>
-              <div className={styles.cardTitle}>오늘의 키워드 분석 요약</div>
+              <div className={styles.cardTitle}>키워드 분석 요약</div>
               <div className={styles.cardSub}>수집된 기사 내용을 바탕으로 생성한 AI 요약입니다.</div>
             </div>
             <span className={styles.badgeSoft}>요약 리포트</span>
           </div>
-          <div className={styles.summaryText}>{detail.summary}</div>
+          <div className={styles.summaryText}>
+            {viewData.summaryText?.trim() ? viewData.summaryText : "요약 데이터가 없습니다."}
+          </div>
         </article>
       </section>
 
@@ -820,7 +1151,7 @@ export default function KeywordDetailPage() {
             <span className={styles.badgeSoft}>제목 기반</span>
           </div>
 
-          <WordCloudD3 items={titleWordCloud} height={220} seed={`${keyword}-${period}-all-title`} />
+          <WordCloudD3 items={viewData.titleWordcloud} height={220} seed={`${displayKeyword}-${period}-title`} />
         </article>
 
         <article className={styles.card}>
@@ -839,15 +1170,15 @@ export default function KeywordDetailPage() {
           <div className={styles.chartLegend}>
             <div className={styles.legendItem}>
               <span className={`${styles.legendSwatch} ${styles.swatchPositive}`} />
-              긍정 (Positive)
+              긍정 (Positive) <strong>{sentiment.positive}%</strong>
             </div>
             <div className={styles.legendItem}>
               <span className={`${styles.legendSwatch} ${styles.swatchNeutral}`} />
-              중립 (Neutral)
+              중립 (Neutral) <strong>{sentiment.neutral}%</strong>
             </div>
             <div className={styles.legendItem}>
               <span className={`${styles.legendSwatch} ${styles.swatchNegative}`} />
-              부정 (Negative)
+              부정 (Negative) <strong>{sentiment.negative}%</strong>
             </div>
           </div>
         </article>
@@ -865,13 +1196,19 @@ export default function KeywordDetailPage() {
             <span className={styles.badgeSoft}>편향 분석</span>
           </div>
 
-          <div className={styles.chartWrapper}>
-            <canvas ref={biasCanvasRef} />
-          </div>
+          {viewData.biasItems.length ? (
+            <>
+              <div className={styles.chartWrapper}>
+                <canvas ref={biasCanvasRef} />
+              </div>
 
-          <div className={styles.biasCaption}>
-            <strong>양수</strong>일수록 긍정적인 톤, <strong>음수</strong>일수록 비판적인 톤이 강한 언론사입니다.
-          </div>
+              <div className={styles.biasCaption}>
+                <strong>양수</strong>일수록 긍정적인 톤, <strong>음수</strong>일수록 비판적인 톤이 강한 언론사입니다.
+              </div>
+            </>
+          ) : (
+            <div className={styles.emptyBox}>표시할 편향도 데이터가 없습니다.</div>
+          )}
         </article>
 
         <article className={styles.card}>
@@ -879,13 +1216,19 @@ export default function KeywordDetailPage() {
             <div>
               <div className={styles.cardTitle}>관계도 분석</div>
               <div className={styles.cardSub}>
-                {keyword}과(와) 함께 언급되는 인물·조직을 공동 언급 관계로 연결해 시각화했습니다.
+                {displayKeyword}과(와) 함께 언급되는 인물·조직을 공동 언급 관계로 연결해 시각화했습니다.
               </div>
             </div>
             <span className={styles.badgeSoft}>공동 언급 네트워크</span>
           </div>
 
-          <NetworkGraph keyword={keyword} entities={entities} height={260} seed={`${keyword}-${period}-all`} />
+          <NetworkGraph
+            keyword={displayKeyword}
+            apiNodes={viewData.coocNodes}
+            apiEdges={viewData.coocEdges}
+            height={260}
+            seed={`${displayKeyword}-${period}-cooc`}
+          />
         </article>
       </section>
 
@@ -899,7 +1242,7 @@ export default function KeywordDetailPage() {
             <span className={styles.badgeSoft}>댓글 기반</span>
           </div>
 
-          <WordCloudD3 items={reactionWordCloud} height={220} seed={`${keyword}-${period}-all-reaction`} />
+          <WordCloudD3 items={viewData.commentWordcloud} height={220} seed={`${displayKeyword}-${period}-comment`} />
         </article>
       </section>
     </main>

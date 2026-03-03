@@ -3,6 +3,8 @@ package com.newsight.backend.accounts.presentation.dto;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 
 /**
@@ -43,7 +45,28 @@ public final class UserListDto {
             Integer gradeCode,
 
             @JsonProperty("grade_name")
-            String gradeName
+            String gradeName,
+
+            @JsonProperty("email")
+            String email,
+
+            @JsonProperty("birth_date")
+            LocalDate birthDate,
+
+            @JsonProperty("gender")
+            String gender,
+
+            @JsonProperty("last_login_at")
+            LocalDateTime lastLoginAt,
+
+            @JsonProperty("joined_at")
+            LocalDateTime joinedAt,
+
+            @JsonProperty("granted_at")
+            LocalDateTime grantedAt,
+
+            @JsonProperty("password_changed_at")
+            LocalDateTime passwordChangedAt
     ) {}
 
     @JsonInclude(JsonInclude.Include.NON_NULL)

@@ -1,5 +1,6 @@
 // src/components/Auth/SignUp/SignUpCard/SignUpCard.tsx
 import { useMemo, useState } from "react";
+import { validateEmail, validateUserId } from "../../../../utils/signupValidators";
 import styles from "./SignUpCard.module.css";
 import logo from "../../../../assets/logo.png";
 
@@ -91,8 +92,9 @@ export default function SignUpCard({
     setLocalErrors((e) => ({ ...e, username: undefined }));
     onClearError?.("username");
 
-    if (!form.username.trim()) {
-      setLocalErrors((e) => ({ ...e, username: "아이디를 입력해주세요." }));
+    const userIdError = validateUserId(form.username);
+    if (userIdError) {
+      setLocalErrors((e) => ({ ...e, username: userIdError }));
       return;
     }
 
@@ -114,9 +116,9 @@ export default function SignUpCard({
     setLocalErrors((e) => ({ ...e, email: undefined }));
     onClearError?.("email");
 
-    const emailOK = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email);
-    if (!emailOK) {
-      setLocalErrors((e) => ({ ...e, email: "이메일 형식이 올바르지 않습니다." }));
+    const emailError = validateEmail(form.email);
+    if (emailError) {
+      setLocalErrors((e) => ({ ...e, email: emailError }));
       return;
     }
 

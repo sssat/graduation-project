@@ -1,45 +1,36 @@
 // frontend/src/pages/AdminUserManagementPage.tsx
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import styles from "./AdminUserManagementPage.module.css";
-import { getAllUsers, type UserItem, type UserRole, type Gender } from "../mocks/userMockData";
+import {
+  demoteAdmin,
+  listUsers,
+  promoteAdmin,
+  withdrawUser,
+  type UserListItem,
+} from "../api/accounts";
+import { getErrorMessage } from "../api/types";
 
 const PAGE_SIZE = 10;
 
-// 로컬스토리지(목업) 상태 저장 키 (승급/강등/삭제 반영)
-const ADMIN_USERS_STORE_KEY = "NS_ADMIN_USERS_STORE_V1";
+type AdminUiRole = "USER" | "ADMIN" | "SUPER_ADMIN";
+type Gender = "M" | "F" | null;
 
-type UserOverride = Partial<
-  Pick<UserItem, "role" | "grantedAt" | "lastLoginAt" | "passwordChangedAt" | "email" | "name">
->;
-
-type UserStore = {
-  overrides: Record<number, UserOverride>;
-  deletedSeqs: number[];
+type AdminUserRow = {
+  userSeq: number;
+  userId: string;
+  name: string;
+  role: AdminUiRole;
+  gradeCode: number;
+  gradeName: string;
+  email: string;
+  birthDate: string;
+  gender: Gender;
+  lastLoginAt: string;
+  joinedAt: string;
+  grantedAt: string;
+  passwordChangedAt: string;
 };
-
-function readUserStore(): UserStore {
-  try {
-    const raw = localStorage.getItem(ADMIN_USERS_STORE_KEY);
-    if (!raw) return { overrides: {}, deletedSeqs: [] };
-    const parsed = JSON.parse(raw) as UserStore;
-    if (!parsed || typeof parsed !== "object") return { overrides: {}, deletedSeqs: [] };
-    return {
-      overrides: parsed.overrides ?? {},
-      deletedSeqs: Array.isArray(parsed.deletedSeqs) ? parsed.deletedSeqs : [],
-    };
-  } catch {
-    return { overrides: {}, deletedSeqs: [] };
-  }
-}
-
-function writeUserStore(next: UserStore) {
-  try {
-    localStorage.setItem(ADMIN_USERS_STORE_KEY, JSON.stringify(next));
-  } catch {
-    // ignore
-  }
-}
 
 function pad2(n: number) {
   return String(n).padStart(2, "0");
@@ -54,67 +45,155 @@ function formatNowYYYYMMDDHHmm(d = new Date()) {
   return `${yyyy}-${mm}-${dd} ${hh}:${mi}`;
 }
 
-function parseYYYYMMDDHHmmToMs(s: string) {
-  if (!s || s === "—") return 0;
-  const [datePart, timePart] = s.split(" ");
-  if (!datePart || !timePart) return 0;
+function formatIsoDateTimeForTable(input?: string | null) {
+  if (!input || typeof input !== "string") return "—";
+  const s = input.trim();
+  if (!s) return "—";
 
-  const [y, m, d] = datePart.split("-").map((x) => Number(x));
-  const [hh, mi] = timePart.split(":").map((x) => Number(x));
-  if (![y, m, d, hh, mi].every((x) => Number.isFinite(x))) return 0;
+  // 이미 화면 포맷이면 그대로 사용
+  if (/^\d{4}-\d{2}-\d{2}\s\d{2}:\d{2}$/.test(s)) return s;
 
-  return new Date(y, m - 1, d, hh, mi, 0, 0).getTime();
+  const dt = new Date(s);
+  if (Number.isNaN(dt.getTime())) return s;
+
+  return `${dt.getFullYear()}-${pad2(dt.getMonth() + 1)}-${pad2(dt.getDate())} ${pad2(
+    dt.getHours(),
+  )}:${pad2(dt.getMinutes())}`;
 }
 
-function roleLabel(r: UserRole) {
+function normalizeRoleFromApi(item: UserListItem): AdminUiRole {
+  const gradeNameUpper = String(item.grade_name ?? "")
+    .trim()
+    .toUpperCase()
+    .replace(/\s+/g, "_");
+
+  // grade_name이 내려오면 이름을 우선 신뢰하고, 없거나 불명확할 때만 grade_code로 보정한다.
+  // 현재 시스템(DB 기준): 0=USER, 1=ADMIN, 2=SUPER_ADMIN
+  if (gradeNameUpper.includes("SUPER")) return "SUPER_ADMIN";
+  if (gradeNameUpper === "ADMIN" || gradeNameUpper.includes("관리자")) return "ADMIN";
+  if (gradeNameUpper === "USER" || gradeNameUpper.includes("회원")) return "USER";
+
+  if (item.grade_code === 2) return "SUPER_ADMIN";
+  if (item.grade_code === 1) return "ADMIN";
+  return "USER";
+}
+
+function roleLabel(r: AdminUiRole) {
   if (r === "SUPER_ADMIN") return "SUPER ADMIN";
   return r;
 }
 
 function genderLabel(g: Gender) {
-  return g === "M" ? "남" : "여";
+  if (g === "M") return "남";
+  if (g === "F") return "여";
+  return "—";
+}
+
+function getOptionalStringField<T extends object>(obj: T, key: string): string | null {
+  const value = (obj as Record<string, unknown>)[key];
+  if (typeof value !== "string") return null;
+  const trimmed = value.trim();
+  return trimmed ? trimmed : null;
+}
+
+function getOptionalGenderField<T extends object>(obj: T, key: string): Gender {
+  const value = (obj as Record<string, unknown>)[key];
+  if (value === "M" || value === "F") return value;
+  return null;
+}
+
+function mapUserListItemToRow(item: UserListItem): AdminUserRow {
+  // 현재 /api/admins/users DTO는 최소 필드만 내려주므로, 없는 필드는 "—"로 표시한다.
+  // 추후 백엔드가 필드를 확장하면 자동으로 매핑되도록 런타임 키도 함께 확인한다.
+  const email = getOptionalStringField(item, "email") ?? "—";
+  const birthDate = getOptionalStringField(item, "birth_date") ?? "—";
+  const lastLoginAt = formatIsoDateTimeForTable(getOptionalStringField(item, "last_login_at"));
+  const joinedAt = formatIsoDateTimeForTable(getOptionalStringField(item, "joined_at"));
+  const grantedAt = formatIsoDateTimeForTable(getOptionalStringField(item, "granted_at"));
+  const passwordChangedAt = formatIsoDateTimeForTable(getOptionalStringField(item, "password_changed_at"));
+
+  return {
+    userSeq: item.user_seq,
+    userId: item.user_id,
+    name: item.user_name,
+    role: normalizeRoleFromApi(item),
+    gradeCode: item.grade_code,
+    gradeName: item.grade_name,
+    email,
+    birthDate,
+    gender: getOptionalGenderField(item, "gender"),
+    lastLoginAt,
+    joinedAt,
+    grantedAt,
+    passwordChangedAt,
+  };
+}
+
+async function fetchAllUsersByQuery(q: string): Promise<AdminUserRow[]> {
+  const trimmedQ = q.trim();
+  const size = 200;
+
+  const first = await listUsers({ page: 1, size, q: trimmedQ || undefined });
+  const totalPages = Math.max(1, Number(first.total_pages ?? 1));
+  const allItems: UserListItem[] = [...(first.items ?? [])];
+
+  for (let page = 2; page <= totalPages; page += 1) {
+    const next = await listUsers({ page, size, q: trimmedQ || undefined });
+    allItems.push(...(next.items ?? []));
+  }
+
+  const rows = allItems.map(mapUserListItemToRow);
+
+  rows.sort((a, b) => {
+    // 가입일이 있으면 가입일 우선, 없으면 userSeq 내림차순
+    const aJoined = a.joinedAt === "—" ? 0 : new Date(a.joinedAt.replace(" ", "T")).getTime() || 0;
+    const bJoined = b.joinedAt === "—" ? 0 : new Date(b.joinedAt.replace(" ", "T")).getTime() || 0;
+    if (bJoined !== aJoined) return bJoined - aJoined;
+    return b.userSeq - a.userSeq;
+  });
+
+  return rows;
 }
 
 export default function AdminUserManagementPage() {
-  const [store, setStore] = useState<UserStore>(() => readUserStore());
+  const [allUsers, setAllUsers] = useState<AdminUserRow[]>([]);
   const [page, setPage] = useState(1);
   const [q, setQ] = useState("");
-  const [roleFilter, setRoleFilter] = useState<UserRole | "ALL">("ALL");
+  const [roleFilter, setRoleFilter] = useState<AdminUiRole | "ALL">("ALL");
+  const [isLoading, setIsLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [actingUserSeq, setActingUserSeq] = useState<number | null>(null);
 
-  const allUsersMerged = useMemo(() => {
-    const base = getAllUsers();
-    const deletedSet = new Set(store.deletedSeqs);
+  useEffect(() => {
+    let cancelled = false;
+    const timer = window.setTimeout(async () => {
+      setIsLoading(true);
+      setErrorMessage(null);
+      try {
+        const rows = await fetchAllUsersByQuery(q);
+        if (cancelled) return;
+        setAllUsers(rows);
+      } catch (error) {
+        if (cancelled) return;
+        setAllUsers([]);
+        setErrorMessage(getErrorMessage(error, "회원 목록을 불러오지 못했습니다."));
+      } finally {
+        if (!cancelled) setIsLoading(false);
+      }
+    }, 250);
 
-    const merged = base
-      .filter((u) => !deletedSet.has(u.userSeq))
-      .map((u) => {
-        const ov = store.overrides[u.userSeq];
-        if (!ov) return u;
-        return { ...u, ...ov };
-      });
-
-    // 가입일 기준: 최근 가입자가 위(내림차순)
-    merged.sort((a, b) => {
-      const aMs = parseYYYYMMDDHHmmToMs(a.joinedAt);
-      const bMs = parseYYYYMMDDHHmmToMs(b.joinedAt);
-      if (bMs !== aMs) return bMs - aMs;
-      return b.userSeq - a.userSeq;
-    });
-
-    return merged;
-  }, [store.deletedSeqs, store.overrides]);
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timer);
+    };
+  }, [q]);
 
   const filtered = useMemo(() => {
-    const query = q.trim().toLowerCase();
-    return allUsersMerged.filter((u) => {
+    return allUsers.filter((u) => {
       if (roleFilter !== "ALL" && u.role !== roleFilter) return false;
-      if (!query) return true;
-
-      // 검색 범위: 이름/아이디만
-      const hay = [u.name, u.userId].join(" ").toLowerCase();
-      return hay.includes(query);
+      return true;
     });
-  }, [allUsersMerged, q, roleFilter]);
+  }, [allUsers, roleFilter]);
 
   const totalPages = useMemo(() => Math.max(1, Math.ceil(filtered.length / PAGE_SIZE)), [filtered.length]);
   const pageSafe = useMemo(() => Math.min(Math.max(1, page), totalPages), [page, totalPages]);
@@ -140,64 +219,86 @@ export default function AdminUserManagementPage() {
     return arr;
   }, [pageSafe, totalPages]);
 
-  function persistOverride(userSeq: number, patch: UserOverride) {
-    setStore((prev) => {
-      const next: UserStore = {
-        overrides: { ...prev.overrides, [userSeq]: { ...(prev.overrides[userSeq] ?? {}), ...patch } },
-        deletedSeqs: [...prev.deletedSeqs],
-      };
-      writeUserStore(next);
-      return next;
-    });
-  }
-
-  function persistDelete(userSeq: number) {
-    setStore((prev) => {
-      const deletedSeqs = prev.deletedSeqs.includes(userSeq) ? prev.deletedSeqs : [userSeq, ...prev.deletedSeqs];
-      const overrides = { ...prev.overrides };
-      delete overrides[userSeq];
-      const next: UserStore = { overrides, deletedSeqs };
-      writeUserStore(next);
-      return next;
-    });
-  }
-
-  function onToggleRole(u: UserItem) {
+  async function onToggleRole(u: AdminUserRow) {
     if (u.role === "SUPER_ADMIN") return;
+    if (actingUserSeq != null) return;
 
-    const now = formatNowYYYYMMDDHHmm();
+    try {
+      setActingUserSeq(u.userSeq);
 
-    if (u.role === "USER") {
-      const ok = window.confirm(`"${u.userId}" 사용자를 ADMIN으로 승급하시겠습니까?`);
-      if (!ok) return;
+      if (u.role === "USER") {
+        const ok = window.confirm(`"${u.userId}" 사용자를 ADMIN으로 승급하시겠습니까?`);
+        if (!ok) return;
 
-      persistOverride(u.userSeq, {
-        role: "ADMIN",
-        grantedAt: now,
-      });
-      return;
-    }
+        const res = await promoteAdmin({ user_seq: u.userSeq });
+        const grantedAt = formatIsoDateTimeForTable(res.granted_at) || formatNowYYYYMMDDHHmm();
 
-    if (u.role === "ADMIN") {
-      const ok = window.confirm(`"${u.userId}" 사용자를 USER로 강등하시겠습니까?`);
-      if (!ok) return;
+        setAllUsers((prev) =>
+          prev.map((row) =>
+            row.userSeq === u.userSeq
+              ? {
+                  ...row,
+                  role: "ADMIN",
+                  gradeCode: 1,
+                  gradeName: "ADMIN",
+                  grantedAt: grantedAt === "—" ? formatNowYYYYMMDDHHmm() : grantedAt,
+                }
+              : row,
+          ),
+        );
 
-      persistOverride(u.userSeq, {
-        role: "USER",
-        grantedAt: "—",
-      });
+        if (res.message) window.alert(res.message);
+        return;
+      }
+
+      if (u.role === "ADMIN") {
+        const ok = window.confirm(`"${u.userId}" 사용자를 USER로 강등하시겠습니까?`);
+        if (!ok) return;
+
+        const res = await demoteAdmin({ user_seq: u.userSeq });
+
+        setAllUsers((prev) =>
+          prev.map((row) =>
+            row.userSeq === u.userSeq
+              ? {
+                  ...row,
+                  role: "USER",
+                  gradeCode: 0,
+                  gradeName: "USER",
+                  grantedAt: "—",
+                }
+              : row,
+          ),
+        );
+
+        if (res.message) window.alert(res.message);
+      }
+    } catch (error) {
+      window.alert(getErrorMessage(error, "권한 변경 중 오류가 발생했습니다."));
+    } finally {
+      setActingUserSeq(null);
     }
   }
 
-  function onDeleteUser(u: UserItem) {
+  async function onDeleteUser(u: AdminUserRow) {
     if (u.role === "SUPER_ADMIN") return;
+    if (actingUserSeq != null) return;
 
     const ok = window.confirm(
-      `"${u.userId}" 회원을 탈퇴 처리(삭제)하시겠습니까?\n\n이 동작은 목업 단계에서는 로컬스토리지에서만 삭제 처리됩니다.`
+      `"${u.userId}" 회원을 탈퇴 처리(삭제)하시겠습니까?\n\n이 작업은 실제 accounts API를 호출합니다.`,
     );
     if (!ok) return;
 
-    persistDelete(u.userSeq);
+    try {
+      setActingUserSeq(u.userSeq);
+      await withdrawUser({ user_seq: u.userSeq });
+      setAllUsers((prev) => prev.filter((row) => row.userSeq !== u.userSeq));
+      window.alert("회원 탈퇴 처리가 완료되었습니다.");
+    } catch (error) {
+      window.alert(getErrorMessage(error, "회원 탈퇴 처리 중 오류가 발생했습니다."));
+    } finally {
+      setActingUserSeq(null);
+    }
   }
 
   function onQueryChange(v: string) {
@@ -219,7 +320,7 @@ export default function AdminUserManagementPage() {
           <div className={styles.heroKicker}>User Management</div>
           <h1 className={styles.heroTitle}>회원 관리</h1>
           <p className={styles.heroSub}>
-            회원 기본 정보, 접속/보안 관련 시각 정보를 확인하고 ADMIN 승급·강등 및 회원 탈퇴(삭제)를 관리합니다.
+            회원 기본 정보와 등급을 확인하고 ADMIN 승급·강등 및 회원 탈퇴(삭제)를 관리합니다.
           </p>
         </div>
       </section>
@@ -229,6 +330,7 @@ export default function AdminUserManagementPage() {
           <div className={styles.cardTitle}>회원 목록</div>
           <div className={styles.cardMeta}>
             전체 <strong>{filtered.length}</strong>명
+            <br />
           </div>
         </div>
 
@@ -264,6 +366,12 @@ export default function AdminUserManagementPage() {
           </div>
         </div>
 
+        {errorMessage ? (
+          <div className={styles.cardMeta} style={{ marginBottom: 10, color: "#fca5a5", textAlign: "left" }}>
+            {errorMessage}
+          </div>
+        ) : null}
+
         <div className={styles.tableScroll} aria-label="회원 목록">
           <table className={styles.table}>
             <thead>
@@ -287,15 +395,16 @@ export default function AdminUserManagementPage() {
 
             <tbody>
               {pageItems.map((u, idx) => {
-                const no = filtered.length - ((pageSafe - 1) * PAGE_SIZE + idx);
+                const no = filtered.length - (pageSafe - 1) * PAGE_SIZE - idx;
                 const isSuper = u.role === "SUPER_ADMIN";
+                const isActingThisRow = actingUserSeq === u.userSeq;
 
                 const rolePill =
                   u.role === "SUPER_ADMIN"
                     ? `${styles.rolePill} ${styles.roleSuper}`
                     : u.role === "ADMIN"
-                    ? `${styles.rolePill} ${styles.roleAdmin}`
-                    : `${styles.rolePill} ${styles.roleUser}`;
+                      ? `${styles.rolePill} ${styles.roleAdmin}`
+                      : `${styles.rolePill} ${styles.roleUser}`;
 
                 const actionLabel =
                   u.role === "USER" ? "ADMIN 승급" : u.role === "ADMIN" ? "USER 강등" : "수정 불가";
@@ -304,8 +413,8 @@ export default function AdminUserManagementPage() {
                   u.role === "USER"
                     ? `${styles.btnTable} ${styles.btnPromote}`
                     : u.role === "ADMIN"
-                    ? `${styles.btnTable} ${styles.btnDemote}`
-                    : styles.btnTable;
+                      ? `${styles.btnTable} ${styles.btnDemote}`
+                      : styles.btnTable;
 
                 return (
                   <tr key={u.userSeq}>
@@ -328,11 +437,11 @@ export default function AdminUserManagementPage() {
                       <button
                         type="button"
                         className={actionBtnClass}
-                        onClick={() => onToggleRole(u)}
-                        disabled={isSuper}
+                        onClick={() => void onToggleRole(u)}
+                        disabled={isSuper || actingUserSeq != null}
                         title={isSuper ? "SUPER ADMIN은 수정할 수 없습니다." : "승급/강등"}
                       >
-                        {actionLabel}
+                        {isActingThisRow ? "처리 중..." : actionLabel}
                       </button>
                     </td>
 
@@ -340,11 +449,11 @@ export default function AdminUserManagementPage() {
                       <button
                         type="button"
                         className={`${styles.btnTable} ${styles.btnDanger}`}
-                        onClick={() => onDeleteUser(u)}
-                        disabled={isSuper}
+                        onClick={() => void onDeleteUser(u)}
+                        disabled={isSuper || actingUserSeq != null}
                         title={isSuper ? "SUPER ADMIN은 삭제할 수 없습니다." : "회원 탈퇴(삭제)"}
                       >
-                        회원 탈퇴
+                        {isActingThisRow ? "처리 중..." : "회원 탈퇴"}
                       </button>
                     </td>
                   </tr>
@@ -354,7 +463,7 @@ export default function AdminUserManagementPage() {
               {pageItems.length === 0 ? (
                 <tr>
                   <td colSpan={14} className={styles.emptyRow}>
-                    표시할 회원이 없습니다.
+                    {isLoading ? "회원 목록을 불러오는 중입니다..." : "표시할 회원이 없습니다."}
                   </td>
                 </tr>
               ) : null}

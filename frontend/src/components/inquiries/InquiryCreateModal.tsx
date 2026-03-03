@@ -2,19 +2,22 @@
 
 import { useRef, useState, type ChangeEvent } from "react";
 import styles from "./InquiryCreateModal.module.css";
-import type { InquiryItem } from "../../mocks/inquiryMockData";
+
+export type InquiryTypeKey = "bug" | "idea" | "data" | "account" | "etc";
+
+export type InquiryCreateFormPayload = {
+  typeKey: InquiryTypeKey;
+  title: string;
+  body: string;
+  isPrivate: boolean;
+};
 
 type Props = {
   onClose: () => void;
-  onSubmit: (payload: {
-    typeKey: InquiryItem["typeKey"];
-    title: string;
-    body: string;
-    isPrivate: boolean;
-  }) => void;
+  onSubmit: (payload: InquiryCreateFormPayload) => void | Promise<void>;
 };
 
-const TYPE_OPTIONS: Array<{ key: InquiryItem["typeKey"]; label: string }> = [
+const TYPE_OPTIONS: Array<{ key: InquiryTypeKey; label: string }> = [
   { key: "bug", label: "오류 제보" },
   { key: "idea", label: "기능 제안" },
   { key: "data", label: "데이터 문의" },
@@ -22,7 +25,7 @@ const TYPE_OPTIONS: Array<{ key: InquiryItem["typeKey"]; label: string }> = [
   { key: "etc", label: "기타" },
 ];
 
-function parseInquiryTypeKey(value: string): InquiryItem["typeKey"] | "" {
+function parseInquiryTypeKey(value: string): InquiryTypeKey | "" {
   switch (value) {
     case "bug":
     case "idea":
@@ -39,19 +42,38 @@ type FieldErrors = {
   typeKey?: string;
   title?: string;
   body?: string;
+  submit?: string;
 };
+
+function getErrorMessage(error: unknown, fallback = "문의 등록 중 오류가 발생했습니다.") {
+  if (error instanceof Error && error.message) return error.message;
+
+  if (typeof error === "object" && error !== null) {
+    const anyErr = error as {
+      response?: { data?: { message?: string; details?: string } };
+      message?: string;
+    };
+    const serverMessage = anyErr.response?.data?.message ?? anyErr.response?.data?.details;
+    if (typeof serverMessage === "string" && serverMessage.trim()) return serverMessage.trim();
+    if (typeof anyErr.message === "string" && anyErr.message.trim()) return anyErr.message.trim();
+  }
+
+  return fallback;
+}
 
 export default function InquiryCreateModal({ onClose, onSubmit }: Props) {
   const dialogRef = useRef<HTMLDivElement | null>(null);
 
-  const [typeKey, setTypeKey] = useState<InquiryItem["typeKey"] | "">("");
+  const [typeKey, setTypeKey] = useState<InquiryTypeKey | "">("");
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
   const [isPrivate, setIsPrivate] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const [errors, setErrors] = useState<FieldErrors>({});
 
   const onBackdropClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (isSubmitting) return;
     if (!dialogRef.current) return;
     if (!dialogRef.current.contains(e.target as Node)) onClose();
   };
@@ -74,10 +96,11 @@ export default function InquiryCreateModal({ onClose, onSubmit }: Props) {
     const next = parseInquiryTypeKey(e.target.value);
     setTypeKey(next);
 
-    if (errors.typeKey) {
+    if (errors.typeKey || errors.submit) {
       setErrors((prev) => {
         const copied = { ...prev };
         if (next) delete copied.typeKey;
+        delete copied.submit;
         return copied;
       });
     }
@@ -87,15 +110,14 @@ export default function InquiryCreateModal({ onClose, onSubmit }: Props) {
     const v = e.target.value;
     setTitle(v);
 
-    if (errors.title) {
+    if (errors.title || errors.submit) {
       const ok = v.trim().length > 0;
-      if (ok) {
-        setErrors((prev) => {
-          const copied = { ...prev };
-          delete copied.title;
-          return copied;
-        });
-      }
+      setErrors((prev) => {
+        const copied = { ...prev };
+        if (ok) delete copied.title;
+        delete copied.submit;
+        return copied;
+      });
     }
   };
 
@@ -103,32 +125,44 @@ export default function InquiryCreateModal({ onClose, onSubmit }: Props) {
     const v = e.target.value;
     setBody(v);
 
-    if (errors.body) {
+    if (errors.body || errors.submit) {
       const trim = v.trim();
       const ok = trim.length >= 50;
-      if (ok) {
-        setErrors((prev) => {
-          const copied = { ...prev };
-          delete copied.body;
-          return copied;
-        });
-      }
+      setErrors((prev) => {
+        const copied = { ...prev };
+        if (ok) delete copied.body;
+        delete copied.submit;
+        return copied;
+      });
     }
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
+    if (isSubmitting) return;
+
     const nextErrors = validate();
     setErrors(nextErrors);
 
     if (Object.keys(nextErrors).length > 0) return;
 
-    onSubmit({
-      typeKey: typeKey as InquiryItem["typeKey"],
-      title: title.trim(),
-      body: body.trim(),
-      isPrivate,
-    });
-    onClose();
+    setIsSubmitting(true);
+
+    try {
+      await onSubmit({
+        typeKey: typeKey as InquiryTypeKey,
+        title: title.trim(),
+        body: body.trim(),
+        isPrivate,
+      });
+      onClose();
+    } catch (error) {
+      setErrors((prev) => ({
+        ...prev,
+        submit: getErrorMessage(error),
+      }));
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -136,14 +170,27 @@ export default function InquiryCreateModal({ onClose, onSubmit }: Props) {
       <div ref={dialogRef} className={styles.modalDialog} role="dialog" aria-modal="true">
         <div className={styles.modalHeader}>
           <div className={styles.modalTitle}>새 문의 작성</div>
-          <button type="button" className={styles.modalCloseBtn} onClick={onClose} aria-label="닫기">
+          <button
+            type="button"
+            className={styles.modalCloseBtn}
+            onClick={onClose}
+            aria-label="닫기"
+            disabled={isSubmitting}
+          >
             ✕
           </button>
         </div>
 
-        <p className={styles.modalDesc}>제목과 문의 내용을 작성해 주세요. 문의 내용은 최소 50자 이상 입력해 주세요.</p>
+        <p className={styles.modalDesc}>
+          제목과 문의 내용을 작성해 주세요. 문의 내용은 최소 50자 이상 입력해 주세요.
+        </p>
 
-        <form onSubmit={(e) => e.preventDefault()}>
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            void handleSubmit();
+          }}
+        >
           <div className={styles.formGrid}>
             <div className={styles.formField}>
               <label className={styles.fieldLabel}>
@@ -155,6 +202,7 @@ export default function InquiryCreateModal({ onClose, onSubmit }: Props) {
                 onChange={onTypeChange}
                 aria-invalid={Boolean(errors.typeKey)}
                 aria-describedby={errors.typeKey ? "inquiry-type-error" : undefined}
+                disabled={isSubmitting}
               >
                 <option value="">문의 유형을 선택해주세요</option>
                 {TYPE_OPTIONS.map((t) => (
@@ -182,6 +230,7 @@ export default function InquiryCreateModal({ onClose, onSubmit }: Props) {
                 placeholder="문의 제목을 간단히 입력해주세요"
                 aria-invalid={Boolean(errors.title)}
                 aria-describedby={errors.title ? "inquiry-title-error" : undefined}
+                disabled={isSubmitting}
               />
               {errors.title && (
                 <div id="inquiry-title-error" className={styles.errorText} role="alert">
@@ -201,6 +250,7 @@ export default function InquiryCreateModal({ onClose, onSubmit }: Props) {
                 placeholder="서비스 이용 중 궁금한 점, 오류 제보, 기능 제안 등을 자세히 작성해 주세요."
                 aria-invalid={Boolean(errors.body)}
                 aria-describedby={errors.body ? "inquiry-body-error" : undefined}
+                disabled={isSubmitting}
               />
               {errors.body && (
                 <div id="inquiry-body-error" className={styles.errorText} role="alert">
@@ -216,14 +266,21 @@ export default function InquiryCreateModal({ onClose, onSubmit }: Props) {
                 type="checkbox"
                 checked={isPrivate}
                 onChange={(e) => setIsPrivate(e.target.checked)}
+                disabled={isSubmitting}
               />
               <span>이 문의를 비공개로 설정합니다.</span>
             </label>
 
-            <button type="button" className={styles.submitBtn} onClick={handleSubmit}>
-              문의 등록하기
+            <button type="submit" className={styles.submitBtn} disabled={isSubmitting}>
+              {isSubmitting ? "등록 중..." : "문의 등록하기"}
             </button>
           </div>
+
+          {errors.submit ? (
+            <div className={styles.errorText} role="alert" style={{ marginTop: 12 }}>
+              {errors.submit}
+            </div>
+          ) : null}
         </form>
       </div>
     </div>
