@@ -215,8 +215,6 @@ function WordCloudD3({
 
     ro.observe(el);
 
-    // eslint(react-hooks/set-state-in-effect) 경고 회피:
-    // effect 본문에서 동기 setState 대신 다음 프레임에 1회 초기 측정
     const rafId = window.requestAnimationFrame(() => {
       const next = Math.max(260, Math.floor(el.clientWidth));
       setWidth(next);
@@ -231,8 +229,6 @@ function WordCloudD3({
   useEffect(() => {
     if (!width || !height) return;
     if (!items.length) {
-      // 빈 데이터일 때는 렌더에서 empty UI를 보여주므로
-      // effect 본문에서 동기 setState를 호출하지 않는다.
       return;
     }
 
@@ -338,7 +334,6 @@ type GraphNode = SimulationNodeDatum & {
   group: number;
   value: number;
   pinned?: boolean;
-  seedLocked?: boolean;
 };
 
 type GraphLink = SimulationLinkDatum<GraphNode> & {
@@ -350,7 +345,6 @@ type GraphLink = SimulationLinkDatum<GraphNode> & {
 const COOC_RENDER_MAX_NODES = 18;
 const COOC_RENDER_MAX_LINKS = 45;
 const COOC_LABEL_TOP_N = 8;
-const COOC_SEED_RADIUS_MULTIPLIER = 1.25;
 
 function normalizeGraphLabel(label: unknown): string {
   return String(label ?? "")
@@ -358,12 +352,8 @@ function normalizeGraphLabel(label: unknown): string {
     .trim();
 }
 
-function getGraphNodeRadius(node: Pick<GraphNode, "group" | "value">) {
-  const base = clamp(10 + (node.value ?? 0) * 2.0, 14, 34);
-  if (node.group === 0) {
-    return clamp(base * COOC_SEED_RADIUS_MULTIPLIER, 16, 44);
-  }
-  return base;
+function getGraphNodeRadius(node: Pick<GraphNode, "value">) {
+  return clamp(10 + (node.value ?? 0) * 2.0, 14, 34);
 }
 
 function buildApiCoMentionGraph(
@@ -424,17 +414,14 @@ function buildApiCoMentionGraph(
 
   const nodes: GraphNode[] = finalApiNodes.map((n) => {
     const normalizedLabel = normalizeGraphLabel(n.label);
-    const isKeywordNode = normalizedLabel === normalizedKeyword;
     const size = Number.isFinite(n.size) ? n.size : 0;
     const normalizedValue = clamp(3 + (size / safeMaxNodeSize) * 7, 3, 10);
 
     return {
       id: String(n.id),
       label: normalizedLabel,
-      group: isKeywordNode ? 0 : 1 + (hashInt(normalizedLabel) % 3),
+      group: 1 + (hashInt(normalizedLabel) % 3),
       value: normalizedValue,
-      pinned: isKeywordNode ? true : undefined,
-      seedLocked: isKeywordNode ? true : undefined,
       x: (rand() - 0.5) * 80,
       y: (rand() - 0.5) * 80,
     };
@@ -505,8 +492,6 @@ function NetworkGraph({
 
     ro.observe(el);
 
-    // eslint(react-hooks/set-state-in-effect) 경고 회피:
-    // effect 본문 동기 setState 대신 다음 프레임에서 초기 폭 측정
     const rafId = window.requestAnimationFrame(() => {
       const next = Math.max(280, Math.floor(el.clientWidth));
       setWidth(next);
@@ -530,15 +515,6 @@ function NetworkGraph({
     for (const n of nodes) {
       if (typeof n.x !== "number") n.x = width / 2 + (randPos() - 0.5) * 40;
       if (typeof n.y !== "number") n.y = height / 2 + (randPos() - 0.5) * 40;
-
-      if (n.group === 0) {
-        n.pinned = true;
-        n.seedLocked = true;
-        n.x = width / 2;
-        n.y = height / 2;
-        n.fx = width / 2;
-        n.fy = height / 2;
-      }
     }
 
     const nodeMap = new Map(nodes.map((n) => [n.id, n] as const));
@@ -548,18 +524,20 @@ function NetworkGraph({
   const labelVisibleIds = useMemo(() => {
     const sorted = [...simData.nodes].sort((a, b) => (b.value ?? 0) - (a.value ?? 0));
     const ids = new Set<string>();
+    const normalizedKeyword = normalizeGraphLabel(keyword);
 
     for (const n of simData.nodes) {
-      if (n.group === 0) ids.add(n.id);
+      if (normalizeGraphLabel(n.label) === normalizedKeyword) {
+        ids.add(n.id);
+      }
     }
     for (const n of sorted.slice(0, COOC_LABEL_TOP_N)) {
       ids.add(n.id);
     }
 
     return ids;
-  }, [simData.nodes]);
+  }, [keyword, simData.nodes]);
 
-  // 라벨 비표시 노드는 원/텍스트 자체를 렌더링하지 않아 "빈 노드"처럼 보이는 현상을 방지한다.
   const renderedNodeIds = labelVisibleIds;
 
   const resolveNode = (x: string | GraphNode) => {
@@ -575,8 +553,6 @@ function NetworkGraph({
   };
 
   const onNodePointerDown = (e: React.PointerEvent, node: GraphNode) => {
-    if (node.seedLocked) return;
-
     const sim = simRef.current;
     const svg = svgRef.current;
     if (!sim || !svg) return;
@@ -614,13 +590,7 @@ function NetworkGraph({
 
     if (d.pointerId === e.pointerId) {
       const n = d.node;
-      if (n.seedLocked) {
-        n.pinned = true;
-        n.fx = width / 2;
-        n.fy = height / 2;
-        n.x = width / 2;
-        n.y = height / 2;
-      } else if (n.pinned) {
+      if (n.pinned) {
         n.pinned = false;
         n.fx = null;
         n.fy = null;
@@ -732,10 +702,7 @@ function NetworkGraph({
           {simData.nodes.map((n) => {
             if (!renderedNodeIds.has(n.id)) return null;
 
-            const idx = n.group;
-            const c = palette[idx % palette.length];
-            const isSeedNode = n.group === 0;
-
+            const c = palette[n.group % palette.length];
             const r = getGraphNodeRadius(n);
             const x = n.x ?? width / 2;
             const y = n.y ?? height / 2;
@@ -753,9 +720,9 @@ function NetworkGraph({
                   r={r}
                   className={styles.networkCircle}
                   style={{
-                    fill: isSeedNode ? "#ffffff" : c.fill,
-                    stroke: isSeedNode ? "rgba(148,163,184,0.95)" : c.stroke,
-                    strokeWidth: isSeedNode ? 2.8 : 1.6,
+                    fill: c.fill,
+                    stroke: c.stroke,
+                    strokeWidth: 1.6,
                     opacity: 1,
                   }}
                 />
@@ -820,12 +787,9 @@ export default function KeywordDetailPage() {
 
   useEffect(() => {
     if (!keywordSeq) {
-      // keywordSeq가 없으면 아래 렌더 분기에서 즉시 안내 UI를 보여준다.
-      // effect 본문에서 추가 setState를 호출하지 않는다.
       return;
     }
 
-    // TypeScript 좁히기용 로컬 상수 (async 함수 내부에서도 number로 유지)
     const targetKeywordSeq = keywordSeq;
 
     let cancelled = false;
@@ -1288,7 +1252,7 @@ export default function KeywordDetailPage() {
       </section>
 
       <section className={styles.grid2}>
-        <article className={styles.card}>
+        <article className={`${styles.card} ${styles.cardFill}`}>
           <div className={styles.cardHeader}>
             <div>
               <div className={styles.cardTitle}>언론사별 편향도 지수</div>
@@ -1301,7 +1265,7 @@ export default function KeywordDetailPage() {
 
           {viewData.biasItems.length ? (
             <>
-              <div className={styles.chartWrapper}>
+              <div className={`${styles.chartWrapper} ${styles.chartWrapperStretch}`}>
                 <canvas ref={biasCanvasRef} />
               </div>
 

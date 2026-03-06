@@ -149,6 +149,12 @@
   box-shadow: 0 14px 32px rgba(15, 23, 42, 0.6);
 }
 
+.cardFill {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
 .cardHeader {
   display: flex;
   justify-content: space-between;
@@ -320,6 +326,19 @@
   justify-content: center;
 }
 
+.chartWrapper canvas {
+  width: 100% !important;
+  height: 100% !important;
+}
+
+.chartWrapperStretch {
+  height: auto;
+  min-height: 340px;
+  flex: 1 1 auto;
+  align-items: stretch;
+  justify-content: stretch;
+}
+
 .chartLegend {
   margin-top: 10px;
   font-size: 11px;
@@ -438,6 +457,10 @@
 
   .wordcloudClassic {
     height: 200px;
+  }
+
+  .chartWrapperStretch {
+    min-height: 260px;
   }
 
   .statusActions {

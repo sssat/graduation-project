@@ -74,11 +74,11 @@ function mapTopKeywordItem(
   };
 }
 
-function showNotAnalyzableAlert(keyword: string, count: number): void {
+function showNotAnalyzableAlert(count: number): void {
   window.alert(
-    `'${keyword}' 키워드는 기사 수가 ${count.toLocaleString(
+    `해당 키워드는 기사 수가 ${count.toLocaleString(
       "ko-KR",
-    )}건으로 10건 미만이라 분석 결과를 제공하지 않습니다.\n\n분석 제공 기준: 기사 10건 이상`,
+    )}건으로 10건 미만이라 분석 결과를 제공하지 않습니다.`,
   );
 }
 
@@ -169,7 +169,8 @@ export default function HomePage() {
           key={item.rank}
           type="button"
           className={styles.statItem}
-          onClick={() => showNotAnalyzableAlert(item.label, item.count)}
+          onClick={() => showNotAnalyzableAlert(item
+            .count)}
           aria-label={`${item.label} 키워드: 데이터 부족으로 분석 제공 불가 안내 보기`}
           style={{
             background: "transparent",
