@@ -26,7 +26,7 @@ export type IsoDateTimeString = string;
 
 /* =========================================================
  * 1) 아이디 사전검사
- * POST /api/auth/register/precheck/user-id
+ * POST /auth/register/precheck/user-id
  * ======================================================= */
 
 export interface IdPrecheckRequest {
@@ -49,7 +49,7 @@ export async function precheckUserId(
   config?: HttpRequestConfig<IdPrecheckRequest>,
 ): Promise<IdPrecheckResponse> {
   const response = await http.post<IdPrecheckResponse>(
-    '/api/auth/register/precheck/user-id',
+    '/auth/register/precheck/user-id',
     payload,
     { ...config, skipAuth: true } as HttpRequestConfig<IdPrecheckRequest>,
   );
@@ -58,7 +58,7 @@ export async function precheckUserId(
 
 /* =========================================================
  * 2) 이메일 사전검사
- * POST /api/auth/register/precheck/email
+ * POST /auth/register/precheck/email
  * ======================================================= */
 
 export interface EmailPrecheckRequest {
@@ -82,7 +82,7 @@ export async function precheckEmail(
   config?: HttpRequestConfig<EmailPrecheckRequest>,
 ): Promise<EmailPrecheckResponse> {
   const response = await http.post<EmailPrecheckResponse>(
-    '/api/auth/register/precheck/email',
+    '/auth/register/precheck/email',
     payload,
     { ...config, skipAuth: true } as HttpRequestConfig<EmailPrecheckRequest>,
   );
@@ -91,7 +91,7 @@ export async function precheckEmail(
 
 /* =========================================================
  * 3) 회원가입
- * POST /api/auth/register
+ * POST /auth/register
  * ======================================================= */
 
 export interface SignUpRequest {
@@ -117,7 +117,7 @@ export async function signUp(
   config?: HttpRequestConfig<SignUpRequest>,
 ): Promise<SignUpResponse> {
   const response = await http.post<SignUpResponse>(
-    '/api/auth/register',
+    '/auth/register',
     payload,
     { ...config, skipAuth: true } as HttpRequestConfig<SignUpRequest>,
   );
@@ -126,7 +126,7 @@ export async function signUp(
 
 /* =========================================================
  * 4) 로그인
- * POST /api/auth/login
+ * POST /auth/login
  * - refresh 토큰은 HttpOnly 쿠키
  * - access 토큰은 응답 body로 수신
  * ======================================================= */
@@ -152,7 +152,7 @@ export async function login(
   config?: HttpRequestConfig<LoginRequest>,
 ): Promise<LoginResponse> {
   const response = await http.post<LoginResponse>(
-    '/api/auth/login',
+    '/auth/login',
     payload,
     { ...config, skipAuth: true } as HttpRequestConfig<LoginRequest>,
   );
@@ -174,7 +174,7 @@ export async function login(
 
 /* =========================================================
  * 5) 토큰 갱신
- * POST /api/auth/refresh
+ * POST /auth/refresh
  * - refresh 쿠키 기반
  * - 401 루프 방지를 위해 skipUnauthorizedHandler=true 권장
  * ======================================================= */
@@ -195,7 +195,7 @@ export async function refreshToken(
   };
 
   const response = await http.post<TokenRefreshResponse>(
-    '/api/auth/refresh',
+    '/auth/refresh',
     undefined,
     mergedConfig,
   );
@@ -217,7 +217,7 @@ export async function refreshToken(
 
 /* =========================================================
  * 6) 로그아웃
- * POST /api/auth/logout
+ * POST /auth/logout
  * - 서버 refresh 쿠키 제거 + 프론트 access 토큰 제거
  * ======================================================= */
 
@@ -227,7 +227,7 @@ export async function logout(
   config?: HttpRequestConfig<undefined>,
 ): Promise<LogoutResponse> {
   const response = await http.post<LogoutResponse>(
-    '/api/auth/logout',
+    '/auth/logout',
     undefined,
     config,
   );
@@ -246,7 +246,7 @@ export function clearClientAuth(): void {
 
 /* =========================================================
  * 7) 아이디 찾기
- * POST /api/auth/find-id
+ * POST /auth/find-id
  * ======================================================= */
 
 export interface FindIdRequest {
@@ -264,7 +264,7 @@ export async function findId(
   config?: HttpRequestConfig<FindIdRequest>,
 ): Promise<FindIdResponse> {
   const response = await http.post<FindIdResponse>(
-    '/api/auth/find-id',
+    '/auth/find-id',
     payload,
     { ...config, skipAuth: true } as HttpRequestConfig<FindIdRequest>,
   );
@@ -273,7 +273,7 @@ export async function findId(
 
 /* =========================================================
  * 8) 비밀번호 찾기
- * POST /api/auth/find-password
+ * POST /auth/find-password
  * ======================================================= */
 
 export interface FindPasswordRequest {
@@ -292,7 +292,7 @@ export async function findPassword(
   config?: HttpRequestConfig<FindPasswordRequest>,
 ): Promise<FindPasswordResponse> {
   const response = await http.post<FindPasswordResponse>(
-    '/api/auth/find-password',
+    '/auth/find-password',
     payload,
     { ...config, skipAuth: true } as HttpRequestConfig<FindPasswordRequest>,
   );
@@ -301,7 +301,7 @@ export async function findPassword(
 
 /* =========================================================
  * 9) 비밀번호 변경 (로그인 필요)
- * POST /api/auth/change-password
+ * POST /auth/change-password
  * ======================================================= */
 
 export interface ChangePasswordRequest {
@@ -320,7 +320,7 @@ export async function changePassword(
   config?: HttpRequestConfig<ChangePasswordRequest>,
 ): Promise<ChangePasswordResponse> {
   const response = await http.post<ChangePasswordResponse>(
-    '/api/auth/change-password',
+    '/auth/change-password',
     payload,
     config,
   );
@@ -329,7 +329,7 @@ export async function changePassword(
 
 /* =========================================================
  * 10) 회원 목록 (슈퍼 관리자)
- * GET /api/admins/users?page=&size=&q=
+ * GET /admins/users?page=&size=&q=
  * ======================================================= */
 
 export interface UserListParams {
@@ -354,7 +354,7 @@ export async function listUsers(
   params?: UserListParams,
   config?: HttpRequestConfig<undefined>,
 ): Promise<UserListResponse> {
-  const response = await http.get<UserListResponse>('/api/admins/users', {
+  const response = await http.get<UserListResponse>('/admins/users', {
     ...config,
     params,
   } as HttpRequestConfig<undefined>);
@@ -364,7 +364,7 @@ export async function listUsers(
 
 /* =========================================================
  * 10-1) 관리자 대시보드 로그인 로그 조회 (관리자 이상)
- * GET /api/admins/dashboard/login-logs?page=&size=
+ * GET /admins/dashboard/login-logs?page=&size=
  * ======================================================= */
 
 export interface AdminDashboardLoginLogsParams {
@@ -390,7 +390,7 @@ export async function listAdminDashboardLoginLogs(
   config?: HttpRequestConfig<undefined>,
 ): Promise<AdminDashboardLoginLogsResponse> {
   const response = await http.get<AdminDashboardLoginLogsResponse>(
-    '/api/admins/dashboard/login-logs',
+    '/admins/dashboard/login-logs',
     {
       ...config,
       params,
@@ -403,7 +403,7 @@ export async function listAdminDashboardLoginLogs(
 
 /* =========================================================
  * 10-2) 관리자 대시보드 요약 조회 (관리자 이상)
- * GET /api/admins/dashboard/summary
+ * GET /admins/dashboard/summary
  * - 구현 버전에 따라 응답 필드명이 다를 수 있어 넓은 타입으로 정의
  * ======================================================= */
 
@@ -435,7 +435,7 @@ export async function getAdminDashboardSummary(
   config?: HttpRequestConfig<undefined>,
 ): Promise<AdminDashboardSummaryResponse> {
   const response = await http.get<AdminDashboardSummaryResponse>(
-    '/api/admins/dashboard/summary',
+    '/admins/dashboard/summary',
     config as HttpRequestConfig<undefined> | undefined,
   );
   return response.data;
@@ -443,7 +443,7 @@ export async function getAdminDashboardSummary(
 
 /* =========================================================
  * 11) 관리자 승격 (슈퍼 관리자)
- * POST /api/admins/promote
+ * POST /admins/promote
  * ======================================================= */
 
 export interface AdminPromoteRequest {
@@ -463,7 +463,7 @@ export async function promoteAdmin(
   config?: HttpRequestConfig<AdminPromoteRequest>,
 ): Promise<AdminPromoteResponse> {
   const response = await http.post<AdminPromoteResponse>(
-    '/api/admins/promote',
+    '/admins/promote',
     payload,
     config,
   );
@@ -472,7 +472,7 @@ export async function promoteAdmin(
 
 /* =========================================================
  * 12) 관리자 강등 (슈퍼 관리자)
- * POST /api/admins/demote
+ * POST /admins/demote
  * ======================================================= */
 
 export interface AdminDemoteRequest {
@@ -491,7 +491,7 @@ export async function demoteAdmin(
   config?: HttpRequestConfig<AdminDemoteRequest>,
 ): Promise<AdminDemoteResponse> {
   const response = await http.post<AdminDemoteResponse>(
-    '/api/admins/demote',
+    '/admins/demote',
     payload,
     config,
   );
@@ -500,7 +500,7 @@ export async function demoteAdmin(
 
 /* =========================================================
  * 13) 강제 탈퇴 (슈퍼 관리자)
- * POST /api/admins/users/withdraw
+ * POST /admins/users/withdraw
  * ======================================================= */
 
 export interface WithdrawUserRequest {
@@ -518,7 +518,7 @@ export async function withdrawUser(
   config?: HttpRequestConfig<WithdrawUserRequest>,
 ): Promise<WithdrawUserResponse> {
   const response = await http.post<WithdrawUserResponse>(
-    '/api/admins/users/withdraw',
+    '/admins/users/withdraw',
     payload,
     config,
   );

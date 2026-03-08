@@ -34,7 +34,9 @@ const DEFAULT_TIMEOUT_MS = 15_000;
 function resolveApiBaseUrl(): string {
   const envUrl = (import.meta.env.VITE_API_BASE_URL as string | undefined)?.trim();
 
-  const base = envUrl && envUrl.length > 0 ? envUrl : 'http://localhost:8080';
+  // 기본값도 /api까지 포함해 두어 각 도메인 API 파일에서는 '/auth/...', '/analytics/...', '/inquiries/...'
+  // 형태의 상대 경로만 사용하도록 통일한다.
+  const base = envUrl && envUrl.length > 0 ? envUrl : 'http://localhost:8080/api';
 
   // 마지막 슬래시 제거
   return base.replace(/\/+$/, '');

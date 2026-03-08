@@ -30,7 +30,7 @@ function publicConfig<D = undefined>(
 
 /* =========================================================
  * 1) 개요(홈 상단) - 공개
- * GET /api/analytics/overview
+ * GET /analytics/overview
  * ======================================================= */
 
 export interface AnalyticsOverviewTopKeywordItem {
@@ -49,7 +49,7 @@ export async function getAnalyticsOverview(
   config?: HttpRequestConfig<undefined>,
 ): Promise<AnalyticsOverviewResponse> {
   const response = await http.get<AnalyticsOverviewResponse>(
-    '/api/analytics/overview',
+    '/analytics/overview',
     publicConfig(config) as HttpRequestConfig<undefined>,
   );
   return response.data;
@@ -57,7 +57,7 @@ export async function getAnalyticsOverview(
 
 /* =========================================================
  * 2) 키워드 메타 - 공개
- * GET /api/analytics/keywords/{keyword_seq}?period=D7|D14
+ * GET /analytics/keywords/{keyword_seq}?period=D7|D14
  * ======================================================= */
 
 export type KeywordMetaParams = AnalyticsPeriodParams;
@@ -78,7 +78,7 @@ export async function getKeywordMeta(
   config?: HttpRequestConfig<undefined>,
 ): Promise<KeywordMetaResponse> {
   const response = await http.get<KeywordMetaResponse>(
-    `/api/analytics/keywords/${keywordSeq}`,
+    `/analytics/keywords/${keywordSeq}`,
     {
       ...publicConfig(config),
       params,
@@ -89,7 +89,7 @@ export async function getKeywordMeta(
 
 /* =========================================================
  * 3) AI 요약 - 공개
- * GET /api/analytics/keywords/{keyword_seq}/summary?period=D7|D14
+ * GET /analytics/keywords/{keyword_seq}/summary?period=D7|D14
  * ======================================================= */
 
 export type AiSummaryParams = AnalyticsPeriodParams;
@@ -104,7 +104,7 @@ export async function getAiSummary(
   config?: HttpRequestConfig<undefined>,
 ): Promise<AiSummaryResponse> {
   const response = await http.get<AiSummaryResponse>(
-    `/api/analytics/keywords/${keywordSeq}/summary`,
+    `/analytics/keywords/${keywordSeq}/summary`,
     {
       ...publicConfig(config),
       params,
@@ -115,7 +115,7 @@ export async function getAiSummary(
 
 /* =========================================================
  * 4) 워드클라우드 (제목) - 공개
- * GET /api/analytics/keywords/{keyword_seq}/wordcloud/title?period=D7|D14
+ * GET /analytics/keywords/{keyword_seq}/wordcloud/title?period=D7|D14
  * ======================================================= */
 
 export interface WordcloudItem {
@@ -133,7 +133,7 @@ export async function getTitleWordcloud(
   config?: HttpRequestConfig<undefined>,
 ): Promise<WordcloudResponse> {
   const response = await http.get<WordcloudResponse>(
-    `/api/analytics/keywords/${keywordSeq}/wordcloud/title`,
+    `/analytics/keywords/${keywordSeq}/wordcloud/title`,
     {
       ...publicConfig(config),
       params,
@@ -144,7 +144,7 @@ export async function getTitleWordcloud(
 
 /* =========================================================
  * 5) 워드클라우드 (댓글/코멘트) - 공개
- * GET /api/analytics/keywords/{keyword_seq}/wordcloud/comment?period=D7|D14
+ * GET /analytics/keywords/{keyword_seq}/wordcloud/comment?period=D7|D14
  * ======================================================= */
 
 export async function getCommentWordcloud(
@@ -153,7 +153,7 @@ export async function getCommentWordcloud(
   config?: HttpRequestConfig<undefined>,
 ): Promise<WordcloudResponse> {
   const response = await http.get<WordcloudResponse>(
-    `/api/analytics/keywords/${keywordSeq}/wordcloud/comment`,
+    `/analytics/keywords/${keywordSeq}/wordcloud/comment`,
     {
       ...publicConfig(config),
       params,
@@ -164,7 +164,7 @@ export async function getCommentWordcloud(
 
 /* =========================================================
  * 6) 본문 감성 분석 - 공개
- * GET /api/analytics/keywords/{keyword_seq}/sentiment/content?period=D7|D14
+ * GET /analytics/keywords/{keyword_seq}/sentiment/content?period=D7|D14
  * ======================================================= */
 
 export interface ContentSentimentResponse {
@@ -179,7 +179,7 @@ export async function getContentSentiment(
   config?: HttpRequestConfig<undefined>,
 ): Promise<ContentSentimentResponse> {
   const response = await http.get<ContentSentimentResponse>(
-    `/api/analytics/keywords/${keywordSeq}/sentiment/content`,
+    `/analytics/keywords/${keywordSeq}/sentiment/content`,
     {
       ...publicConfig(config),
       params,
@@ -190,7 +190,7 @@ export async function getContentSentiment(
 
 /* =========================================================
  * 7) 제목 편향도(언론사별) - 공개
- * GET /api/analytics/keywords/{keyword_seq}/bias/title?period=D7|D14
+ * GET /analytics/keywords/{keyword_seq}/bias/title?period=D7|D14
  * ======================================================= */
 
 export interface TitleBiasByMediaItem {
@@ -208,7 +208,7 @@ export async function getTitleBiasByMedia(
   config?: HttpRequestConfig<undefined>,
 ): Promise<TitleBiasByMediaResponse> {
   const response = await http.get<TitleBiasByMediaResponse>(
-    `/api/analytics/keywords/${keywordSeq}/bias/title`,
+    `/analytics/keywords/${keywordSeq}/bias/title`,
     {
       ...publicConfig(config),
       params,
@@ -219,7 +219,7 @@ export async function getTitleBiasByMedia(
 
 /* =========================================================
  * 8) 동시언급 네트워크 - 공개
- * GET /api/analytics/keywords/{keyword_seq}/cooc-network?period=D7|D14
+ * GET /analytics/keywords/{keyword_seq}/cooc-network?period=D7|D14
  * ======================================================= */
 
 export interface CoocNetworkNode {
@@ -245,7 +245,7 @@ export async function getCoocNetwork(
   config?: HttpRequestConfig<undefined>,
 ): Promise<CoocNetworkResponse> {
   const response = await http.get<CoocNetworkResponse>(
-    `/api/analytics/keywords/${keywordSeq}/cooc-network`,
+    `/analytics/keywords/${keywordSeq}/cooc-network`,
     {
       ...publicConfig(config),
       params,
@@ -256,7 +256,7 @@ export async function getCoocNetwork(
 
 /* =========================================================
  * 9) 미디어 비교용 상위 키워드 - 공개
- * GET /api/analytics/media-compare/keywords/top?period=D7|D14&limit=10
+ * GET /analytics/media-compare/keywords/top?period=D7|D14&limit=10
  * ======================================================= */
 
 export interface MediaCompareTopKeywordsParams extends AnalyticsPeriodParams {
@@ -283,7 +283,7 @@ export async function getMediaCompareTopKeywords(
   config?: HttpRequestConfig<undefined>,
 ): Promise<MediaCompareTopKeywordsResponse> {
   const response = await http.get<MediaCompareTopKeywordsResponse>(
-    '/api/analytics/media-compare/keywords/top',
+    '/analytics/media-compare/keywords/top',
     {
       ...publicConfig(config),
       params,
@@ -294,7 +294,7 @@ export async function getMediaCompareTopKeywords(
 
 /* =========================================================
  * 10) 미디어별 기사 수 - 공개
- * GET /api/analytics/media-compare/keywords/{keyword_seq}/media-article-counts?period=D7|D14
+ * GET /analytics/media-compare/keywords/{keyword_seq}/media-article-counts?period=D7|D14
  * ======================================================= */
 
 export interface MediaArticleCountItem {
@@ -312,7 +312,7 @@ export async function getMediaArticleCounts(
   config?: HttpRequestConfig<undefined>,
 ): Promise<MediaArticleCountsResponse> {
   const response = await http.get<MediaArticleCountsResponse>(
-    `/api/analytics/media-compare/keywords/${keywordSeq}/media-article-counts`,
+    `/analytics/media-compare/keywords/${keywordSeq}/media-article-counts`,
     {
       ...publicConfig(config),
       params,
@@ -323,7 +323,7 @@ export async function getMediaArticleCounts(
 
 /* =========================================================
  * 11) 미디어별 본문 감성 비교 - 공개
- * GET /api/analytics/media-compare/keywords/{keyword_seq}/sentiment/content?period=D7|D14
+ * GET /analytics/media-compare/keywords/{keyword_seq}/sentiment/content?period=D7|D14
  * ======================================================= */
 
 export interface MediaContentSentimentCompareItem {
@@ -343,7 +343,7 @@ export async function getMediaCompareContentSentiment(
   config?: HttpRequestConfig<undefined>,
 ): Promise<MediaContentSentimentCompareResponse> {
   const response = await http.get<MediaContentSentimentCompareResponse>(
-    `/api/analytics/media-compare/keywords/${keywordSeq}/sentiment/content`,
+    `/analytics/media-compare/keywords/${keywordSeq}/sentiment/content`,
     {
       ...publicConfig(config),
       params,
@@ -354,7 +354,7 @@ export async function getMediaCompareContentSentiment(
 
 /* =========================================================
  * 12) 미디어별 제목 상위 단어(프레이밍 비교) - 공개
- * GET /api/analytics/media-compare/keywords/{keyword_seq}/framing/title-top-words?period=D7|D14&top_n=5
+ * GET /analytics/media-compare/keywords/{keyword_seq}/framing/title-top-words?period=D7|D14&top_n=5
  * ======================================================= */
 
 export interface MediaTitleTopWordsParams extends AnalyticsPeriodParams {
@@ -376,7 +376,7 @@ export async function getMediaCompareTitleTopWords(
   config?: HttpRequestConfig<undefined>,
 ): Promise<MediaTitleTopWordsResponse> {
   const response = await http.get<MediaTitleTopWordsResponse>(
-    `/api/analytics/media-compare/keywords/${keywordSeq}/framing/title-top-words`,
+    `/analytics/media-compare/keywords/${keywordSeq}/framing/title-top-words`,
     {
       ...publicConfig(config),
       params,
@@ -387,7 +387,7 @@ export async function getMediaCompareTitleTopWords(
 
 /* =========================================================
  * 13) 관리자 대시보드 요약 (인증 필요)
- * GET /api/admins/dashboard/summary
+ * GET /admins/dashboard/summary
  * ======================================================= */
 
 export interface AdminDashboardSummaryResponse {
@@ -403,7 +403,7 @@ export async function getAdminDashboardSummary(
   config?: HttpRequestConfig<undefined>,
 ): Promise<AdminDashboardSummaryResponse> {
   const response = await http.get<AdminDashboardSummaryResponse>(
-    '/api/admins/dashboard/summary',
+    '/admins/dashboard/summary',
     config as HttpRequestConfig<undefined> | undefined,
   );
   return response.data;

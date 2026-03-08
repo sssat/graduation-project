@@ -18,7 +18,7 @@ export type InquiryStatus = string;
 
 /* =========================================================
  * 1) 사용자 문의 목록 조회
- * GET /api/inquiries
+ * GET /inquiries
  * ======================================================= */
 
 export interface InquiryListParams {
@@ -45,7 +45,7 @@ export async function listInquiries(
   params?: InquiryListParams,
   config?: HttpRequestConfig<undefined>,
 ): Promise<InquiryListResponse> {
-  const response = await http.get<InquiryListResponse>('/api/inquiries', {
+  const response = await http.get<InquiryListResponse>('/inquiries', {
     ...config,
     params,
   } as HttpRequestConfig<undefined>);
@@ -55,7 +55,7 @@ export async function listInquiries(
 
 /* =========================================================
  * 2) 사용자 문의 상세 조회
- * GET /api/inquiries/{inquiry_seq}
+ * GET /inquiries/{inquiry_seq}
  * ======================================================= */
 
 export interface InquiryDetail {
@@ -88,7 +88,7 @@ export async function getInquiryDetail(
   config?: HttpRequestConfig<undefined>,
 ): Promise<InquiryDetailResponse> {
   const response = await http.get<InquiryDetailResponse>(
-    `/api/inquiries/${inquirySeq}`,
+    `/inquiries/${inquirySeq}`,
     config as HttpRequestConfig<undefined> | undefined,
   );
 
@@ -97,7 +97,7 @@ export async function getInquiryDetail(
 
 /* =========================================================
  * 3) 사용자 문의 등록
- * POST /api/inquiries
+ * POST /inquiries
  * ======================================================= */
 
 export interface CreateInquiryRequest {
@@ -117,7 +117,7 @@ export async function createInquiry(
   config?: HttpRequestConfig<CreateInquiryRequest>,
 ): Promise<CreateInquiryResponse> {
   const response = await http.post<CreateInquiryResponse>(
-    '/api/inquiries',
+    '/inquiries',
     payload,
     config,
   );
@@ -127,7 +127,7 @@ export async function createInquiry(
 
 /* =========================================================
  * 4) 관리자 문의 목록 조회
- * GET /api/admins/inquiries
+ * GET /admins/inquiries
  * ======================================================= */
 
 export interface AdminInquiryListParams {
@@ -151,7 +151,7 @@ export async function listAdminInquiries(
   config?: HttpRequestConfig<undefined>,
 ): Promise<AdminInquiryListResponse> {
   const response = await http.get<AdminInquiryListResponse>(
-    '/api/admins/inquiries',
+    '/admins/inquiries',
     {
       ...config,
       params,
@@ -163,7 +163,7 @@ export async function listAdminInquiries(
 
 /* =========================================================
  * 5) 관리자 문의 상세 조회
- * GET /api/admins/inquiries/{inquiry_seq}
+ * GET /admins/inquiries/{inquiry_seq}
  * ======================================================= */
 
 export interface AdminInquiryDetail {
@@ -186,7 +186,7 @@ export async function getAdminInquiryDetail(
   config?: HttpRequestConfig<undefined>,
 ): Promise<AdminInquiryDetailResponse> {
   const response = await http.get<AdminInquiryDetailResponse>(
-    `/api/admins/inquiries/${inquirySeq}`,
+    `/admins/inquiries/${inquirySeq}`,
     config as HttpRequestConfig<undefined> | undefined,
   );
 
@@ -195,7 +195,7 @@ export async function getAdminInquiryDetail(
 
 /* =========================================================
  * 6) 관리자 답변 저장/수정 + 처리상태 변경
- * PUT /api/admins/inquiries/{inquiry_seq}/answer
+ * PUT /admins/inquiries/{inquiry_seq}/answer
  * ======================================================= */
 
 export interface AdminInquiryAnswerRequest {
@@ -216,7 +216,7 @@ export async function saveOrUpdateAdminInquiryAnswer(
   config?: HttpRequestConfig<AdminInquiryAnswerRequest>,
 ): Promise<AdminInquiryAnswerResponse> {
   const response = await http.put<AdminInquiryAnswerResponse>(
-    `/api/admins/inquiries/${inquirySeq}/answer`,
+    `/admins/inquiries/${inquirySeq}/answer`,
     payload,
     config,
   );
@@ -226,7 +226,7 @@ export async function saveOrUpdateAdminInquiryAnswer(
 
 /* =========================================================
  * 7) 관리자 문의 삭제
- * DELETE /api/admins/inquiries/{inquiry_seq}
+ * DELETE /admins/inquiries/{inquiry_seq}
  * ======================================================= */
 
 export interface AdminInquiryDeleteResponse {
@@ -238,7 +238,7 @@ export async function deleteAdminInquiry(
   config?: HttpRequestConfig<undefined>,
 ): Promise<AdminInquiryDeleteResponse> {
   const response = await http.delete<AdminInquiryDeleteResponse>(
-    `/api/admins/inquiries/${inquirySeq}`,
+    `/admins/inquiries/${inquirySeq}`,
     config as HttpRequestConfig<undefined> | undefined,
   );
 
