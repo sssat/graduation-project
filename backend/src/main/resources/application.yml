@@ -38,7 +38,6 @@ spring:
 
 app:
   cors:
-    # 개발 중 자주 쓰는 프론트 주소들을 명시적으로 허용
     allowed-origins:
       - "http://localhost:5173"
       - "http://127.0.0.1:5173"
@@ -47,8 +46,6 @@ app:
       - "http://localhost:5175"
       - "http://127.0.0.1:5175"
 
-    # Vite 포트가 바뀌어도 대응 가능하도록 개발용 패턴 허용
-    # (allow-credentials=true 환경에서도 Spring은 요청 Origin을 구체값으로 반영함)
     allowed-origin-patterns:
       - "http://localhost:*"
       - "http://127.0.0.1:*"
@@ -68,6 +65,11 @@ app:
     access-minutes: ${JWT_ACCESS_MINUTES:30}
     refresh-minutes: ${JWT_REFRESH_MINUTES:60}
     user-id-claim: ${JWT_USER_ID_CLAIM:user_seq}
+
+management:
+  health:
+    mail:
+      enabled: false
 
 logging:
   level:

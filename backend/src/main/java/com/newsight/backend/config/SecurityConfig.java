@@ -147,7 +147,9 @@ public class SecurityConfig {
                 // CORS preflight 허용
                 .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
 
-                .requestMatchers("/actuator/health").permitAll()
+                // actuator health 전체 공개
+                // /actuator/health 는 물론 /actuator/health/db, /actuator/health/mail 등 세부 확인도 허용
+                .requestMatchers("/actuator/health", "/actuator/health/**").permitAll()
 
                 // accounts (public)
                 .requestMatchers("/api/auth/register/**").permitAll()

@@ -750,16 +750,17 @@ public class AnalyticsService {
             LocalDate windowEnd
     ) {
         List<ArticleDateRangeSqlCandidate> candidates = List.of(
+                // 현재 운영 스키마 기준:
+                // - 기사 테이블: T_NEWS_ARTICLE
+                // - 발행일 컬럼: PUBLISHED_AT
+                // - 키워드/런 연결 컬럼: KEYWORD_SEQ, TREND_RUN_SEQ
+                //
+                // 과거 로컬/구버전 스키마 후보(T_NEWS_ARTICLE_RAW, PUBLISHED_DATE)를 계속 시도하면
+                // 운영 DB에서 불필요한 SQL 예외가 발생하고 트랜잭션이 rollback-only로 표시될 수 있다.
                 new ArticleDateRangeSqlCandidate("T_NEWS_ARTICLE", "PUBLISHED_AT", "KEYWORD_SEQ", "TREND_RUN_SEQ"),
-                new ArticleDateRangeSqlCandidate("T_NEWS_ARTICLE", "PUBLISHED_DATE", "KEYWORD_SEQ", "TREND_RUN_SEQ"),
-                new ArticleDateRangeSqlCandidate("T_NEWS_ARTICLE_RAW", "PUBLISHED_AT", "KEYWORD_SEQ", "TREND_RUN_SEQ"),
-                new ArticleDateRangeSqlCandidate("T_NEWS_ARTICLE_RAW", "PUBLISHED_DATE", "KEYWORD_SEQ", "TREND_RUN_SEQ"),
 
-                // run_seq 컬럼이 없는 경우(키워드 + 날짜 범위로만 조회)도 대비
-                new ArticleDateRangeSqlCandidate("T_NEWS_ARTICLE", "PUBLISHED_AT", "KEYWORD_SEQ", null),
-                new ArticleDateRangeSqlCandidate("T_NEWS_ARTICLE", "PUBLISHED_DATE", "KEYWORD_SEQ", null),
-                new ArticleDateRangeSqlCandidate("T_NEWS_ARTICLE_RAW", "PUBLISHED_AT", "KEYWORD_SEQ", null),
-                new ArticleDateRangeSqlCandidate("T_NEWS_ARTICLE_RAW", "PUBLISHED_DATE", "KEYWORD_SEQ", null)
+                // run_seq 컬럼이 없는 스키마에도 대비한 fallback
+                new ArticleDateRangeSqlCandidate("T_NEWS_ARTICLE", "PUBLISHED_AT", "KEYWORD_SEQ", null)
         );
 
         for (ArticleDateRangeSqlCandidate c : candidates) {
