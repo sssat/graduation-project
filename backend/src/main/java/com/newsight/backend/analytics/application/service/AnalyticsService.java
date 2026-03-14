@@ -149,9 +149,10 @@ public class AnalyticsService {
         TrendRunRef latestRun = getLatestTrendRunOrThrow();
         long todayCollectedArticleCount = sumAllKeywordArticleCount(latestRun.getTrendRunSeq(), PeriodFilter.D14);
 
-        TrendRunRef lastWeekRun = trendRunRefRepository
-                .findFirstByBaseDateOrderByTrendRunSeqDesc(latestRun.getBaseDate().minusDays(7))
-                .orElse(null);
+        TrendRunRef lastWeekRun = findComparableTrendRunWithData(
+                latestRun.getBaseDate().minusDays(7),
+                PeriodFilter.D14
+        );
 
         Double todayCollectedArticleDeltaRate = null;
         if (lastWeekRun != null) {
@@ -560,6 +561,37 @@ public class AnalyticsService {
     private TrendRunRef getLatestTrendRunOrThrow() {
         return trendRunRefRepository.findFirstByOrderByTrendRunSeqDesc()
                 .orElseThrow(() -> new NotFoundException("최신 트렌드 run이 없습니다."));
+    }
+
+    /**
+     * 같은 baseDate에 run이 여러 개 있을 수 있으므로,
+     * 비교 기준 run은 단순히 가장 최신 run 1건을 고르지 않고
+     * 실제 기사 합계가 있는 run을 우선 선택한다.
+     */
+    private TrendRunRef findComparableTrendRunWithData(LocalDate baseDate, PeriodFilter pf) {
+        if (baseDate == null || pf == null) {
+            return null;
+        }
+
+        List<TrendRunRef> candidates = em.createQuery(
+                        "select tr from TrendRunRef tr where tr.baseDate = :baseDate order by tr.trendRunSeq desc",
+                        TrendRunRef.class
+                )
+                .setParameter("baseDate", baseDate)
+                .getResultList();
+
+        if (candidates == null || candidates.isEmpty()) {
+            return null;
+        }
+
+        for (TrendRunRef candidate : candidates) {
+            long articleCountSum = sumAllKeywordArticleCount(candidate.getTrendRunSeq(), pf);
+            if (articleCountSum > 0L) {
+                return candidate;
+            }
+        }
+
+        return null;
     }
 
     private long sumAllKeywordArticleCount(Long trendRunSeq, PeriodFilter pf) {
