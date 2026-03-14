@@ -1,7 +1,6 @@
-# backend/src/main/resources/application.yml
-
 server:
   port: 8080
+  forward-headers-strategy: framework
 
 spring:
   datasource:
@@ -45,6 +44,8 @@ app:
       - "http://127.0.0.1:5174"
       - "http://localhost:5175"
       - "http://127.0.0.1:5175"
+      - "https://newsightkr.com"
+      - "https://www.newsightkr.com"
 
     allowed-origin-patterns:
       - "http://localhost:*"
