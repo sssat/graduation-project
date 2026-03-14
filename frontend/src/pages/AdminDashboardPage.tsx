@@ -2,11 +2,11 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import styles from "./AdminDashboardPage.module.css";
+import { listAdminDashboardLoginLogs } from "../api/accounts";
 import {
   getAdminDashboardSummary,
-  listAdminDashboardLoginLogs,
   type AdminDashboardSummaryResponse,
-} from "../api/accounts";
+} from "../api/analytics";
 import {
   deleteAdminInquiry,
   getAdminInquiryDetail,
@@ -83,6 +83,10 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
 }
 
+function asRecord(value: unknown): Record<string, unknown> {
+  return isRecord(value) ? value : {};
+}
+
 function formatDisplayDateTime(value: string | null | undefined): string {
   if (!value) return "-";
   const normalized = value.replace("T", " ");
@@ -101,6 +105,17 @@ function formatIpAddress(value: string | null | undefined): string {
   if (ip === "::1" || ip === "0:0:0:0:0:0:0:1") return "localhost";
   if (ip.startsWith("::ffff:")) return ip.slice("::ffff:".length);
   return ip;
+}
+
+function formatDeltaRate(value: number | null, label: string): string {
+  if (value == null || !Number.isFinite(value)) return "-";
+  const sign = value > 0 ? "+" : "";
+  return `${label} ${sign}${value.toFixed(1)}%`;
+}
+
+function formatElapsedDays(value: number | null): string {
+  if (value == null || !Number.isFinite(value)) return "-";
+  return `평균 경과 ${value.toFixed(1)}일`;
 }
 
 function getNumberByKeys(obj: Record<string, unknown>, keys: string[]): number | null {
@@ -208,7 +223,26 @@ function mapAdminDetailToVm(detail: AdminInquiryDetail): SelectedInquiryVm {
 }
 
 function mapSummaryResponse(raw: AdminDashboardSummaryResponse, fallbackProcessingCount: number): DashboardSummaryVm {
-  const source = isRecord(raw.summary) ? raw.summary : (raw as Record<string, unknown>);
+  const root = asRecord(raw);
+  const source = isRecord(root.summary) ? root.summary : root;
+
+  const signupsDeltaRate = getNumberByKeys(source, [
+    "today_joined_delta_rate",
+    "joined_delta_rate",
+    "signups_delta_rate",
+  ]);
+
+  const articlesDeltaRate = getNumberByKeys(source, [
+    "today_collected_article_delta_rate",
+    "collected_article_delta_rate",
+    "articles_delta_rate",
+  ]);
+
+  const inquiriesAvgElapsedDays = getNumberByKeys(source, [
+    "processing_inquiry_avg_elapsed_days",
+    "inquiries_avg_elapsed_days",
+    "processing_avg_elapsed_days",
+  ]);
 
   return {
     signupsToday:
@@ -222,7 +256,8 @@ function mapSummaryResponse(raw: AdminDashboardSummaryResponse, fallbackProcessi
         "joined_count_today",
       ]) ?? 0,
     signupsMeta:
-      getStringByKeys(source, ["signups_meta", "signups_delta_text", "signups_summary"]) ?? "-",
+      getStringByKeys(source, ["signups_meta", "signups_delta_text", "signups_summary"]) ??
+      formatDeltaRate(signupsDeltaRate, "최근 7일 평균 대비"),
     articlesToday:
       getNumberByKeys(source, [
         "articles_today",
@@ -235,7 +270,8 @@ function mapSummaryResponse(raw: AdminDashboardSummaryResponse, fallbackProcessi
         "collected_article_count_today",
       ]) ?? 0,
     articlesMeta:
-      getStringByKeys(source, ["articles_meta", "articles_delta_text", "articles_summary"]) ?? "-",
+      getStringByKeys(source, ["articles_meta", "articles_delta_text", "articles_summary"]) ??
+      formatDeltaRate(articlesDeltaRate, "지난주 동일 요일 대비"),
     inquiriesInProgress:
       getNumberByKeys(source, [
         "inquiries_in_progress",
@@ -246,7 +282,8 @@ function mapSummaryResponse(raw: AdminDashboardSummaryResponse, fallbackProcessi
         "processing_inquiry_count",
       ]) ?? fallbackProcessingCount,
     inquiriesMeta:
-      getStringByKeys(source, ["inquiries_meta", "processing_inquiries_meta", "inquiries_summary"]) ?? "-",
+      getStringByKeys(source, ["inquiries_meta", "processing_inquiries_meta", "inquiries_summary"]) ??
+      formatElapsedDays(inquiriesAvgElapsedDays),
   };
 }
 
