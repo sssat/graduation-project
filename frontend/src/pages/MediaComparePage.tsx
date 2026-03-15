@@ -503,6 +503,9 @@ export default function MediaComparePage() {
     Number(hasSentimentCard) +
     Number(hasFramingCard);
 
+  const topSectionCount = Number(hasVolumeCard) + Number(hasBiasCard);
+  const bottomSectionCount = Number(hasSentimentCard) + Number(hasFramingCard);
+
   useEffect(() => {
     if (!volumeCanvasRef.current || !hasVolumeCard) return;
 
@@ -739,22 +742,24 @@ export default function MediaComparePage() {
         </div>
       </section>
 
-      {visibleAnalysisCount > 0 && (
-        <section className={styles.grid2}>
-          {hasSummaryCard && (
-            <article className={styles.card}>
-              <div className={styles.cardHeader}>
-                <div>
-                  <div className={styles.cardTitle}>키워드 분석 요약</div>
-                  <div className={styles.cardSub}>수집된 기사 내용을 바탕으로 생성한 AI 요약입니다.</div>
-                </div>
-                <span className={styles.badgeSoft}>요약 리포트</span>
+      {hasSummaryCard && (
+        <section className={styles.grid1}>
+          <article className={styles.card}>
+            <div className={styles.cardHeader}>
+              <div>
+                <div className={styles.cardTitle}>키워드 분석 요약</div>
+                <div className={styles.cardSub}>수집된 기사 내용을 바탕으로 생성한 AI 요약입니다.</div>
               </div>
+              <span className={styles.badgeSoft}>요약 리포트</span>
+            </div>
 
-              <div className={styles.summaryText}>{aiSummaryText}</div>
-            </article>
-          )}
+            <div className={styles.summaryText}>{aiSummaryText}</div>
+          </article>
+        </section>
+      )}
 
+      {topSectionCount > 0 && (
+        <section className={topSectionCount === 1 ? styles.grid1 : styles.grid2}>
           {hasVolumeCard && (
             <article className={styles.card}>
               <div className={styles.cardHeader}>
@@ -798,7 +803,11 @@ export default function MediaComparePage() {
               </div>
             </article>
           )}
+        </section>
+      )}
 
+      {bottomSectionCount > 0 && (
+        <section className={bottomSectionCount === 1 ? styles.grid1 : styles.grid2}>
           {hasSentimentCard && (
             <article className={styles.card}>
               <div className={styles.cardHeader}>
