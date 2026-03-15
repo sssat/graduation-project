@@ -307,7 +307,11 @@ public class AnalyticsService {
 
         AnalyzeCoMentionGraph graph = analyzeCoMentionGraphRepository
                 .findFirstByKeywordSeqAndMediaCodeAndPeriodFilterOrderByTrendRunSeqDesc(keywordSeq, ALL_MEDIA_CODE, pf)
-                .orElseThrow(() -> new NotFoundException("공동 언급 네트워크 데이터가 없습니다."));
+                .orElse(null);
+
+        if (graph == null) {
+            return new CoocNetworkResult(List.of(), List.of());
+        }
 
         List<AnalyzeCoMentionNode> nodes = analyzeCoMentionNodeRepository
                 .findByGraphSeqOrderByNodeWeightDesc(graph.getGraphSeq());
