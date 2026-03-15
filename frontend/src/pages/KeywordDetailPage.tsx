@@ -138,14 +138,6 @@ function roundSentiment(sentiment: ContentSentimentResponse): ContentSentimentRe
   };
 }
 
-async function loadOptional<T>(loader: () => Promise<T>, fallback: T): Promise<T> {
-  try {
-    return await loader();
-  } catch {
-    return fallback;
-  }
-}
-
 type ChartColors = {
   sentPos: string;
   sentNeu: string;
@@ -834,16 +826,12 @@ export default function KeywordDetailPage() {
           coocRes,
           commentWordcloudRes,
         ] = await Promise.all([
-          loadOptional(() => getAiSummary(targetKeywordSeq, { period }), { summary_text: "" }),
-          loadOptional(() => getTitleWordcloud(targetKeywordSeq, { period }), { items: [] }),
-          loadOptional(() => getContentSentiment(targetKeywordSeq, { period }), {
-            positive: 0,
-            neutral: 0,
-            negative: 0,
-          }),
-          loadOptional(() => getTitleBiasByMedia(targetKeywordSeq, { period }), { items: [] }),
-          loadOptional(() => getCoocNetwork(targetKeywordSeq, { period }), { nodes: [], edges: [] }),
-          loadOptional(() => getCommentWordcloud(targetKeywordSeq, { period }), { items: [] }),
+          getAiSummary(targetKeywordSeq, { period }),
+          getTitleWordcloud(targetKeywordSeq, { period }),
+          getContentSentiment(targetKeywordSeq, { period }),
+          getTitleBiasByMedia(targetKeywordSeq, { period }),
+          getCoocNetwork(targetKeywordSeq, { period }),
+          getCommentWordcloud(targetKeywordSeq, { period }),
         ]);
 
         if (cancelled) return;
