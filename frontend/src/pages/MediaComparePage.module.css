@@ -10,6 +10,7 @@
   --ns-text-muted: #9ca3af;
   --ns-text-main: #e5e7eb;
 
+  /* 차트 색상(Chart.js에서 참조) */
   --ns-bias-pos: #38bdf8;
   --ns-bias-neg: #f97316;
 
@@ -77,6 +78,7 @@
   margin: 0;
 }
 
+/* 키워드 선택 라인 */
 .keywordFilterRow {
   margin-top: 18px;
   display: flex;
@@ -101,12 +103,8 @@
   background: rgba(15, 23, 42, 0.9);
   color: #e5e7eb;
   cursor: pointer;
-  transition:
-    background 0.15s ease,
-    color 0.15s ease,
-    border-color 0.15s ease,
-    transform 0.1s ease,
-    box-shadow 0.15s ease;
+  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease,
+    transform 0.1s ease, box-shadow 0.15s ease;
 }
 
 .keywordChip:hover {
@@ -122,6 +120,7 @@
   box-shadow: 0 10px 22px rgba(37, 99, 235, 0.7);
 }
 
+/* 기간 필터(키워드 칩 라인 우측) */
 .periodFilterInline {
   display: flex;
   gap: 10px;
@@ -129,6 +128,7 @@
   flex: 0 0 auto;
 }
 
+/* 기간 필터(칩) */
 .filterLabel {
   font-size: 12px;
   color: var(--ns-text-muted);
@@ -158,21 +158,20 @@
 }
 
 .active {
-  background: linear-gradient(135deg, rgba(56, 189, 248, 0.45), rgba(129, 140, 248, 0.6));
+  background: linear-gradient(
+    135deg,
+    rgba(56, 189, 248, 0.45),
+    rgba(129, 140, 248, 0.6)
+  );
 }
 
+/* 카드 공통 */
 .card {
   border-radius: 20px;
   background: radial-gradient(circle at top left, #111827 0, #020617 60%);
   border: 1px solid var(--ns-border-soft);
   padding: 18px 20px 18px;
   box-shadow: 0 14px 32px rgba(15, 23, 42, 0.6);
-}
-
-.cardFill {
-  display: flex;
-  flex-direction: column;
-  height: 100%;
 }
 
 .cardHeader {
@@ -204,6 +203,7 @@
   white-space: nowrap;
 }
 
+/* 레이아웃 */
 .grid1 {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
@@ -211,14 +211,14 @@
   margin-bottom: 18px;
 }
 
-.analysisGrid {
+.grid2 {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 16px;
   margin-bottom: 18px;
-  align-items: stretch;
 }
 
+/* 요약 */
 .summaryText {
   font-size: 13px;
   line-height: 1.7;
@@ -227,18 +227,7 @@
   word-break: keep-all;
 }
 
-.statusCard {
-  min-height: 180px;
-  display: grid;
-  align-content: center;
-  gap: 10px;
-}
 
-.statusTitle {
-  font-size: 16px;
-  font-weight: 700;
-  color: #f8fafc;
-}
 
 .statusText {
   font-size: 12px;
@@ -253,22 +242,15 @@
   line-height: 1.5;
 }
 
+/* 차트 */
 .chartWrapper {
   position: relative;
   height: 240px;
-  flex: 0 0 auto;
 }
 
 .chartWrapperTall {
   position: relative;
-  min-height: 340px;
-  flex: 1 1 auto;
-}
-
-.chartWrapper canvas,
-.chartWrapperTall canvas {
-  width: 100% !important;
-  height: 100% !important;
+  height: 240px;
 }
 
 .chartLegend {
@@ -310,6 +292,7 @@
   margin-top: 8px;
 }
 
+/* 대표 단어(프레이밍) 리스트 */
 .framingList {
   margin-top: 6px;
   font-size: 13px;
@@ -338,6 +321,7 @@
   gap: 6px;
 }
 
+/* 강조 제거: 전부 동일 스타일만 사용 */
 .keywordTagNeutral {
   font-size: 11px;
   padding: 3px 8px;
@@ -351,7 +335,7 @@
     padding: 22px 18px 32px;
   }
 
-  .analysisGrid {
+  .grid2 {
     grid-template-columns: minmax(0, 1fr);
   }
 
@@ -362,12 +346,9 @@
   .framingList {
     grid-template-columns: minmax(0, 1fr);
   }
-
-  .chartWrapperTall {
-    min-height: 280px;
-  }
 }
 
+/* 모바일에서 기간 필터가 아래로 내려가도 보기 좋게 */
 @media (max-width: 520px) {
   .periodFilterInline {
     width: 100%;

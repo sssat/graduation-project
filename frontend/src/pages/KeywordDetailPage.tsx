@@ -280,7 +280,11 @@ function WordCloudD3({
   }, [items, width, height, seed]);
 
   if (!items.length) {
-    return null;
+    return (
+      <div ref={wrapRef} className={styles.wordcloudClassic}>
+        <div className={styles.emptyBox}>표시할 워드클라우드 데이터가 없습니다.</div>
+      </div>
+    );
   }
 
   return (
@@ -649,7 +653,11 @@ function NetworkGraph({
   void tick;
 
   if (!simData.nodes.length) {
-    return null;
+    return (
+      <div ref={wrapRef} className={styles.networkWrap}>
+        <div className={styles.emptyBox}>표시할 공동 언급 네트워크 데이터가 없습니다.</div>
+      </div>
+    );
   }
 
   return (
@@ -730,7 +738,7 @@ function NetworkGraph({
       </svg>
 
       <div className={styles.networkHint}>
-        상위 핵심 노드/연결만 표시합니다. 노드를 드래그해 배치할 수 있고, 놓으면 고정되며 다시 누르면 고정이 해제됩니다.
+        상위 핵심 노드/연결만 표시합니다(라벨 비표시 노드는 화면에서 제외). 노드를 드래그해 배치할 수 있고, 놓으면 고정되며 다시 누르면 고정이 해제됩니다.
       </div>
     </div>
   );
@@ -862,19 +870,6 @@ export default function KeywordDetailPage() {
 
   const isInsufficient = Boolean(meta && !meta.is_analyzable);
 
-  const coocGraphPreview = useMemo(() => {
-    if (!viewData) {
-      return { nodes: [], links: [] };
-    }
-
-    return buildApiCoMentionGraph(
-      displayKeyword,
-      viewData.coocNodes,
-      viewData.coocEdges,
-      `${displayKeyword}-${period}-preview`
-    );
-  }, [displayKeyword, period, viewData]);
-
   useEffect(() => {
     if (!isInsufficient || !meta || !keywordSeq) return;
 
@@ -889,13 +884,6 @@ export default function KeywordDetailPage() {
   useEffect(() => {
     if (!viewData || isInsufficient) return;
     if (!sentimentCanvasRef.current) return;
-
-    const sentimentTotal =
-      (viewData.sentiment.positive ?? 0) +
-      (viewData.sentiment.neutral ?? 0) +
-      (viewData.sentiment.negative ?? 0);
-
-    if (sentimentTotal <= 0) return;
 
     const ctx = sentimentCanvasRef.current.getContext("2d");
     if (!ctx) return;
@@ -953,7 +941,6 @@ export default function KeywordDetailPage() {
   useEffect(() => {
     if (!viewData || isInsufficient) return;
     if (!biasCanvasRef.current) return;
-    if (!viewData.biasItems.length) return;
 
     const ctx = biasCanvasRef.current.getContext("2d");
     if (!ctx) return;
@@ -1159,21 +1146,6 @@ export default function KeywordDetailPage() {
   }
 
   const sentiment = viewData.sentiment;
-  const sentimentTotal = sentiment.positive + sentiment.neutral + sentiment.negative;
-
-  const hasSummary = Boolean(viewData.summaryText.trim());
-  const hasTitleWordcloud = viewData.titleWordcloud.length > 0;
-  const hasSentiment = sentimentTotal > 0;
-  const hasBias = viewData.biasItems.length > 0;
-  const hasNetwork = coocGraphPreview.nodes.length > 0 && coocGraphPreview.links.length > 0;
-  const hasCommentWordcloud = viewData.commentWordcloud.length > 0;
-  const hasAnySection =
-    hasSummary ||
-    hasTitleWordcloud ||
-    hasSentiment ||
-    hasBias ||
-    hasNetwork ||
-    hasCommentWordcloud;
 
   return (
     <main ref={rootRef} className={styles.pageRoot}>
@@ -1221,78 +1193,78 @@ export default function KeywordDetailPage() {
         </div>
       </section>
 
-      {hasAnySection ? (
-        <section className={styles.analysisGrid}>
-          {hasSummary && (
-            <article className={`${styles.card} ${styles.cardFill}`}>
-              <div className={styles.cardHeader}>
-                <div>
-                  <div className={styles.cardTitle}>키워드 분석 요약</div>
-                  <div className={styles.cardSub}>수집된 기사 내용을 바탕으로 생성한 AI 요약입니다.</div>
-                </div>
-                <span className={styles.badgeSoft}>요약 리포트</span>
+      <section className={styles.grid1}>
+        <article className={styles.card}>
+          <div className={styles.cardHeader}>
+            <div>
+              <div className={styles.cardTitle}>키워드 분석 요약</div>
+              <div className={styles.cardSub}>수집된 기사 내용을 바탕으로 생성한 AI 요약입니다.</div>
+            </div>
+            <span className={styles.badgeSoft}>요약 리포트</span>
+          </div>
+          <div className={styles.summaryText}>
+            {viewData.summaryText?.trim() ? viewData.summaryText : "요약 데이터가 없습니다."}
+          </div>
+        </article>
+      </section>
+
+      <section className={styles.grid2}>
+        <article className={styles.card}>
+          <div className={styles.cardHeader}>
+            <div>
+              <div className={styles.cardTitle}>제목 워드 클라우드</div>
+              <div className={styles.cardSub}>수집된 기사 제목에서 자주 등장한 단어를 시각화한 결과입니다.</div>
+            </div>
+            <span className={styles.badgeSoft}>제목 기반</span>
+          </div>
+
+          <WordCloudD3 items={viewData.titleWordcloud} height={220} seed={`${displayKeyword}-${period}-title`} />
+        </article>
+
+        <article className={styles.card}>
+          <div className={styles.cardHeader}>
+            <div>
+              <div className={styles.cardTitle}>감성 분석 결과</div>
+              <div className={styles.cardSub}>기사 본문을 기반으로 긍정/중립/부정 비율을 집계했습니다.</div>
+            </div>
+            <span className={styles.badgeSoft}>텍스트 감성</span>
+          </div>
+
+          <div className={styles.chartWrapper}>
+            <canvas ref={sentimentCanvasRef} />
+          </div>
+
+          <div className={styles.chartLegend}>
+            <div className={styles.legendItem}>
+              <span className={`${styles.legendSwatch} ${styles.swatchPositive}`} />
+              긍정 (Positive) <strong>{sentiment.positive}%</strong>
+            </div>
+            <div className={styles.legendItem}>
+              <span className={`${styles.legendSwatch} ${styles.swatchNeutral}`} />
+              중립 (Neutral) <strong>{sentiment.neutral}%</strong>
+            </div>
+            <div className={styles.legendItem}>
+              <span className={`${styles.legendSwatch} ${styles.swatchNegative}`} />
+              부정 (Negative) <strong>{sentiment.negative}%</strong>
+            </div>
+          </div>
+        </article>
+      </section>
+
+      <section className={styles.grid2}>
+        <article className={`${styles.card} ${styles.cardFill}`}>
+          <div className={styles.cardHeader}>
+            <div>
+              <div className={styles.cardTitle}>언론사별 편향도 지수</div>
+              <div className={styles.cardSub}>
+                선택 키워드 기사들의 제목 톤을 기반으로 산출한 지표입니다 (0에 가까울수록 중립).
               </div>
-              <div className={styles.summaryText}>{viewData.summaryText}</div>
-            </article>
-          )}
+            </div>
+            <span className={styles.badgeSoft}>편향 분석</span>
+          </div>
 
-          {hasTitleWordcloud && (
-            <article className={`${styles.card} ${styles.cardFill}`}>
-              <div className={styles.cardHeader}>
-                <div>
-                  <div className={styles.cardTitle}>제목 워드 클라우드</div>
-                  <div className={styles.cardSub}>수집된 기사 제목에서 자주 등장한 단어를 시각화한 결과입니다.</div>
-                </div>
-                <span className={styles.badgeSoft}>제목 기반</span>
-              </div>
-
-              <WordCloudD3 items={viewData.titleWordcloud} height={220} seed={`${displayKeyword}-${period}-title`} />
-            </article>
-          )}
-
-          {hasSentiment && (
-            <article className={`${styles.card} ${styles.cardFill}`}>
-              <div className={styles.cardHeader}>
-                <div>
-                  <div className={styles.cardTitle}>감성 분석 결과</div>
-                  <div className={styles.cardSub}>기사 본문을 기반으로 긍정/중립/부정 비율을 집계했습니다.</div>
-                </div>
-                <span className={styles.badgeSoft}>텍스트 감성</span>
-              </div>
-
-              <div className={styles.chartWrapper}>
-                <canvas ref={sentimentCanvasRef} />
-              </div>
-
-              <div className={styles.chartLegend}>
-                <div className={styles.legendItem}>
-                  <span className={`${styles.legendSwatch} ${styles.swatchPositive}`} />
-                  긍정 (Positive) <strong>{sentiment.positive}%</strong>
-                </div>
-                <div className={styles.legendItem}>
-                  <span className={`${styles.legendSwatch} ${styles.swatchNeutral}`} />
-                  중립 (Neutral) <strong>{sentiment.neutral}%</strong>
-                </div>
-                <div className={styles.legendItem}>
-                  <span className={`${styles.legendSwatch} ${styles.swatchNegative}`} />
-                  부정 (Negative) <strong>{sentiment.negative}%</strong>
-                </div>
-              </div>
-            </article>
-          )}
-
-          {hasBias && (
-            <article className={`${styles.card} ${styles.cardFill}`}>
-              <div className={styles.cardHeader}>
-                <div>
-                  <div className={styles.cardTitle}>언론사별 편향도 지수</div>
-                  <div className={styles.cardSub}>
-                    선택 키워드 기사들의 제목 톤을 기반으로 산출한 지표입니다 (0에 가까울수록 중립).
-                  </div>
-                </div>
-                <span className={styles.badgeSoft}>편향 분석</span>
-              </div>
-
+          {viewData.biasItems.length ? (
+            <>
               <div className={`${styles.chartWrapper} ${styles.chartWrapperStretch}`}>
                 <canvas ref={biasCanvasRef} />
               </div>
@@ -1300,53 +1272,46 @@ export default function KeywordDetailPage() {
               <div className={styles.biasCaption}>
                 <strong>양수</strong>일수록 긍정적인 톤, <strong>음수</strong>일수록 비판적인 톤이 강한 언론사입니다.
               </div>
-            </article>
+            </>
+          ) : (
+            <div className={styles.emptyBox}>표시할 편향도 데이터가 없습니다.</div>
           )}
+        </article>
 
-          {hasNetwork && (
-            <article className={`${styles.card} ${styles.cardFill}`}>
-              <div className={styles.cardHeader}>
-                <div>
-                  <div className={styles.cardTitle}>관계도 분석</div>
-                  <div className={styles.cardSub}>
-                    {displayKeyword}과(와) 함께 언급되는 인물·조직을 공동 언급 관계로 연결해 시각화했습니다.
-                  </div>
-                </div>
-                <span className={styles.badgeSoft}>공동 언급 네트워크</span>
+        <article className={styles.card}>
+          <div className={styles.cardHeader}>
+            <div>
+              <div className={styles.cardTitle}>관계도 분석</div>
+              <div className={styles.cardSub}>
+                {displayKeyword}과(와) 함께 언급되는 인물·조직을 공동 언급 관계로 연결해 시각화했습니다.
               </div>
+            </div>
+            <span className={styles.badgeSoft}>공동 언급 네트워크</span>
+          </div>
 
-              <NetworkGraph
-                keyword={displayKeyword}
-                apiNodes={viewData.coocNodes}
-                apiEdges={viewData.coocEdges}
-                height={340}
-                seed={`${displayKeyword}-${period}-cooc`}
-              />
-            </article>
-          )}
+          <NetworkGraph
+            keyword={displayKeyword}
+            apiNodes={viewData.coocNodes}
+            apiEdges={viewData.coocEdges}
+            height={340}
+            seed={`${displayKeyword}-${period}-cooc`}
+          />
+        </article>
+      </section>
 
-          {hasCommentWordcloud && (
-            <article className={`${styles.card} ${styles.cardFill}`}>
-              <div className={styles.cardHeader}>
-                <div>
-                  <div className={styles.cardTitle}>독자 반응 워드 클라우드</div>
-                  <div className={styles.cardSub}>뉴스 댓글에서 자주 등장한 단어를 시각화한 결과입니다.</div>
-                </div>
-                <span className={styles.badgeSoft}>댓글 기반</span>
-              </div>
+      <section className={styles.grid2Bottom}>
+        <article className={styles.card}>
+          <div className={styles.cardHeader}>
+            <div>
+              <div className={styles.cardTitle}>독자 반응 워드 클라우드</div>
+              <div className={styles.cardSub}>뉴스 댓글에서 자주 등장한 단어를 시각화한 결과입니다.</div>
+            </div>
+            <span className={styles.badgeSoft}>댓글 기반</span>
+          </div>
 
-              <WordCloudD3 items={viewData.commentWordcloud} height={220} seed={`${displayKeyword}-${period}-comment`} />
-            </article>
-          )}
-        </section>
-      ) : (
-        <section className={styles.grid1}>
-          <article className={`${styles.card} ${styles.statusCard}`}>
-            <div className={styles.statusTitle}>표시 가능한 분석 결과가 없습니다</div>
-            <div className={styles.statusText}>현재 기간에는 실제로 렌더링할 수 있는 분석 데이터가 없습니다.</div>
-          </article>
-        </section>
-      )}
+          <WordCloudD3 items={viewData.commentWordcloud} height={220} seed={`${displayKeyword}-${period}-comment`} />
+        </article>
+      </section>
     </main>
   );
 }
