@@ -910,9 +910,6 @@ export default function KeywordDetailPage() {
     hasBias ||
     hasCooc;
 
-  const overviewCardCount = Number(hasTitleWordcloud) + Number(hasSentiment);
-  const compareCardCount = Number(hasBias) + Number(hasCooc);
-
   useEffect(() => {
     if (!viewData || isInsufficient || !hasSentiment) return;
     if (!sentimentCanvasRef.current) return;
@@ -1223,23 +1220,21 @@ export default function KeywordDetailPage() {
         </div>
       </section>
 
-      {hasSummary && (
-        <section className={styles.grid1}>
-          <article className={styles.card}>
-            <div className={styles.cardHeader}>
-              <div>
-                <div className={styles.cardTitle}>키워드 분석 요약</div>
-                <div className={styles.cardSub}>수집된 기사 내용을 바탕으로 생성한 AI 요약입니다.</div>
+      {hasAnyAnalysis && (
+        <section className={styles.grid2}>
+          {hasSummary && (
+            <article className={styles.card}>
+              <div className={styles.cardHeader}>
+                <div>
+                  <div className={styles.cardTitle}>키워드 분석 요약</div>
+                  <div className={styles.cardSub}>수집된 기사 내용을 바탕으로 생성한 AI 요약입니다.</div>
+                </div>
+                <span className={styles.badgeSoft}>요약 리포트</span>
               </div>
-              <span className={styles.badgeSoft}>요약 리포트</span>
-            </div>
-            <div className={styles.summaryText}>{viewData.summaryText}</div>
-          </article>
-        </section>
-      )}
+              <div className={styles.summaryText}>{viewData.summaryText}</div>
+            </article>
+          )}
 
-      {overviewCardCount > 0 && (
-        <section className={overviewCardCount === 1 ? styles.grid1 : styles.grid2}>
           {hasTitleWordcloud && (
             <article className={styles.card}>
               <div className={styles.cardHeader}>
@@ -1284,13 +1279,9 @@ export default function KeywordDetailPage() {
               </div>
             </article>
           )}
-        </section>
-      )}
 
-      {compareCardCount > 0 && (
-        <section className={compareCardCount === 1 ? styles.grid1 : styles.grid2}>
           {hasBias && (
-            <article className={`${styles.card} ${styles.cardFill}`}>
+            <article className={styles.card}>
               <div className={styles.cardHeader}>
                 <div>
                   <div className={styles.cardTitle}>언론사별 편향도 지수</div>
@@ -1301,7 +1292,7 @@ export default function KeywordDetailPage() {
                 <span className={styles.badgeSoft}>편향 분석</span>
               </div>
 
-              <div className={`${styles.chartWrapper} ${styles.chartWrapperStretch}`}>
+              <div className={styles.chartWrapper}>
                 <canvas ref={biasCanvasRef} />
               </div>
 
@@ -1332,22 +1323,20 @@ export default function KeywordDetailPage() {
               />
             </article>
           )}
-        </section>
-      )}
 
-      {hasCommentWordcloud && (
-        <section className={styles.grid1}>
-          <article className={styles.card}>
-            <div className={styles.cardHeader}>
-              <div>
-                <div className={styles.cardTitle}>독자 반응 워드 클라우드</div>
-                <div className={styles.cardSub}>뉴스 댓글에서 자주 등장한 단어를 시각화한 결과입니다.</div>
+          {hasCommentWordcloud && (
+            <article className={styles.card}>
+              <div className={styles.cardHeader}>
+                <div>
+                  <div className={styles.cardTitle}>독자 반응 워드 클라우드</div>
+                  <div className={styles.cardSub}>뉴스 댓글에서 자주 등장한 단어를 시각화한 결과입니다.</div>
+                </div>
+                <span className={styles.badgeSoft}>댓글 기반</span>
               </div>
-              <span className={styles.badgeSoft}>댓글 기반</span>
-            </div>
 
-            <WordCloudD3 items={viewData.commentWordcloud} height={220} seed={`${displayKeyword}-${period}-comment`} />
-          </article>
+              <WordCloudD3 items={viewData.commentWordcloud} height={220} seed={`${displayKeyword}-${period}-comment`} />
+            </article>
+          )}
         </section>
       )}
 
