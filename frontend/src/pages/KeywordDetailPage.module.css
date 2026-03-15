@@ -191,18 +191,12 @@
   margin-bottom: 18px;
 }
 
-.grid2 {
+.analysisGrid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 16px;
   margin-bottom: 18px;
-}
-
-.grid2Bottom {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 16px;
-  margin-bottom: 18px;
+  align-items: stretch;
 }
 
 .summaryText {
@@ -303,21 +297,6 @@
   display: block;
 }
 
-.emptyBox {
-  width: calc(100% - (var(--card-pad-x) * 2));
-  min-height: 140px;
-  border: 1px dashed rgba(148, 163, 184, 0.35);
-  border-radius: 14px;
-  background: rgba(15, 23, 42, 0.22);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--ns-text-muted);
-  font-size: 12px;
-  text-align: center;
-  padding: 14px;
-}
-
 .chartWrapper {
   position: relative;
   height: 220px;
@@ -332,8 +311,8 @@
 }
 
 .chartWrapperStretch {
+  min-height: 320px;
   height: auto;
-  min-height: 340px;
   flex: 1 1 auto;
   align-items: stretch;
   justify-content: stretch;
@@ -446,8 +425,7 @@
     padding: 22px 18px 32px;
   }
 
-  .grid2,
-  .grid2Bottom {
+  .analysisGrid {
     grid-template-columns: minmax(0, 1fr);
   }
 

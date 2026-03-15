@@ -25,9 +25,16 @@ type MediaRow = {
   key: string;
   label: string;
   volume: number;
-  bias: number; // 음수=비판, 양수=긍정
-  sentiment: { positive: number; neutral: number; negative: number }; // 합 100
+  bias: number;
+  sentiment: { positive: number; neutral: number; negative: number };
   topWords: string[];
+};
+
+type DetailSectionState = {
+  hasArticleCounts: boolean;
+  hasBias: boolean;
+  hasSentiment: boolean;
+  hasTopWords: boolean;
 };
 
 function clamp(n: number, min: number, max: number) {
@@ -141,7 +148,6 @@ function buildRowsFromResponses(
     const row = ensureRow(item.media_name);
     if (!row) return;
 
-    // "전체"는 프론트 정책상 0으로 고정(개별 언론사 비교용 행만 실제 점수 사용)
     if (row.label === "전체") {
       row.bias = 0;
       return;
@@ -178,7 +184,6 @@ function buildRowsFromResponses(
     .map((name) => rowMap.get(name))
     .filter((row): row is MediaRow => Boolean(row))
     .filter((row) => row.label !== "전체")
-    // 기사량 0건인 언론사는 비교 화면 전반(차트/대표 단어 카드)에서 제외
     .filter((row) => row.volume > 0);
 }
 
@@ -200,7 +205,6 @@ function buildOverallRow(rows: MediaRow[]): MediaRow | null {
     key: "overall",
     label: "전체",
     volume: totalVol,
-    // 프론트 정책: 전체 편향도는 항상 0으로 표시
     bias: 0,
     sentiment: normalizePercentTriplet(weightedPositive, weightedNeutral, weightedNegative),
     topWords: [],
@@ -221,6 +225,15 @@ function formatRangeLabelFromApi(header: MediaCompareTopKeywordsResponse | null,
   return `${formatDateYYYYMMDD(start)} ~ ${formatDateYYYYMMDD(end)}`;
 }
 
+function createEmptyDetailSections(): DetailSectionState {
+  return {
+    hasArticleCounts: false,
+    hasBias: false,
+    hasSentiment: false,
+    hasTopWords: false,
+  };
+}
+
 export default function MediaComparePage() {
   const [period, setPeriod] = useState<Period>("7d");
 
@@ -228,6 +241,7 @@ export default function MediaComparePage() {
   const [selectedKeywordSeq, setSelectedKeywordSeq] = useState<number | null>(null);
 
   const [rows, setRows] = useState<MediaRow[]>([]);
+  const [detailSections, setDetailSections] = useState<DetailSectionState>(createEmptyDetailSections);
   const [isHeaderLoading, setIsHeaderLoading] = useState(false);
   const [isDetailLoading, setIsDetailLoading] = useState(false);
   const [headerError, setHeaderError] = useState<string | null>(null);
@@ -240,7 +254,6 @@ export default function MediaComparePage() {
   const biasCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const sentimentCanvasRef = useRef<HTMLCanvasElement | null>(null);
 
-  // 상단 키워드 헤더(칩 목록/기간/선택 키워드 요약) 조회
   useEffect(() => {
     let cancelled = false;
 
@@ -270,6 +283,7 @@ export default function MediaComparePage() {
         setHeaderData(null);
         setSelectedKeywordSeq(null);
         setRows([]);
+        setDetailSections(createEmptyDetailSections());
         setHeaderError(getErrorMessage(err));
       } finally {
         if (!cancelled) setIsHeaderLoading(false);
@@ -283,7 +297,6 @@ export default function MediaComparePage() {
     };
   }, [period]);
 
-  // 선택 키워드 기준 상세 데이터(기사량/편향/감성/프레이밍) 조회
   useEffect(() => {
     let cancelled = false;
 
@@ -304,10 +317,28 @@ export default function MediaComparePage() {
         if (cancelled) return;
 
         const mergedRows = buildRowsFromResponses(articleCounts, biasByMedia, sentiments, framingWords);
+
+        const hasArticleCounts = (articleCounts.items ?? []).some((item) => Number(item.article_count) > 0);
+        const hasBias = (biasByMedia.items ?? []).length > 0;
+        const hasSentiment = (sentiments.items ?? []).some((item) => {
+          const total = Number(item.positive ?? 0) + Number(item.neutral ?? 0) + Number(item.negative ?? 0);
+          return total > 0;
+        });
+        const hasTopWords = (framingWords.items ?? []).some(
+          (item) => Array.isArray(item.words) && item.words.some((word) => String(word).trim())
+        );
+
         setRows(mergedRows);
+        setDetailSections({
+          hasArticleCounts,
+          hasBias,
+          hasSentiment,
+          hasTopWords,
+        });
       } catch (err) {
         if (cancelled) return;
         setRows([]);
+        setDetailSections(createEmptyDetailSections());
         setDetailError(getErrorMessage(err));
       } finally {
         if (!cancelled) setIsDetailLoading(false);
@@ -316,6 +347,7 @@ export default function MediaComparePage() {
 
     if (selectedKeywordSeq == null) {
       setRows([]);
+      setDetailSections(createEmptyDetailSections());
       setDetailError(null);
       setIsDetailLoading(false);
       return;
@@ -328,7 +360,6 @@ export default function MediaComparePage() {
     };
   }, [period, selectedKeywordSeq]);
 
-  // 선택 키워드 기준 AI 요약 조회 (키워드 상세페이지와 동일 데이터)
   useEffect(() => {
     let cancelled = false;
 
@@ -407,9 +438,27 @@ export default function MediaComparePage() {
 
   const rangeLabel = period === "7d" ? "최근 7일" : "최근 14일";
 
-  // 기사량 차트 (언론사 행만)
+  const hasSummarySection = Boolean(aiSummaryText.trim());
+  const hasVolumeSection = detailSections.hasArticleCounts && rows.length > 0;
+  const hasBiasSection = detailSections.hasBias && biasRows.length > 0;
+  const hasSentimentSection =
+    detailSections.hasSentiment &&
+    sentimentRows.some(
+      (row) => row.sentiment.positive + row.sentiment.neutral + row.sentiment.negative > 0
+    );
+  const hasFramingSection = detailSections.hasTopWords && rows.some((row) => row.topWords.length > 0);
+
+  const hasAnyAnalysisSection =
+    hasSummarySection ||
+    hasVolumeSection ||
+    hasBiasSection ||
+    hasSentimentSection ||
+    hasFramingSection;
+
   useEffect(() => {
     if (!volumeCanvasRef.current) return;
+    if (!hasVolumeSection) return;
+
     const ctx = volumeCanvasRef.current.getContext("2d");
     if (!ctx) return;
 
@@ -457,11 +506,12 @@ export default function MediaComparePage() {
     });
 
     return () => chart.destroy();
-  }, [rows]);
+  }, [hasVolumeSection, rows]);
 
-  // 편향도 차트 (언론사 행만, "전체" 제외)
   useEffect(() => {
     if (!biasCanvasRef.current) return;
+    if (!hasBiasSection) return;
+
     const ctx = biasCanvasRef.current.getContext("2d");
     if (!ctx) return;
 
@@ -515,11 +565,12 @@ export default function MediaComparePage() {
     });
 
     return () => chart.destroy();
-  }, [biasRows]);
+  }, [biasRows, hasBiasSection]);
 
-  // 감성(스택) 차트 (맨 왼쪽 "전체" 포함)
   useEffect(() => {
     if (!sentimentCanvasRef.current) return;
+    if (!hasSentimentSection) return;
+
     const ctx = sentimentCanvasRef.current.getContext("2d");
     if (!ctx) return;
 
@@ -575,10 +626,10 @@ export default function MediaComparePage() {
     });
 
     return () => chart.destroy();
-  }, [sentimentRows]);
+  }, [hasSentimentSection, sentimentRows]);
 
-  const summaryCardError = headerError || aiSummaryError;
-  const isSummaryCardLoading = isHeaderLoading || isAiSummaryLoading;
+  const hasLoadingState = isHeaderLoading || isDetailLoading || isAiSummaryLoading;
+  const errorMessage = headerError || detailError || aiSummaryError;
   const noKeywordAvailable = !isHeaderLoading && !headerError && keywordItems.length === 0;
 
   return (
@@ -647,149 +698,153 @@ export default function MediaComparePage() {
         </div>
       </section>
 
-      <section className={styles.grid1}>
-        <article className={styles.card}>
-          <div className={styles.cardHeader}>
-            <div>
-              <div className={styles.cardTitle}>키워드 분석 요약</div>
-              <div className={styles.cardSub}>수집된 기사 내용을 바탕으로 생성한 AI 요약입니다.</div>
-            </div>
-            <span className={styles.badgeSoft}>요약 리포트</span>
-          </div>
-
-          <div className={styles.summaryText}>
-            {summaryCardError ? (
-              <span className={styles.statusError}>{summaryCardError}</span>
-            ) : isSummaryCardLoading ? (
-              "데이터를 불러오는 중입니다..."
-            ) : selectedKeywordSeq == null || !selectedKeywordLabel ? (
-              `${rangeLabel} 기준으로 비교 가능한 키워드가 없습니다.`
-            ) : aiSummaryText.trim() ? (
-              aiSummaryText
-            ) : (
-              "요약 데이터가 없습니다."
-            )}
-          </div>
-        </article>
-      </section>
-
-      <section className={styles.grid2}>
-        <article className={styles.card}>
-          <div className={styles.cardHeader}>
-            <div>
-              <div className={styles.cardTitle}>언론사별 기사량 TOP</div>
-              <div className={styles.cardSub}>
-                선택한 키워드에 대해 {metaRangeLabel} 기준 수집된 기사 건수를 언론사별로 정렬한 결과입니다.
+      {hasAnyAnalysisSection ? (
+        <section className={styles.analysisGrid}>
+          {hasSummarySection && (
+            <article className={`${styles.card} ${styles.cardFill}`}>
+              <div className={styles.cardHeader}>
+                <div>
+                  <div className={styles.cardTitle}>키워드 분석 요약</div>
+                  <div className={styles.cardSub}>수집된 기사 내용을 바탕으로 생성한 AI 요약입니다.</div>
+                </div>
+                <span className={styles.badgeSoft}>요약 리포트</span>
               </div>
-            </div>
-            <span className={styles.badgeSoft}>기사량 지표</span>
-          </div>
 
-          <div className={styles.chartWrapper}>
-            <canvas ref={volumeCanvasRef} />
-          </div>
+              <div className={styles.summaryText}>{aiSummaryText}</div>
+            </article>
+          )}
 
-          <div className={styles.biasCaption}>
-            막대가 길수록 {metaRangeLabel} 선택 키워드에 대해 더 많은 기사를 보도한 언론사입니다.
-          </div>
-          {detailError && <div className={styles.statusError}>{detailError}</div>}
-        </article>
-
-        <article className={styles.card}>
-          <div className={styles.cardHeader}>
-            <div>
-              <div className={styles.cardTitle}>언론사별 편향도 지수</div>
-              <div className={styles.cardSub}>
-                선택 키워드 기사들의 제목 톤을 기반으로 산출한 지표입니다 (0에 가까울수록 중립).
-              </div>
-            </div>
-            <span className={styles.badgeSoft}>편향 분석</span>
-          </div>
-
-          <div className={styles.chartWrapper}>
-            <canvas ref={biasCanvasRef} />
-          </div>
-
-          <div className={styles.biasCaption}>
-            <strong>양수</strong>일수록 긍정적인 톤, <strong>음수</strong>일수록 비판적인 톤이 강한 언론사입니다.
-          </div>
-          {detailError && <div className={styles.statusError}>{detailError}</div>}
-        </article>
-      </section>
-
-      <section className={styles.grid2}>
-        <article className={styles.card}>
-          <div className={styles.cardHeader}>
-            <div>
-              <div className={styles.cardTitle}>언론사별 감성 비율 비교</div>
-              <div className={styles.cardSub}>
-                선택 키워드 기사 본문을 기반으로 긍정/중립/부정 비율을 비교한 결과입니다.
-              </div>
-            </div>
-            <span className={styles.badgeSoft}>감성 분석</span>
-          </div>
-
-          <div className={styles.chartWrapperTall}>
-            <canvas ref={sentimentCanvasRef} />
-          </div>
-
-          <div className={styles.chartLegend}>
-            <div className={styles.legendItem}>
-              <span className={`${styles.legendSwatch} ${styles.swatchPositive}`} />
-              긍정 (Positive)
-            </div>
-            <div className={styles.legendItem}>
-              <span className={`${styles.legendSwatch} ${styles.swatchNeutral}`} />
-              중립 (Neutral)
-            </div>
-            <div className={styles.legendItem}>
-              <span className={`${styles.legendSwatch} ${styles.swatchNegative}`} />
-              부정 (Negative)
-            </div>
-          </div>
-          {detailError && <div className={styles.statusError}>{detailError}</div>}
-        </article>
-
-        <article className={styles.card}>
-          <div className={styles.cardHeader}>
-            <div>
-              <div className={styles.cardTitle}>언론사별 대표 단어 비교</div>
-              <div className={styles.cardSub}>
-                선택한 키워드 기사에서 각 언론사별로 상위 5개 단어를 뽑아 어떤 관점으로 보도하는지 비교합니다.
-              </div>
-            </div>
-            <span className={styles.badgeSoft}>텍스트 프레이밍</span>
-          </div>
-
-          {isDetailLoading ? (
-            <div className={styles.statusText}>대표 단어 데이터를 불러오는 중입니다...</div>
-          ) : detailError ? (
-            <div className={styles.statusError}>{detailError}</div>
-          ) : rows.length === 0 ? (
-            <div className={styles.statusText}>표시할 대표 단어 데이터가 없습니다.</div>
-          ) : (
-            <div className={styles.framingList}>
-              {rows.map((r) => (
-                <div key={r.key} className={styles.framingItem}>
-                  <div className={styles.framingMedia}>{r.label}</div>
-
-                  <div className={styles.framingKeywords} aria-label={`${r.label} 대표 단어`}>
-                    {r.topWords.length > 0 ? (
-                      r.topWords.map((w, i) => (
-                        <span key={`${r.key}-${w}-${i}`} className={styles.keywordTagNeutral}>
-                          {w}
-                        </span>
-                      ))
-                    ) : (
-                      <span className={styles.statusText}>단어 데이터 없음</span>
-                    )}
+          {hasVolumeSection && (
+            <article className={`${styles.card} ${styles.cardFill}`}>
+              <div className={styles.cardHeader}>
+                <div>
+                  <div className={styles.cardTitle}>언론사별 기사량 TOP</div>
+                  <div className={styles.cardSub}>
+                    선택한 키워드에 대해 {metaRangeLabel} 기준 수집된 기사 건수를 언론사별로 정렬한 결과입니다.
                   </div>
                 </div>
-              ))}
-            </div>
+                <span className={styles.badgeSoft}>기사량 지표</span>
+              </div>
+
+              <div className={styles.chartWrapper}>
+                <canvas ref={volumeCanvasRef} />
+              </div>
+
+              <div className={styles.biasCaption}>
+                막대가 길수록 {metaRangeLabel} 선택 키워드에 대해 더 많은 기사를 보도한 언론사입니다.
+              </div>
+            </article>
           )}
-        </article>
-      </section>
+
+          {hasBiasSection && (
+            <article className={`${styles.card} ${styles.cardFill}`}>
+              <div className={styles.cardHeader}>
+                <div>
+                  <div className={styles.cardTitle}>언론사별 편향도 지수</div>
+                  <div className={styles.cardSub}>
+                    선택 키워드 기사들의 제목 톤을 기반으로 산출한 지표입니다 (0에 가까울수록 중립).
+                  </div>
+                </div>
+                <span className={styles.badgeSoft}>편향 분석</span>
+              </div>
+
+              <div className={styles.chartWrapper}>
+                <canvas ref={biasCanvasRef} />
+              </div>
+
+              <div className={styles.biasCaption}>
+                <strong>양수</strong>일수록 긍정적인 톤, <strong>음수</strong>일수록 비판적인 톤이 강한 언론사입니다.
+              </div>
+            </article>
+          )}
+
+          {hasSentimentSection && (
+            <article className={`${styles.card} ${styles.cardFill}`}>
+              <div className={styles.cardHeader}>
+                <div>
+                  <div className={styles.cardTitle}>언론사별 감성 비율 비교</div>
+                  <div className={styles.cardSub}>
+                    선택 키워드 기사 본문을 기반으로 긍정/중립/부정 비율을 비교한 결과입니다.
+                  </div>
+                </div>
+                <span className={styles.badgeSoft}>감성 분석</span>
+              </div>
+
+              <div className={styles.chartWrapperTall}>
+                <canvas ref={sentimentCanvasRef} />
+              </div>
+
+              <div className={styles.chartLegend}>
+                <div className={styles.legendItem}>
+                  <span className={`${styles.legendSwatch} ${styles.swatchPositive}`} />
+                  긍정 (Positive)
+                </div>
+                <div className={styles.legendItem}>
+                  <span className={`${styles.legendSwatch} ${styles.swatchNeutral}`} />
+                  중립 (Neutral)
+                </div>
+                <div className={styles.legendItem}>
+                  <span className={`${styles.legendSwatch} ${styles.swatchNegative}`} />
+                  부정 (Negative)
+                </div>
+              </div>
+            </article>
+          )}
+
+          {hasFramingSection && (
+            <article className={`${styles.card} ${styles.cardFill}`}>
+              <div className={styles.cardHeader}>
+                <div>
+                  <div className={styles.cardTitle}>언론사별 대표 단어 비교</div>
+                  <div className={styles.cardSub}>
+                    선택한 키워드 기사에서 각 언론사별로 상위 5개 단어를 뽑아 어떤 관점으로 보도하는지 비교합니다.
+                  </div>
+                </div>
+                <span className={styles.badgeSoft}>텍스트 프레이밍</span>
+              </div>
+
+              <div className={styles.framingList}>
+                {rows
+                  .filter((row) => row.topWords.length > 0)
+                  .map((r) => (
+                    <div key={r.key} className={styles.framingItem}>
+                      <div className={styles.framingMedia}>{r.label}</div>
+
+                      <div className={styles.framingKeywords} aria-label={`${r.label} 대표 단어`}>
+                        {r.topWords.map((w, i) => (
+                          <span key={`${r.key}-${w}-${i}`} className={styles.keywordTagNeutral}>
+                            {w}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+              </div>
+            </article>
+          )}
+        </section>
+      ) : (
+        <section className={styles.grid1}>
+          <article className={`${styles.card} ${styles.statusCard}`}>
+            <div className={styles.statusTitle}>
+              {errorMessage
+                ? "데이터를 불러오지 못했습니다"
+                : hasLoadingState
+                  ? "데이터를 불러오는 중입니다"
+                  : "표시 가능한 분석 결과가 없습니다"}
+            </div>
+            <div className={styles.statusText}>
+              {errorMessage
+                ? errorMessage
+                : hasLoadingState
+                  ? "잠시 후 자동으로 표시됩니다."
+                  : selectedKeywordSeq == null || !selectedKeywordLabel
+                    ? `${rangeLabel} 기준으로 비교 가능한 키워드가 없습니다.`
+                    : "현재 기간에는 실제로 렌더링할 수 있는 비교 데이터가 없습니다."}
+            </div>
+          </article>
+        </section>
+      )}
     </main>
   );
 }
