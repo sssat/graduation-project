@@ -16,10 +16,10 @@ from src.config.settings import settings
 
 from src.analyzer.summary.core.openai_summary_client import call_openai_summary
 from src.analyzer.summary.storage.summary_reader import (
-    PERIOD_D30,
+    PERIOD_D7,
     ArticleInput,
     get_base_date_for_run,
-    select_articles_for_keyword_d30,
+    select_articles_for_keyword_d7,
     select_keyword_name,
     select_keywords_for_summary,
 )
@@ -49,7 +49,7 @@ def _build_articles_block(*, articles: List[ArticleInput]) -> str:
     lines: List[str] = []
     for idx, a in enumerate(articles, start=1):
         content = _clip_content(a.content_clean, clip_max=int(settings.ai_summary_content_clip_max))
-        lines.append(f"[{idx}] MEDIA_CODE={a.media_code} PUBLISHED_AT={a.published_at.isoformat(sep=' ')}")
+        lines.append(f"[{idx}] PUBLISHED_AT={a.published_at.isoformat(sep=' ')}")
         lines.append(f"TITLE: {a.title_clean}")
         lines.append(f"CONTENT: {content}")
         lines.append("")  # 기사 간 빈 줄
@@ -99,8 +99,8 @@ def run_keyword_ai_summary_for_run(
 ) -> Dict[str, Any]:
     """
     키워드 AI 요약 실행(비즈니스 로직):
-    - 기간: D30 고정
-    - 키워드: FINAL_RANK(D30) 상위 N(없으면 TREND_RANK 상위 N)
+    - 기간: D7 고정
+    - 키워드: FINAL_RANK(D7) 상위 N(없으면 TREND_RANK 상위 N)
     - 기사: 언론사별 최신 N개(per_media_limit)
     - 요약 1건/키워드/런
     - 사용 기사 전부 매핑 저장
@@ -121,7 +121,7 @@ def run_keyword_ai_summary_for_run(
             return {
                 "trend_run_seq": trend_run_seq,
                 "base_date": str(base_date),
-                "period": PERIOD_D30,
+                "period": PERIOD_D7,
                 "keywords": 0,
                 "written": 0,
                 "skipped": 0,
@@ -139,7 +139,7 @@ def run_keyword_ai_summary_for_run(
             {
                 "event": "summary_start",
                 "trend_run_seq": int(trend_run_seq),
-                "period": PERIOD_D30,
+                "period": PERIOD_D7,
                 "base_date": str(base_date),
                 "refresh": bool(refresh_same_run),
                 "keywords": len(keyword_seqs),
@@ -167,7 +167,7 @@ def run_keyword_ai_summary_for_run(
                         }
                     )
 
-            articles = select_articles_for_keyword_d30(
+            articles = select_articles_for_keyword_d7(
                 conn=conn,
                 trend_run_seq=trend_run_seq,
                 keyword_seq=kseq,
@@ -249,7 +249,7 @@ def run_keyword_ai_summary_for_run(
         return {
             "trend_run_seq": trend_run_seq,
             "base_date": str(base_date),
-            "period": PERIOD_D30,
+            "period": PERIOD_D7,
             "keywords": len(keyword_seqs),
             "written": written,
             "skipped": skipped,
