@@ -18,9 +18,7 @@ from urllib.parse import quote_plus
 import aiohttp
 from bs4 import BeautifulSoup
 from selenium import webdriver
-from selenium.common.exceptions import TimeoutException
 from selenium.webdriver.common.by import By
-from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait
 from zoneinfo import ZoneInfo
 
@@ -48,6 +46,7 @@ HTTP_CONN_LIMIT_PER_HOST: int = int(settings.news_http_conn_limit_per_host)
 MAX_COMMENTS_PER_ARTICLE: int = int(settings.news_max_comments_per_article)
 COMMENT_SAMPLE_RATE: float = float(settings.news_comment_sample_rate)
 COMMENT_SAMPLE_MIN: int = int(settings.news_comment_sample_min)
+SELENIUM_WAIT_SECONDS: int = max(1, int(settings.selenium_wait_seconds))
 
 # 네이버 언론사 코드(= T_MEDIA seed와 동일해야 함)
 PRESS_CODES: Dict[str, int] = {
@@ -146,6 +145,48 @@ def _stable_hash_int(s: str) -> int:
     return int(hashlib.sha256(s.encode("utf-8")).hexdigest(), 16)
 
 
+def _has_article_payload(*, title: str, content: str) -> bool:
+    return bool((title or "").strip() or (content or "").strip())
+
+
+def _wait_for_news_links(driver: webdriver.Chrome) -> bool:
+    try:
+        WebDriverWait(driver, SELENIUM_WAIT_SECONDS).until(
+            lambda d: len(
+                d.find_elements(
+                    By.CSS_SELECTOR,
+                    'a[cru^="https://n.news.naver.com/mnews/article"], a[href*="n.news.naver.com/mnews/article"]',
+                )
+            ) > 0
+        )
+        return True
+    except Exception:
+        return False
+
+
+def _wait_for_comment_area_ready(driver: webdriver.Chrome) -> bool:
+    try:
+        WebDriverWait(driver, SELENIUM_WAIT_SECONDS).until(
+            lambda d: len(d.find_elements(By.CLASS_NAME, "u_cbox_contents")) > 0
+            or len(d.find_elements(By.CLASS_NAME, "u_cbox_page_more")) > 0
+            or d.execute_script("return document.readyState") == "complete"
+        )
+        return True
+    except Exception:
+        return False
+
+
+def _wait_for_more_comments_loaded(driver: webdriver.Chrome, *, previous_count: int) -> bool:
+    try:
+        WebDriverWait(driver, SELENIUM_WAIT_SECONDS).until(
+            lambda d: len(d.find_elements(By.CLASS_NAME, "u_cbox_contents")) > previous_count
+            or not d.find_elements(By.CLASS_NAME, "u_cbox_page_more")
+        )
+        return True
+    except Exception:
+        return False
+
+
 def _sample_urls_for_comments(urls: List[str], *, rate: float, min_count: int) -> List[str]:
     """
     언론사×키워드 내 기사 URL 중 일부만 댓글 수집 대상으로 샘플링.
@@ -199,7 +240,7 @@ def crawl_article_links_for_press(
     options = _build_chrome_options(headless=headless)
     driver = webdriver.Chrome(options=options)
     driver.set_page_load_timeout(40)
-    driver.implicitly_wait(6)
+    driver.implicitly_wait(SELENIUM_WAIT_SECONDS)
 
     results: Dict[str, List[str]] = {}
 
@@ -214,19 +255,8 @@ def crawl_article_links_for_press(
                 except Exception:
                     continue
 
-                try:
-                    WebDriverWait(driver, 10).until(
-                        EC.presence_of_element_located(
-                            (
-                                By.CSS_SELECTOR,
-                                'a[cru^="https://n.news.naver.com/mnews/article"], a[href*="n.news.naver.com/mnews/article"]',
-                            )
-                        )
-                    )
-                except TimeoutException:
+                if not _wait_for_news_links(driver):
                     continue
-
-                time.sleep(random.uniform(0.15, 0.45))
 
                 # 1) cru 속성 기반
                 for a in driver.find_elements(
@@ -535,6 +565,8 @@ def _collect_comments_on_current_page(driver: webdriver.Chrome) -> List[str]:
         except Exception:
             break
 
+        current_count = len(comments)
+
         for c in comments[collected:]:
             t = (c.text or "").strip()
             if t:
@@ -548,10 +580,11 @@ def _collect_comments_on_current_page(driver: webdriver.Chrome) -> List[str]:
 
         try:
             more_button = driver.find_element(By.CLASS_NAME, "u_cbox_page_more")
-            if more_button.is_displayed():
-                driver.execute_script("arguments[0].click();", more_button)
-                time.sleep(random.uniform(1.2, 1.8))
-            else:
+            if not more_button.is_displayed():
+                break
+
+            driver.execute_script("arguments[0].click();", more_button)
+            if not _wait_for_more_comments_loaded(driver, previous_count=current_count):
                 break
         except Exception:
             break
@@ -567,7 +600,7 @@ def crawl_comments_for_press(
     options = _build_chrome_options(headless=headless)
     driver = webdriver.Chrome(options=options)
     driver.set_page_load_timeout(40)
-    driver.implicitly_wait(8)
+    driver.implicitly_wait(SELENIUM_WAIT_SECONDS)
 
     out: Dict[str, Dict[str, List[str]]] = {}
 
@@ -587,7 +620,9 @@ def crawl_comments_for_press(
                     url_to_comments[src_url] = []
                     continue
 
-                time.sleep(random.uniform(1.2, 1.8))
+                if not _wait_for_comment_area_ready(driver):
+                    url_to_comments[src_url] = []
+                    continue
 
                 try:
                     collected_texts = _collect_comments_on_current_page(driver)
@@ -775,6 +810,14 @@ def crawl_news_core(
                 )
 
                 src_url = _normalize_article_url(url)
+                title = (title or "").strip()
+                content = (content or "").strip()
+
+                if not src_url:
+                    continue
+
+                if not _has_article_payload(title=title, content=content):
+                    continue
 
                 art = CrawledArticle(
                     keyword_name=kw,

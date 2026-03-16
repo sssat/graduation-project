@@ -28,7 +28,7 @@ from src.preprocess.storage.preprocess_writer import (
 )
 
 
-def _settings_summary_one_line(*, refresh: bool, trend_run_seq: int | None) -> str:
+def _settings_summary_one_line(*, refresh: bool, trend_run_seq: int | None, max_rounds: int) -> str:
     tr = "all" if trend_run_seq is None else str(int(trend_run_seq))
     return (
         "[settings] "
@@ -38,7 +38,8 @@ def _settings_summary_one_line(*, refresh: bool, trend_run_seq: int | None) -> s
         f"log={settings.log_level} "
         f"preprocess(batch_article={settings.preprocess_article_batch_size},batch_comment={settings.preprocess_comment_batch_size}) "
         f"trend_run_seq={tr} "
-        f"refresh={int(bool(refresh))}"
+        f"refresh={int(bool(refresh))} "
+        f"max_rounds={int(max_rounds)}"
     )
 
 
@@ -161,10 +162,14 @@ def main() -> None:
 
     trend_run_seq = None if trend_run_seq_arg <= 0 else trend_run_seq_arg
 
-    # max_rounds: 미지정이면 무제한(0)
-    max_rounds = 0 if args.max_rounds is None else int(args.max_rounds)
+    # max_rounds: CLI 미지정이면 settings(PREPROCESS_MAX_ROUNDS) 사용, 0이면 무제한
+    if args.max_rounds is None:
+        max_rounds = int(settings.preprocess_max_rounds)
+    else:
+        max_rounds = int(args.max_rounds)
+    max_rounds = max(0, max_rounds)
 
-    print(_settings_summary_one_line(refresh=refresh, trend_run_seq=trend_run_seq))
+    print(_settings_summary_one_line(refresh=refresh, trend_run_seq=trend_run_seq, max_rounds=max_rounds))
 
     logs_dir = Path(settings.log_dir_preprocess)
     logs_dir.mkdir(parents=True, exist_ok=True)
@@ -245,8 +250,9 @@ def main() -> None:
     result = {
         "mode": "preprocess_refresh" if refresh else "preprocess",
         "ran_at": now.isoformat(),
-        "settings_summary": _settings_summary_one_line(refresh=refresh, trend_run_seq=trend_run_seq),
+        "settings_summary": _settings_summary_one_line(refresh=refresh, trend_run_seq=trend_run_seq, max_rounds=max_rounds),
         "trend_run_seq": int(trend_run_seq) if trend_run_seq is not None else None,
+        "max_rounds": int(max_rounds),
         "take": {"article": int(article_take), "comment": int(comment_take)},
         "total": total,
         "rounds": rounds,

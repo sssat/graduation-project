@@ -20,11 +20,11 @@ def clean_text(text: object) -> str:
 
     t = str(text)
 
-    # 1) HTML 태그 제거
-    t = _HTML_TAG_RE.sub(" ", t)
-
-    # 2) HTML 엔티티 복원 (&#34; 같은 숫자 엔티티 포함)
+    # 1) HTML 엔티티 복원 (&#34;, &lt;br&gt; 같은 숫자/문자 엔티티 포함)
     t = html.unescape(t)
+
+    # 2) HTML 태그 제거
+    t = _HTML_TAG_RE.sub(" ", t)
 
     # 3) 제로폭/nbsp 정리
     t = t.replace("\u200b", " ").replace("\xa0", " ")

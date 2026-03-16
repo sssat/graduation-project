@@ -184,6 +184,7 @@ class Settings:
     # (추가) run_preprocess 기본 실행 옵션을 .env로 제어
     preprocess_trend_run_seq: int = _get_int("PREPROCESS_TREND_RUN_SEQ", 0)
     preprocess_refresh: bool = _get_bool01("PREPROCESS_REFRESH", False)
+    preprocess_max_rounds: int = _get_int("PREPROCESS_MAX_ROUNDS", 0)
 
     # 기사량 통계 집계(aggregate) 관련 환경변수 읽어오기
     agg_insert_chunk_size: int = _get_int("AGG_INSERT_CHUNK_SIZE", 800)
@@ -477,6 +478,7 @@ class Settings:
         # 10-1) run_preprocess 기본 옵션 안전화
         object.__setattr__(self, "preprocess_trend_run_seq", max(0, int(self.preprocess_trend_run_seq)))
         object.__setattr__(self, "preprocess_refresh", bool(self.preprocess_refresh))
+        object.__setattr__(self, "preprocess_max_rounds", max(0, int(self.preprocess_max_rounds)))
 
         # 11) aggregate 안전화
         object.__setattr__(self, "agg_insert_chunk_size", max(1, int(self.agg_insert_chunk_size)))

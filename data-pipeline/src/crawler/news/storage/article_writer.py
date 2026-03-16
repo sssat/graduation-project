@@ -33,6 +33,10 @@ def _sha256_hex(text: str) -> str:
     return hashlib.sha256(text.encode("utf-8")).hexdigest()
 
 
+def _has_article_payload(*, title: str, content_text: str) -> bool:
+    return bool((title or "").strip() or (content_text or "").strip())
+
+
 def _batch_sizes() -> tuple[int, int, int]:
     """
     배치 3종은 settings(.env)에서 중앙 관리한다.
@@ -135,15 +139,20 @@ def _upsert_articles_batch(
         if not url:
             continue
 
+        title = (a.title or "").strip()
+        content_text = (a.content_text or "").strip()
+        if not _has_article_payload(title=title, content_text=content_text):
+            continue
+
         url_hash = _sha256_hex(url)
 
         values.append(
             (
                 url,
                 url_hash,
-                a.title[:300] if a.title else "",
+                title[:300] if title else "",
                 a.published_at,
-                a.content_text if a.content_text else None,
+                content_text if content_text else None,
                 a.media_code,
                 a.title_clean[:300] if (a.title_clean or "") else None,
                 a.content_clean if a.content_clean else None,
@@ -193,6 +202,11 @@ def _upsert_one_article_return_seq(
     if not url:
         return None
 
+    title = (article.title or "").strip()
+    content_text = (article.content_text or "").strip()
+    if not _has_article_payload(title=title, content_text=content_text):
+        return None
+
     url_hash = _sha256_hex(url)
 
     with conn.cursor() as cur:
@@ -216,9 +230,9 @@ def _upsert_one_article_return_seq(
             (
                 url,
                 url_hash,
-                article.title[:300] if article.title else "",
+                title[:300] if title else "",
                 article.published_at,
-                article.content_text if article.content_text else None,
+                content_text if content_text else None,
                 article.media_code,
                 article.title_clean[:300] if (article.title_clean or "") else None,
                 article.content_clean if article.content_clean else None,
