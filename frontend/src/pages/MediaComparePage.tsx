@@ -6,11 +6,13 @@ import Chart from "chart.js/auto";
 import styles from "./MediaComparePage.module.css";
 import {
   getAiSummary,
+  getContentSentiment,
   getMediaArticleCounts,
   getMediaCompareContentSentiment,
   getMediaCompareTitleTopWords,
   getMediaCompareTopKeywords,
   getTitleBiasByMedia,
+  type ContentSentimentResponse,
   type MediaArticleCountsResponse,
   type MediaCompareTopKeywordsResponse,
   type MediaContentSentimentCompareResponse,
@@ -26,7 +28,7 @@ type MediaRow = {
   label: string;
   volume: number;
   bias: number; // 음수=비판, 양수=긍정
-  sentiment: { positive: number; neutral: number; negative: number }; // 합 100
+  sentiment: { positive: number; neutral: number; negative: number };
   topWords: string[];
 };
 
@@ -103,6 +105,16 @@ function normalizePercentTriplet(
   return { positive, neutral, negative };
 }
 
+function roundSentimentForDisplay(
+  sentiment: ContentSentimentResponse
+): ContentSentimentResponse {
+  return {
+    positive: Math.round(sentiment.positive ?? 0),
+    neutral: Math.round(sentiment.neutral ?? 0),
+    negative: Math.round(sentiment.negative ?? 0),
+  };
+}
+
 function buildRowsFromResponses(
   articleCounts: MediaArticleCountsResponse,
   biasByMedia: TitleBiasByMediaResponse,
@@ -141,7 +153,6 @@ function buildRowsFromResponses(
     const row = ensureRow(item.media_name);
     if (!row) return;
 
-    // "전체"는 프론트 정책상 0으로 고정(개별 언론사 비교용 행만 실제 점수 사용)
     if (row.label === "전체") {
       row.bias = 0;
       return;
@@ -178,33 +189,7 @@ function buildRowsFromResponses(
     .map((name) => rowMap.get(name))
     .filter((row): row is MediaRow => Boolean(row))
     .filter((row) => row.label !== "전체")
-    // 기사량 0건인 언론사는 비교 화면 전반(차트/대표 단어 카드)에서 제외
     .filter((row) => row.volume > 0);
-}
-
-function buildOverallRow(rows: MediaRow[]): MediaRow | null {
-  if (rows.length === 0) return null;
-
-  const totalVol = rows.reduce((acc, r) => acc + r.volume, 0);
-
-  if (totalVol <= 0) return null;
-
-  const weightedPositive =
-    rows.reduce((acc, r) => acc + r.sentiment.positive * r.volume, 0) / Math.max(1, totalVol || 1);
-  const weightedNeutral =
-    rows.reduce((acc, r) => acc + r.sentiment.neutral * r.volume, 0) / Math.max(1, totalVol || 1);
-  const weightedNegative =
-    rows.reduce((acc, r) => acc + r.sentiment.negative * r.volume, 0) / Math.max(1, totalVol || 1);
-
-  return {
-    key: "overall",
-    label: "전체",
-    volume: totalVol,
-    // 프론트 정책: 전체 편향도는 항상 0으로 표시
-    bias: 0,
-    sentiment: normalizePercentTriplet(weightedPositive, weightedNeutral, weightedNegative),
-    topWords: [],
-  };
 }
 
 function formatRangeLabelFromApi(header: MediaCompareTopKeywordsResponse | null, period: Period) {
@@ -228,6 +213,7 @@ export default function MediaComparePage() {
   const [selectedKeywordSeq, setSelectedKeywordSeq] = useState<number | null>(null);
 
   const [rows, setRows] = useState<MediaRow[]>([]);
+  const [overallSentiment, setOverallSentiment] = useState<ContentSentimentResponse | null>(null);
   const [isHeaderLoading, setIsHeaderLoading] = useState(false);
   const [isDetailLoading, setIsDetailLoading] = useState(false);
   const [headerError, setHeaderError] = useState<string | null>(null);
@@ -240,7 +226,6 @@ export default function MediaComparePage() {
   const biasCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const sentimentCanvasRef = useRef<HTMLCanvasElement | null>(null);
 
-  // 상단 키워드 헤더(칩 목록/기간/선택 키워드 요약) 조회
   useEffect(() => {
     let cancelled = false;
 
@@ -270,6 +255,7 @@ export default function MediaComparePage() {
         setHeaderData(null);
         setSelectedKeywordSeq(null);
         setRows([]);
+        setOverallSentiment(null);
         setHeaderError(getErrorMessage(err));
       } finally {
         if (!cancelled) setIsHeaderLoading(false);
@@ -283,7 +269,6 @@ export default function MediaComparePage() {
     };
   }, [period]);
 
-  // 선택 키워드 기준 상세 데이터(기사량/편향/감성/프레이밍) 조회
   useEffect(() => {
     let cancelled = false;
 
@@ -294,20 +279,23 @@ export default function MediaComparePage() {
       try {
         const apiPeriod = toApiPeriod(period);
 
-        const [articleCounts, biasByMedia, sentiments, framingWords] = await Promise.all([
+        const [articleCounts, biasByMedia, sentiments, framingWords, overallSentimentRes] = await Promise.all([
           getMediaArticleCounts(keywordSeq, { period: apiPeriod }),
           getTitleBiasByMedia(keywordSeq, { period: apiPeriod }),
           getMediaCompareContentSentiment(keywordSeq, { period: apiPeriod }),
           getMediaCompareTitleTopWords(keywordSeq, { period: apiPeriod, top_n: 5 }),
+          getContentSentiment(keywordSeq, { period: apiPeriod }),
         ]);
 
         if (cancelled) return;
 
         const mergedRows = buildRowsFromResponses(articleCounts, biasByMedia, sentiments, framingWords);
         setRows(mergedRows);
+        setOverallSentiment(roundSentimentForDisplay(overallSentimentRes));
       } catch (err) {
         if (cancelled) return;
         setRows([]);
+        setOverallSentiment(null);
         setDetailError(getErrorMessage(err));
       } finally {
         if (!cancelled) setIsDetailLoading(false);
@@ -316,6 +304,7 @@ export default function MediaComparePage() {
 
     if (selectedKeywordSeq == null) {
       setRows([]);
+      setOverallSentiment(null);
       setDetailError(null);
       setIsDetailLoading(false);
       return;
@@ -328,7 +317,6 @@ export default function MediaComparePage() {
     };
   }, [period, selectedKeywordSeq]);
 
-  // 선택 키워드 기준 AI 요약 조회 (키워드 상세페이지와 동일 데이터)
   useEffect(() => {
     let cancelled = false;
 
@@ -376,7 +364,22 @@ export default function MediaComparePage() {
     );
   }, [headerData?.selected_keyword, keywordItems, selectedKeywordSeq]);
 
-  const overallRow = useMemo(() => buildOverallRow(rows), [rows]);
+  const overallRow = useMemo<MediaRow | null>(() => {
+    if (!overallSentiment) return null;
+
+    return {
+      key: "overall",
+      label: "전체",
+      volume: rows.reduce((acc, row) => acc + row.volume, 0),
+      bias: 0,
+      sentiment: {
+        positive: overallSentiment.positive,
+        neutral: overallSentiment.neutral,
+        negative: overallSentiment.negative,
+      },
+      topWords: [],
+    };
+  }, [overallSentiment, rows]);
 
   const biasRows = useMemo(() => rows, [rows]);
   const sentimentRows = useMemo(() => (overallRow ? [overallRow, ...rows] : rows), [overallRow, rows]);
@@ -407,7 +410,6 @@ export default function MediaComparePage() {
 
   const rangeLabel = period === "7d" ? "최근 7일" : "최근 14일";
 
-  // 기사량 차트 (언론사 행만)
   useEffect(() => {
     if (!volumeCanvasRef.current) return;
     const ctx = volumeCanvasRef.current.getContext("2d");
@@ -459,7 +461,6 @@ export default function MediaComparePage() {
     return () => chart.destroy();
   }, [rows]);
 
-  // 편향도 차트 (언론사 행만, "전체" 제외)
   useEffect(() => {
     if (!biasCanvasRef.current) return;
     const ctx = biasCanvasRef.current.getContext("2d");
@@ -517,7 +518,6 @@ export default function MediaComparePage() {
     return () => chart.destroy();
   }, [biasRows]);
 
-  // 감성(스택) 차트 (맨 왼쪽 "전체" 포함)
   useEffect(() => {
     if (!sentimentCanvasRef.current) return;
     const ctx = sentimentCanvasRef.current.getContext("2d");

@@ -6,12 +6,12 @@
 .env
 .env.*
 !.env.example
-data-pipeline/env.txt
 
 # data-pipeline env
 data-pipeline/.env
 data-pipeline/.env.*
 !data-pipeline/.env.example
+data-pipeline/env.txt
 
 # logs
 data-pipeline/**/logs/
