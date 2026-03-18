@@ -164,7 +164,7 @@ def _bias_score_title_continuous(
     base_net = q[0] - q[2]
     delta_net = media_net - base_net
 
-    score = delta_net * 5.0
+    score = delta_net * 10.0
     return float(_clamp(score, -10.0, 10.0))
 
 
