@@ -88,14 +88,46 @@ def _resolve_trend_run_seq(requested: int) -> int:
 def _parse_periods(raw: str | None) -> List[str]:
     if not raw:
         return list(SUPPORTED_PERIODS)
+
     parts = [p.strip().upper() for p in raw.split(",") if p.strip()]
     if not parts:
         return list(SUPPORTED_PERIODS)
-    return [p for p in parts if p in SUPPORTED_PERIODS]
+
+    invalid = [p for p in parts if p not in SUPPORTED_PERIODS]
+    if invalid:
+        supported = ", ".join(SUPPORTED_PERIODS)
+        invalid_str = ", ".join(invalid)
+        raise ValueError(f"지원하지 않는 period 값이 있습니다: {invalid_str} (지원값: {supported})")
+
+    return parts
 
 
 def _logs_dir() -> Path:
     return Path(settings.log_dir_sentiment_content)
+
+
+def _weighted_mean_proba(items: Sequence[SentimentProba], weights: Sequence[int]) -> SentimentProba:
+    """
+    청크 길이를 가중치로 사용한 확률 평균.
+    - 각 chunk의 길이가 길수록 기사 확률에 더 크게 반영한다.
+    - 가중치가 비정상이면 단순 평균으로 fallback 한다.
+    """
+    if not items:
+        raise ValueError("items가 비어 있어 가중 평균을 계산할 수 없습니다.")
+
+    if len(items) != len(weights):
+        raise ValueError("items와 weights 길이가 다릅니다.")
+
+    safe_weights = [max(0, int(w)) for w in weights]
+    total_weight = sum(safe_weights)
+    if total_weight <= 0:
+        return mean_proba(items)
+
+    pos = sum(float(p.positive) * w for p, w in zip(items, safe_weights)) / total_weight
+    neu = sum(float(p.neutral) * w for p, w in zip(items, safe_weights)) / total_weight
+    neg = sum(float(p.negative) * w for p, w in zip(items, safe_weights)) / total_weight
+
+    return SentimentProba(positive=pos, neutral=neu, negative=neg)
 
 
 def _group_probs_with_min_rules(
@@ -195,6 +227,8 @@ def _predict_article_probs_with_chunking(
     used_articles: List[ContentSentimentArticleRow] = []
     chunk_texts: List[str] = []
     spans: List[Tuple[int, int]] = []  # article i -> chunk_texts[start:end]
+    chunk_lengths: List[int] = []
+    article_chunk_weights: List[List[int]] = []
     skipped_short = 0
     total_chunks = 0
 
@@ -219,6 +253,8 @@ def _predict_article_probs_with_chunking(
         end = len(chunk_texts)
 
         spans.append((start, end))
+        chunk_lengths.extend(len(c) for c in chunks)
+        article_chunk_weights.append([len(c) for c in chunks])
         used_articles.append(a)
         total_chunks += (end - start)
 
@@ -228,8 +264,8 @@ def _predict_article_probs_with_chunking(
     chunk_probs = model.predict_proba(chunk_texts, batch_size=batch_size)
 
     article_probs: List[SentimentProba] = []
-    for (start, end) in spans:
-        article_probs.append(mean_proba(chunk_probs[start:end]))
+    for (start, end), weights in zip(spans, article_chunk_weights):
+        article_probs.append(_weighted_mean_proba(chunk_probs[start:end], weights))
 
     return used_articles, article_probs, {"articles_skipped_short": skipped_short, "chunks_total": total_chunks}
 

@@ -49,7 +49,7 @@ def _period_range(base_date: date, period_filter: str) -> Tuple[datetime, dateti
     - TODAY: base_date 00:00:00 ~ (base_date+1) 00:00:00
     - D7:    (base_date-6) 00:00:00 ~ (base_date+1) 00:00:00
     - D14:   (base_date-13) 00:00:00 ~ (base_date+1) 00:00:00
-    - D30:   (base_date-9) 00:00:00 ~ (base_date+1) 00:00:00
+    - D30:   (base_date-29) 00:00:00 ~ (base_date+1) 00:00:00
     """
     period = (period_filter or "").strip().upper()
     tz = ZoneInfo(settings.tz)
