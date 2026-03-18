@@ -1,24 +1,15 @@
 # data-pipeline/src/analyzer/bias/title/core/title_bias.py
 # 제목 감성분석 결과(언론사별 분포)로 제목 편향도 지수를 계산하는 "핵심 로직" 모듈 (순수 계산 + 실행 오케스트레이션)
 #
-# 편향도 지수(Title Bias Score) 정의(단일 값, -10 ~ +10, 3방향 인코딩):
+# 편향도 지수(Title Bias Score) 정의(단일 값, -10 ~ +10, 연속형):
 # - 분포 P(media) = (pos, neu, neg), Q(overall) = (pos, neu, neg) 를 확률(합=1)로 만든다.
-# - 델타: d = P - Q
-#     d_pos = p_pos - q_pos
-#     d_neu = p_neu - q_neu
-#     d_neg = p_neg - q_neg
-# - "가장 큰 변화(절대값)" 축을 dominant로 보고, 점수를 아래 구간으로 매핑한다.
-#
-#   NEG(부정 쏠림):  [-10 .. -4]  (부정 비중이 전체 대비 증가한 방향)
-#   NEU(중립 쏠림):  [-3  .. +3]  (중립 비중 증감 방향, +는 중립 증가, -는 중립 감소=양극화)
-#   POS(긍정 쏠림):  [+4  .. +10] (긍정 비중이 전체 대비 증가한 방향)
-#
-# - dominant 축이 감소(d < 0)인 경우, 확률합=1 특성상 다른 축이 증가하게 되므로
-#   증가(d > 0)하는 축(neg/neu 또는 pos/neu)을 우선순위로 선택하여 방향을 결정한다.
-#
-# - 스케일:
-#   - POS/NEG 구간:  score = 4 + min(6, delta * 10)  -> 4..10
-#   - NEU 구간:      score = sign(delta) * min(3, |delta| * 5) -> -3..+3
+# - 각 분포의 "순감성(net sentiment)" 을 (pos - neg) 로 정의한다.
+# - overall 대비 차이(delta_net) = (p_pos - p_neg) - (q_pos - q_neg)
+# - 점수는 score = clamp(delta_net * 5, -10, +10) 로 계산한다.
+#   - overall과 완전히 같으면 0점
+#   - overall보다 더 긍정 쪽이면 +점
+#   - overall보다 더 부정 쪽이면 -점
+#   - 절대값이 클수록 overall 대비 차이가 큰 것으로 해석한다.
 #
 # overall 기준(입력으로 주어지는 overall_map 활용):
 # - overall_map에 (keyword_seq -> (pos, neu, neg))가 있으면 그 값을 사용
@@ -67,7 +58,7 @@ class TitleBiasItem:
     keyword_name: str
     media_code: int
     period_filter: str
-    bias_score_title: float  # -10 .. +10 (단일 값 3방향 인코딩)
+    bias_score_title: float  # -10 .. +10 (단일 값, overall 대비 연속형 점수)
 
 
 def _clamp(v: float, lo: float, hi: float) -> float:
@@ -142,7 +133,7 @@ def _weighted_overall_from_media(
     return (sum_pos / sum_w, sum_neu / sum_w, sum_neg / sum_w)
 
 
-def _bias_score_title_signed_3dir(
+def _bias_score_title_continuous(
     *,
     media_pos: float,
     media_neu: float,
@@ -152,78 +143,29 @@ def _bias_score_title_signed_3dir(
     base_neg: float,
 ) -> float:
     """
-    단일 값( -10 .. +10 ) 3방향 편향 점수.
+    단일 값( -10 .. +10 ) 연속형 제목 편향 점수.
 
-    구간 의미:
-      -10..-4 : 부정(NEG) 쏠림
-       -3..+3 : 중립(NEU) 쏠림 (+는 중립 증가, -는 중립 감소=양극화)
-       +4..+10: 긍정(POS) 쏠림
+    계산 방식:
+      - media 순감성  = (pos - neg)
+      - overall 순감성 = (pos - neg)
+      - delta_net = media_net - overall_net
+      - score = clamp(delta_net * 5, -10, +10)
+
+    해석:
+      - 0 : overall과 동일한 감성 분포
+      - + : overall보다 더 긍정 쪽
+      - - : overall보다 더 부정 쪽
+      - |score|가 클수록 overall 대비 차이가 큼
     """
     p = _to_prob3(media_pos, media_neu, media_neg)
     q = _to_prob3(base_pos, base_neu, base_neg)
 
-    d_pos = p[0] - q[0]
-    d_neu = p[1] - q[1]
-    d_neg = p[2] - q[2]
+    media_net = p[0] - p[2]
+    base_net = q[0] - q[2]
+    delta_net = media_net - base_net
 
-    # 완전 동일
-    if abs(d_pos) < 1e-12 and abs(d_neu) < 1e-12 and abs(d_neg) < 1e-12:
-        return 0.0
-
-    a_pos = abs(d_pos)
-    a_neu = abs(d_neu)
-    a_neg = abs(d_neg)
-
-    # dominant 결정(동률이면 NEU > POS > NEG 우선)
-    dominant = "neu"
-    if a_pos > a_neu and a_pos >= a_neg:
-        dominant = "pos"
-    elif a_neg > a_neu and a_neg > a_pos:
-        dominant = "neg"
-    else:
-        dominant = "neu"
-
-    # NEU가 가장 크게 변한 경우: -3..+3
-    if dominant == "neu":
-        mag = min(3.0, abs(d_neu) * 5.0)
-        score = mag if d_neu >= 0.0 else -mag
-        return float(_clamp(score, -3.0, 3.0))
-
-    # POS/NEG가 가장 크게 변한 경우:
-    # - d가 증가(>0)면 해당 방향을 사용
-    # - d가 감소(<0)면 증가하는 축(neg/neu 또는 pos/neu)을 비교해서 방향을 재결정
-    if dominant == "pos":
-        if d_pos > 0.0:
-            mag = min(6.0, d_pos * 10.0)
-            return float(_clamp(4.0 + mag, 4.0, 10.0))
-
-        # pos가 줄었다: neg 또는 neu가 늘어났을 가능성이 크다
-        if d_neg > 0.0 and d_neg >= d_neu:
-            mag = min(6.0, d_neg * 10.0)
-            return float(_clamp(-(4.0 + mag), -10.0, -4.0))
-
-        if d_neu > 0.0:
-            mag = min(3.0, d_neu * 5.0)
-            return float(_clamp(mag, -3.0, 3.0))
-
-        # 예외적으로 증가축 판단이 애매하면 0
-        return 0.0
-
-    # dominant == "neg"
-    if d_neg > 0.0:
-        mag = min(6.0, d_neg * 10.0)
-        return float(_clamp(-(4.0 + mag), -10.0, -4.0))
-
-    # neg가 줄었다: pos 또는 neu가 늘어났을 가능성이 크다
-    if d_pos > 0.0 and d_pos >= d_neu:
-        mag = min(6.0, d_pos * 10.0)
-        return float(_clamp(4.0 + mag, 4.0, 10.0))
-
-    if d_neu > 0.0:
-        mag = min(3.0, d_neu * 5.0)
-        return float(_clamp(mag, -3.0, 3.0))
-
-    return 0.0
+    score = delta_net * 5.0
+    return float(_clamp(score, -10.0, 10.0))
 
 
 def calc_title_bias_items(
@@ -248,7 +190,7 @@ def calc_title_bias_items(
 
     출력:
       - TitleBiasItem 리스트 (언론사별)
-        - bias_score_title: -10 .. +10 (3방향 단일 값)
+        - bias_score_title: -10 .. +10 (overall 대비 연속형 단일 값)
     """
     pf = _normalize_period_filter(period_filter)
     rows_list = list(media_rows)
@@ -286,7 +228,7 @@ def calc_title_bias_items(
 
         base_pos, base_neu, base_neg = base
 
-        score = _bias_score_title_signed_3dir(
+        score = _bias_score_title_continuous(
             media_pos=float(r.positive_pct_title),
             media_neu=float(r.neutral_pct_title),
             media_neg=float(r.negative_pct_title),
@@ -323,7 +265,7 @@ def run_title_bias_for_run(
     - 동작:
       1) T_ANALYZE_SENTIMENT에서 언론사별 제목 감성비율 조회
       2) overall(MEDIA_CODE=0) 있으면 사용, 없으면 기사수 가중평균 -> 단순평균 fallback
-      3) 3방향 단일 값(-10..+10) 편향 점수 계산
+      3) overall 대비 연속형 단일 값(-10..+10) 편향 점수 계산
       4) refresh면 같은 run+period에서 BIAS_SCORE_TITLE만 0으로 reset
       5) T_ANALYZE_MEDIA_BIAS에 UPSERT
     """
