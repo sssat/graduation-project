@@ -1,11 +1,11 @@
 # data-pipeline/src/analyzer/wordcloud/preprocess/wdc_preprocess.py
-# 워드클라우드 입력 텍스트에 대한 "추가 전처리" 모듈
-# - DB에 저장된 *_CLEAN은 공통 최소 정제(HTML 제거/허용문자만 남김)로 유지하고,
-#   워드클라우드에서만 필요한 추가 정규화는 여기서 수행한다.
+# 워드클라우드 입력 텍스트에 대한 추가 전처리 모듈
 #
-# 원칙:
-# - 의미를 크게 훼손하는 강한 정제는 피한다(분석 목적별 편차가 큼).
-# - 워드클라우드 품질을 위해 "반복문자/공백/영문 표기" 같은 부분만 안정화한다.
+# 방향:
+# - 공통 전처리(clean_text)는 그대로 사용한다.
+# - 워드클라우드 전용 전처리는 과하게 의미를 바꾸지 않고,
+#   형태소 분석(Komoran) 전에 입력 문자열을 안정화하는 최소 정리만 수행한다.
+# - 과거 프로젝트의 "정규식 최소 정리 + 형태소 분석 기반 명사 추출" 흐름에 맞춘다.
 
 from __future__ import annotations
 
@@ -16,13 +16,8 @@ from typing import Iterable, Optional
 from src.config.settings import settings
 
 _WS_RE = re.compile(r"\s+")
-
-# 한국어/영어 반복 문자 축약용 (댓글에서 자주 등장)
-_REPEAT_KO_RE = re.compile(r"([가-힣])\1{3,}")  # 같은 한글 4회 이상 -> 2회로
-_REPEAT_EN_RE = re.compile(r"([A-Za-z])\1{3,}")  # 같은 영문 4회 이상 -> 2회로
-
-# 자음/모음 반복(ㅋㅋㅋㅋ, ㅎㅎㅎㅎ, ㅠㅠㅠㅠ 등)
-_REPEAT_JAMO_RE = re.compile(r"([ㄱ-ㅎㅏ-ㅣ])\1{3,}")  # 4회 이상 -> 2회로
+_REPEAT_KO_RE = re.compile(r"([가-힣])\1{3,}")
+_REPEAT_EN_RE = re.compile(r"([A-Za-z])\1{3,}")
 
 
 @dataclass(frozen=True)
@@ -30,28 +25,13 @@ class WdcPreprocessOptions:
     """
     워드클라우드 입력 전처리 옵션
     - lowercase_english: 영문 소문자화
-    - normalize_repeats: 반복 문자 축약(댓글 품질 안정화)
-    - max_len: 너무 긴 텍스트는 잘라서 처리(극단적 outlier 방지)
+    - normalize_repeats: 과한 반복 축약
+    - max_len: 너무 긴 텍스트 길이 상한(0이면 제한 없음)
     """
+
     lowercase_english: bool
     normalize_repeats: bool
     max_len: int
-
-
-def _normalize_whitespace(s: str) -> str:
-    return _WS_RE.sub(" ", (s or "").strip())
-
-
-def _normalize_repeats(s: str) -> str:
-    """
-    과한 반복을 적당히 줄인다.
-    - 완전 제거가 아니라 "줄이기"만 해서 감정/강조 뉘앙스를 조금은 남긴다.
-    """
-    t = s
-    t = _REPEAT_JAMO_RE.sub(r"\1\1", t)
-    t = _REPEAT_KO_RE.sub(r"\1\1", t)
-    t = _REPEAT_EN_RE.sub(r"\1\1", t)
-    return t
 
 
 def _default_options_from_settings() -> WdcPreprocessOptions:
@@ -62,11 +42,29 @@ def _default_options_from_settings() -> WdcPreprocessOptions:
     )
 
 
+def _normalize_whitespace(s: str) -> str:
+    return _WS_RE.sub(" ", (s or "").strip())
+
+
+def _normalize_repeats(s: str) -> str:
+    """
+    과한 반복은 2회로 축약한다.
+    - 공통 전처리 단계에서 자모(ㅋㅋ, ㅎㅎ 등)는 대부분 제거되므로
+      여기서는 한글/영문 반복만 가볍게 줄인다.
+    """
+    t = s
+    t = _REPEAT_KO_RE.sub(r"\1\1", t)
+    t = _REPEAT_EN_RE.sub(r"\1\1", t)
+    return t
+
+
 def preprocess_for_wordcloud(text: object, *, opt: Optional[WdcPreprocessOptions] = None) -> str:
     """
     워드클라우드 입력용 추가 전처리(단일 문자열)
-    - 이 함수는 DB의 *_CLEAN 텍스트를 입력으로 받는 것을 전제로 한다.
-    - opt를 주지 않으면 .env -> settings 값을 기본 옵션으로 사용한다.
+
+    전제:
+    - 입력은 이미 공통 전처리(clean_text)를 거친 *_CLEAN 문자열이다.
+    - 여기서는 형태소 분석 전에 필요한 최소한의 안정화만 수행한다.
     """
     if text is None:
         return ""
@@ -75,7 +73,6 @@ def preprocess_for_wordcloud(text: object, *, opt: Optional[WdcPreprocessOptions
 
     t = str(text)
 
-    # 길이 상한(극단적으로 긴 본문/댓글이 들어오는 경우 대비)
     max_len = max(0, int(opt.max_len))
     if max_len > 0 and len(t) > max_len:
         t = t[:max_len]
@@ -91,10 +88,13 @@ def preprocess_for_wordcloud(text: object, *, opt: Optional[WdcPreprocessOptions
     return t.strip()
 
 
-def preprocess_many_for_wordcloud(texts: Iterable[object], *, opt: Optional[WdcPreprocessOptions] = None) -> list[str]:
+def preprocess_many_for_wordcloud(
+    texts: Iterable[object],
+    *,
+    opt: Optional[WdcPreprocessOptions] = None,
+) -> list[str]:
     """
     워드클라우드 입력용 추가 전처리(복수 문자열)
-    - opt를 주지 않으면 .env -> settings 값을 기본 옵션으로 사용한다.
     """
     opt = opt or _default_options_from_settings()
 

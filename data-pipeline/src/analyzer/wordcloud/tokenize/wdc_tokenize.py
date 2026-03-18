@@ -1,18 +1,16 @@
 # data-pipeline/src/analyzer/wordcloud/tokenize/wdc_tokenize.py
 # 워드클라우드 토큰화/필터링 모듈
-# - 형태소 분석기 없이도 MVP로 쓸 수 있는 "공백 기반 토큰화" 제공
-# - 불용어/길이/숫자 토큰 필터 제공
-# - 한국어 조사(은/는/이/가/을/를 등) 휴리스틱 제거로 워드클라우드 품질 개선
 #
-# 주의:
-# - 한국어 워드클라우드 품질을 더 올리고 싶으면,
-#   나중에 여기에서 형태소 분석(예: Mecab/Okt)로 교체하면 된다.
-# - core/wordcloud.py는 tokenize 결과만 받도록 설계하면 교체가 쉬워진다.
+# 방향:
+# - 과거 프로젝트에서 품질이 좋았던 "Komoran 명사 추출 + 불용어 제거" 흐름으로 변경한다.
+# - 공통 전처리(clean_text)는 그대로 두고, 워드클라우드 전용 단계에서 형태소 분석을 적용한다.
+# - 제목/본문/댓글 모두 명사 중심 토큰으로 통일해 품질을 높인다.
 
 from __future__ import annotations
 
 import re
 from dataclasses import dataclass
+from functools import lru_cache
 from pathlib import Path
 from typing import Iterable, Optional, Set
 
@@ -24,48 +22,16 @@ _TOKEN_ALLOWED_RE = re.compile(r"^[가-힣A-Za-z0-9\u4E00-\u9FFF]+$")
 # 숫자만으로 이뤄진 토큰
 _NUMERIC_ONLY_RE = re.compile(r"^[0-9]+$")
 
-# 한글만으로 이뤄진 토큰(조사 제거 휴리스틱 적용 대상)
-_KOREAN_ONLY_RE = re.compile(r"^[가-힣]+$")
-
-# 한국어 조사/붙임표현(긴 것부터 우선 제거되도록 정렬하여 사용)
-# - 과도한 오탐을 줄이기 위해 "명사+조사"에 자주 붙는 표현 위주로만 포함
-# - 100% 정확한 형태소 분석 대체용이 아니라 워드클라우드 품질 개선용 휴리스틱
-_KOREAN_JOSA_SUFFIXES: tuple[str, ...] = tuple(
-    sorted(
-        {
-            # 복합 조사/자주 보이는 결합형
-            "으로부터", "으로써", "으로서",
-            "에게서는", "에게서", "에게는", "에게도", "에게",
-            "한테서는", "한테서", "한테는", "한테도", "한테",
-            "에서는", "에서는요", "에선", "에서", "에는", "에도", "에만",
-            "으로는", "으로도", "으로만", "으로",
-            "로는", "로도", "로만", "로",
-            "까지는", "까지도", "까지",
-            "부터는", "부터도", "부터",
-            "처럼", "같이", "마다", "보다",
-            "이라는", "라는", "이라고", "라고",
-            "이라도", "라도", "이나마", "나마",
-            "이라", "라",  # 드물지만 댓글에서 축약형이 섞일 수 있음
-            "이랑", "랑",
-            "와의", "과의",
-            # 단일 조사
-            "은", "는", "이", "가", "을", "를", "의", "도", "만",
-            "와", "과", "에", "서", "께",
-        },
-        key=len,
-        reverse=True,
-    )
-)
-
 
 @dataclass(frozen=True)
 class TokenizeOptions:
     """
     토큰화 옵션
-    - min_len: 최소 토큰 길이(1글자 토큰 제거 등)
-    - max_len: 너무 긴 토큰 제거(비정상 토큰 방지)
+    - min_len: 최소 토큰 길이(과거 프로젝트와 동일하게 기본 2)
+    - max_len: 너무 긴 토큰 제거
     - drop_numeric_only: 숫자만 있는 토큰 제거
     """
+
     min_len: int = 2
     max_len: int = 30
     drop_numeric_only: bool = True
@@ -79,21 +45,25 @@ def _parse_stopwords_lines(lines: Iterable[str]) -> Set[str]:
             continue
         if s.startswith("#"):
             continue
-        # "a,b,c" 형태도 지원
+
+        # 한 줄에 콤마 구분 또는 탭 구분으로 들어와도 처리
+        parts = [s]
         if "," in s:
-            for part in s.split(","):
-                w = part.strip()
-                if w:
-                    out.add(w)
-        else:
-            out.add(s)
+            parts = s.split(",")
+        elif "\t" in s:
+            parts = s.split("\t")
+
+        for part in parts:
+            w = part.strip()
+            if w:
+                out.add(w)
     return out
 
 
 def load_stopwords_from_file(path: str) -> Set[str]:
     """
     불용어 파일 로드.
-    - 한 줄에 1개 또는 콤마 구분도 허용
+    - 한 줄 1개 / 콤마 구분 / 탭 구분 모두 허용
     - 빈 줄/주석(#) 무시
     """
     p = Path(path)
@@ -125,7 +95,7 @@ def default_tokenize_options_from_settings() -> TokenizeOptions:
 
 def default_stopwords_from_settings() -> Set[str]:
     """
-    .env -> settings 불용어만 사용한다.
+    .env -> settings 불용어를 사용한다.
     - CSV(TEXT)와 파일(path) 둘 다 지원
     - 둘 다 비면 빈 set()
     """
@@ -142,49 +112,46 @@ def default_stopwords_from_settings() -> Set[str]:
     return sw
 
 
-def _strip_korean_josa_heuristic(token: str, *, min_stem_len: int = 2) -> str:
+@lru_cache(maxsize=1)
+def _get_komoran():
     """
-    한국어 토큰 끝의 조사/붙임표현을 휴리스틱으로 제거한다.
-
-    예:
-    - 내란이 -> 내란
-    - 내란을 -> 내란
-    - 윤석열은 -> 윤석열
-
-    주의:
-    - 형태소 분석기가 아니므로 100% 정확하진 않다.
-    - 워드클라우드에서 같은 명사를 하나로 모으는 목적의 "가벼운 정규화"이다.
-    - 과도한 축약 방지를 위해 줄인 뒤 최소 길이(min_stem_len)를 보장해야 반영한다.
+    Komoran 분석기를 지연 로드한다.
+    - 워드클라우드 실행 중 1회만 생성해서 재사용한다.
+    - konlpy/Java 환경이 없으면 명확한 메시지로 실패시킨다.
     """
-    t = (token or "").strip()
+    try:
+        from konlpy.tag import Komoran  # type: ignore
+    except Exception as e:  # pragma: no cover - 실행 환경 의존
+        raise RuntimeError(
+            "워드클라우드 명사 추출을 위해 konlpy의 Komoran이 필요합니다. "
+            "과거 프로젝트와 동일한 방식으로 바꾼 상태이므로, 실행 환경에 konlpy와 Java(JDK)를 설치해 주세요."
+        ) from e
+
+    return Komoran()
+
+
+def _normalize_token(token: str) -> str:
+    return (token or "").strip()
+
+
+def _keep_token(token: str, *, opt: TokenizeOptions, stopwords: Set[str]) -> bool:
+    t = _normalize_token(token)
     if not t:
-        return t
+        return False
 
-    # 한글-only 토큰에만 적용 (영문/숫자/한자는 원형 유지)
-    if not _KOREAN_ONLY_RE.match(t):
-        return t
+    if not _TOKEN_ALLOWED_RE.match(t):
+        return False
 
-    cur = t
-    # 2회까지만 제거 시도 (예: "내란에는" -> "내란")
-    for _ in range(2):
-        changed = False
-        for suffix in _KOREAN_JOSA_SUFFIXES:
-            if not cur.endswith(suffix):
-                continue
+    if opt.drop_numeric_only and _NUMERIC_ONLY_RE.match(t):
+        return False
 
-            stem = cur[: -len(suffix)]
-            if len(stem) < min_stem_len:
-                continue
+    if len(t) < int(opt.min_len) or len(t) > int(opt.max_len):
+        return False
 
-            cur = stem
-            changed = True
-            break
+    if t in stopwords:
+        return False
 
-        if not changed:
-            break
-
-    return cur
-
+    return True
 
 
 def tokenize_text(
@@ -194,41 +161,38 @@ def tokenize_text(
     stopwords: Optional[Set[str]] = None,
 ) -> list[str]:
     """
-    공백 기반 토큰화 + 필터링.
-    - 입력은 preprocess_for_wordcloud()를 거친 문자열을 권장한다.
-    - opt/stopwords를 주지 않으면 .env -> settings 값을 기본으로 사용한다.
-    - 한국어 토큰은 조사 제거 휴리스틱을 적용해 명사 형태를 최대한 합친다.
+    Komoran 기반 명사 추출 + 필터링.
+
+    과거 프로젝트와 동일한 핵심 규칙:
+    - komoran.nouns()로 명사만 추출
+    - 길이 2 이상 명사만 사용
+    - 불용어 제거
+
+    추가로 현재 프로젝트 운영 안전을 위해:
+    - 숫자-only 토큰 제거 옵션
+    - 최대 길이 컷
+    - 허용 문자 범위 필터
+    를 유지한다.
     """
     opt = opt or default_tokenize_options_from_settings()
     stopwords = stopwords or default_stopwords_from_settings()
 
     min_len = max(1, int(opt.min_len))
     max_len = max(min_len, int(opt.max_len))
+    local_opt = TokenizeOptions(min_len=min_len, max_len=max_len, drop_numeric_only=bool(opt.drop_numeric_only))
+
+    s = (text or "").strip()
+    if not s:
+        return []
+
+    komoran = _get_komoran()
+    nouns = komoran.nouns(s)
 
     tokens: list[str] = []
-    for raw in (text or "").split():
-        t = raw.strip()
-        if not t:
+    for noun in nouns:
+        t = _normalize_token(noun)
+        if not _keep_token(t, opt=local_opt, stopwords=stopwords):
             continue
-
-        if not _TOKEN_ALLOWED_RE.match(t):
-            continue
-
-        if opt.drop_numeric_only and _NUMERIC_ONLY_RE.match(t):
-            continue
-
-        # 한국어 조사 정규화 (예: 내란이/내란을 -> 내란)
-        t = _strip_korean_josa_heuristic(t, min_stem_len=min_len)
-        if not t:
-            continue
-
-        # 정규화 후 길이 기준 재검사
-        if len(t) < min_len or len(t) > max_len:
-            continue
-
-        if t in stopwords:
-            continue
-
         tokens.append(t)
 
     return tokens
@@ -242,7 +206,7 @@ def tokenize_many(
 ) -> list[str]:
     """
     복수 텍스트를 토큰화해서 하나의 토큰 리스트로 합친다.
-    - opt/stopwords를 주지 않으면 .env -> settings 값을 기본으로 사용한다.
+    - Komoran 인스턴스는 내부에서 1회만 생성/재사용된다.
     """
     opt = opt or default_tokenize_options_from_settings()
     stopwords = stopwords or default_stopwords_from_settings()
