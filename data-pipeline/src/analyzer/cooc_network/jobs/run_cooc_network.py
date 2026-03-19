@@ -82,6 +82,7 @@ def _settings_summary_one_line() -> str:
         f"node_top_k={int(getattr(settings,'cooc_node_top_k',60))},"
         f"edge_top_k={int(getattr(settings,'cooc_edge_top_k',300))},"
         f"min_edge_weight={int(getattr(settings,'cooc_min_edge_weight',2))},"
+        f"min_docs_used={int(getattr(settings,'cooc_min_docs_used',0))},"
         f"include_overall={int(include_overall)},"
         f"default_media_code={int(getattr(settings,'cooc_default_media_code',0) or 0)},"
         f"token_len={int(getattr(settings,'cooc_token_min_len',2))}-{int(getattr(settings,'cooc_token_max_len',30))})"
@@ -151,6 +152,7 @@ def run_cooc(
     node_top_k = int(getattr(settings, "cooc_node_top_k", 60) or 60)
     edge_top_k = int(getattr(settings, "cooc_edge_top_k", 300) or 300)
     min_edge_weight = int(getattr(settings, "cooc_min_edge_weight", 2) or 2)
+    min_docs_used = max(0, int(getattr(settings, "cooc_min_docs_used", 0) or 0))
 
     default_media_code = int(getattr(settings, "cooc_default_media_code", 0) or 0)
 
@@ -290,8 +292,9 @@ def run_cooc(
                         min_edge_weight=min_edge_weight,
                     )
 
-                    if nodes and edges:
-                        total_docs_used_sum += int(stats.get("docs_used", 0) or 0)
+                    docs_used = int(stats.get("docs_used", 0) or 0)
+                    if nodes and edges and docs_used >= min_docs_used:
+                        total_docs_used_sum += docs_used
 
                         graph_seq = upsert_cooc_header_and_get_seq(
                             key=CoocHeaderKey(
@@ -337,11 +340,12 @@ def run_cooc(
                     min_edge_weight=min_edge_weight,
                 )
 
-                # 네트워크가 너무 작으면 저장하지 않는다.
-                if not nodes or not edges:
+                # 네트워크가 너무 작거나 최소 문서 수 기준에 못 미치면 저장하지 않는다.
+                docs_used = int(stats.get("docs_used", 0) or 0)
+                if (not nodes) or (not edges) or docs_used < min_docs_used:
                     continue
 
-                total_docs_used_sum += int(stats.get("docs_used", 0) or 0)
+                total_docs_used_sum += docs_used
 
                 graph_seq = upsert_cooc_header_and_get_seq(
                     key=CoocHeaderKey(

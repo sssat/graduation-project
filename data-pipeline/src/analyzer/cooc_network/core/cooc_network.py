@@ -94,12 +94,11 @@ def build_cooc_network(
             docs_skipped_empty += 1
             continue
 
-        # node 통계(빈도/문서빈도)는 원본 토큰을 기준으로 잡는다.
-        cnt = Counter(tokens)
+        token_counts = Counter(tokens)
 
         if m == "doc":
             # 문서 내에서 중요한 토큰만 남겨서 조합 폭발을 막는다.
-            items = sorted(cnt.items(), key=lambda x: (-x[1], x[0]))
+            items = sorted(token_counts.items(), key=lambda x: (-x[1], x[0]))
             if max_tokens_per_doc > 0:
                 items = items[:max_tokens_per_doc]
             doc_terms = [t for t, _ in items]
@@ -116,10 +115,11 @@ def build_cooc_network(
 
         docs_used += 1
 
-        # 노드 통계 업데이트
-        for t, c in cnt.items():
+        # 노드 통계(빈도/문서빈도)는 실제 엣지 생성에 사용한 토큰 기준으로 맞춘다.
+        node_counts = Counter(doc_terms)
+        for t, c in node_counts.items():
             node_total_freq[t] = int(node_total_freq.get(t, 0)) + int(c)
-        for t in set(tokens):
+        for t in set(doc_terms):
             node_doc_freq[t] = int(node_doc_freq.get(t, 0)) + 1
 
         # 엣지 카운트

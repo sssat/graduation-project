@@ -401,6 +401,7 @@ class Settings:
     cooc_node_top_k: int = _get_int("COOC_NODE_TOP_K", 60)
     cooc_edge_top_k: int = _get_int("COOC_EDGE_TOP_K", 300)
     cooc_min_edge_weight: int = _get_int("COOC_MIN_EDGE_WEIGHT", 2)
+    cooc_min_docs_used: int = _get_int("COOC_MIN_DOCS_USED", 0)
 
     # (선택) cooc 로그 디렉토리 (현재 job는 파일 로그를 안 남기지만, 디렉토리는 통일 차원에서 둔다)
     log_dir_cooc_network: str = _get_str("LOG_DIR_COOC_NETWORK", "")
@@ -844,6 +845,7 @@ class Settings:
         object.__setattr__(self, "cooc_node_top_k", max(0, int(self.cooc_node_top_k)))
         object.__setattr__(self, "cooc_edge_top_k", max(0, int(self.cooc_edge_top_k)))
         object.__setattr__(self, "cooc_min_edge_weight", max(1, int(self.cooc_min_edge_weight)))
+        object.__setattr__(self, "cooc_min_docs_used", max(0, int(self.cooc_min_docs_used)))
 
         # (선택) 로그 디렉토리 기본값 구성
         cooc_dir = (self.log_dir_cooc_network or "").strip()
