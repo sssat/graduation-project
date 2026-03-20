@@ -23,16 +23,21 @@ spring:
     baseline-description: "baseline (pre-existing schema)"
 
   mail:
-    host: ${SPRING_MAIL_HOST:smtp.naver.com}
-    port: ${SPRING_MAIL_PORT:465}
-    username: ${SPRING_MAIL_USERNAME:}
-    password: ${SPRING_MAIL_PASSWORD:}
+    host: ${SPRING_MAIL_HOST:${NAVER_SMTP_HOST:smtp.naver.com}}
+    port: ${SPRING_MAIL_PORT:${NAVER_SMTP_PORT:465}}
+    username: ${SPRING_MAIL_USERNAME:${NAVER_USER:}}
+    password: ${SPRING_MAIL_PASSWORD:${NAVER_APP_PASS:}}
     properties:
       mail:
+        transport:
+          protocol: smtp
         smtp:
           auth: true
           ssl:
             enable: true
+          connectiontimeout: ${SPRING_MAIL_CONNECTION_TIMEOUT:15000}
+          timeout: ${SPRING_MAIL_TIMEOUT:15000}
+          writetimeout: ${SPRING_MAIL_WRITE_TIMEOUT:15000}
     default-encoding: UTF-8
 
 app:
@@ -58,6 +63,9 @@ app:
     ttl-seconds: ${APP_PRECHECK_TTL_SECONDS:600}
 
   allowed-email-domains: ${APP_ALLOWED_EMAIL_DOMAINS:gmail.com,naver.com,kakao.com}
+
+  mail:
+    from: ${APP_MAIL_FROM:${SPRING_MAIL_USERNAME:${NAVER_USER:}}}
 
   jwt:
     secret: ${JWT_SECRET:change-me-please-32bytes-minimum}

@@ -33,6 +33,7 @@ import java.util.stream.Collectors;
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.security.authentication.AuthenticationCredentialsNotFoundException;
@@ -40,13 +41,11 @@ import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.transaction.annotation.Transactional;
-import org.springframework.transaction.support.TransactionSynchronization;
-import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 @Service
 @RequiredArgsConstructor
 @Transactional
+@Slf4j
 public class AccountsService {
 
     private final SpringDataUserRepository userRepository;
@@ -313,14 +312,14 @@ public class AccountsService {
     }
 
     // ─────────────────────────────────────────────────────────
-    // 8) 비밀번호 찾기 (임시 비밀번호 이메일 발송)
+    // 8) 비밀번호 찾기 (메일 발송 실패 시 전체 롤백)
     // ─────────────────────────────────────────────────────────
     public FindPasswordResult findPassword(FindPasswordCommand cmd) {
         Objects.requireNonNull(cmd, "cmd");
 
-        String userId = safe(cmd.userId());
+        String userId = safe(cmd.userId()).toLowerCase();
         String name = safe(cmd.name());
-        String email = safe(cmd.email());
+        String email = safe(cmd.email()).toLowerCase();
 
         ensureNotBlank(userId, "user_id");
         ensureNotBlank(name, "name");
@@ -339,6 +338,7 @@ public class AccountsService {
         user.setPasswordHash(passwordEncoder.encode(tempPassword));
         user.setPasswordChangedAt(LocalDateTime.now(clock));
         userRepository.save(user);
+        em.flush();
 
         String subject = "[Newsight] 임시 비밀번호 안내";
         String body = """
@@ -353,7 +353,12 @@ public class AccountsService {
                 감사합니다.
                 """.formatted(safe(user.getUserName()), tempPassword);
 
-        sendAfterCommit(() -> mailService.sendText(user.getEmail(), subject, body));
+        try {
+            mailService.sendText(user.getEmail(), subject, body);
+        } catch (RuntimeException e) {
+            log.error("임시 비밀번호 메일 발송 실패. userSeq={}, email={}", user.getUserSeq(), user.getEmail(), e);
+            throw new IllegalStateException("임시 비밀번호 메일 발송에 실패했습니다. 비밀번호는 변경되지 않았습니다. 메일 설정을 확인해주세요.", e);
+        }
 
         return new FindPasswordResult("임시 비밀번호가 이메일로 발송되었습니다.");
     }
@@ -425,9 +430,8 @@ public class AccountsService {
             where.append(" and ul.gradeCode = :roleHint ");
         }
 
-        int idx = 0;
-        for (String t : filteredTerms) {
-            String p = "t" + idx++;
+        for (int i = 0; i < filteredTerms.size(); i++) {
+            String p = "t" + i;
             where.append(" and (")
                     .append(" lower(u.userId) like :").append(p)
                     .append(" or lower(u.userName) like :").append(p)
@@ -447,10 +451,9 @@ public class AccountsService {
             dataQuery.setParameter("roleHint", (short) roleHint.intValue());
         }
 
-        idx = 0;
-        for (String t : filteredTerms) {
-            String p = "t" + idx++;
-            String like = "%" + t.toLowerCase() + "%";
+        for (int i = 0; i < filteredTerms.size(); i++) {
+            String p = "t" + i;
+            String like = "%" + filteredTerms.get(i).toLowerCase() + "%";
             countQuery.setParameter(p, like);
             dataQuery.setParameter(p, like);
         }
@@ -770,22 +773,6 @@ public class AccountsService {
                 .build();
 
         loginLogRepository.save(log);
-    }
-
-    private void sendAfterCommit(Runnable action) {
-        if (action == null) return;
-
-        if (!TransactionSynchronizationManager.isActualTransactionActive()) {
-            action.run();
-            return;
-        }
-
-        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
-            @Override
-            public void afterCommit() {
-                action.run();
-            }
-        });
     }
 
     // ─────────────────────────────────────────────────────────
