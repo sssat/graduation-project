@@ -247,16 +247,16 @@ export default function HomePage() {
     <div className={styles.page}>
       <section className={styles.hero} aria-label="대시보드 소개">
         <div className={styles.heroInner}>
-          <p className={styles.heroKicker}>실시간 뉴스 데이터 모니터링</p>
+          <p className={styles.heroKicker}>최신 뉴스 데이터 모니터링</p>
 
           <h1 className={styles.heroTitle}>
-            실시간 뉴스, 감으로 보지 말고
+            오늘의 뉴스, 감으로 보지 말고
             <br />
             <span className={styles.highlight}>데이터</span>로 한 번에 확인하기
           </h1>
 
           <p className={styles.heroSub}>
-            오늘의 실시간 키워드와 개별 이슈량까지 한 화면에서 정리해서 보여주는 인사이트
+            오늘 수집된 키워드와 개별 이슈량까지 한 화면에서 정리해서 보여주는 인사이트
             대시보드입니다.
           </p>
 
