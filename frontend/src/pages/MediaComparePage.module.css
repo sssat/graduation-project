@@ -85,7 +85,7 @@
   flex-wrap: wrap;
   gap: 10px;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-start;
 }
 
 .keywordChipGroup {
@@ -93,6 +93,7 @@
   flex-wrap: wrap;
   gap: 8px;
   flex: 1 1 auto;
+  min-width: 0;
 }
 
 .keywordChip {
@@ -126,6 +127,8 @@
   gap: 10px;
   align-items: center;
   flex: 0 0 auto;
+  margin-left: auto;
+  white-space: nowrap;
 }
 
 /* 기간 필터(칩) */
@@ -226,8 +229,6 @@
   white-space: pre-line;
   word-break: keep-all;
 }
-
-
 
 .statusText {
   font-size: 12px;
