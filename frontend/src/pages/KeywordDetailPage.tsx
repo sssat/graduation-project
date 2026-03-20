@@ -342,6 +342,12 @@ type GraphLink = SimulationLinkDatum<GraphNode> & {
   target: string | GraphNode;
 };
 
+type GraphPaletteItem = {
+  fill: string;
+  stroke: string;
+  line: string;
+};
+
 const COOC_RENDER_MAX_NODES = 18;
 const COOC_RENDER_MAX_LINKS = 45;
 const COOC_LABEL_TOP_N = 8;
@@ -354,6 +360,19 @@ function normalizeGraphLabel(label: unknown): string {
 
 function getGraphNodeRadius(node: Pick<GraphNode, "value">) {
   return clamp(10 + (node.value ?? 0) * 2.0, 14, 34);
+}
+
+function getGraphPalette() {
+  return [
+    { fill: "#1e293b", stroke: "rgba(148,163,184,0.55)", line: "rgba(148,163,184,0.78)" },
+    { fill: "#2563eb", stroke: "rgba(147,197,253,0.8)", line: "rgba(96,165,250,0.95)" },
+    { fill: "#f59e0b", stroke: "rgba(253,230,138,0.85)", line: "rgba(245,158,11,0.95)" },
+    { fill: "#dc2626", stroke: "rgba(254,202,202,0.85)", line: "rgba(239,68,68,0.95)" },
+  ] satisfies GraphPaletteItem[];
+}
+
+function getGraphNodePalette(node: Pick<GraphNode, "group">, palette: GraphPaletteItem[]) {
+  return palette[node.group % palette.length];
 }
 
 function buildApiCoMentionGraph(
@@ -464,6 +483,7 @@ function NetworkGraph({
 
   const [width, setWidth] = useState(520);
   const [tick, setTick] = useState(0);
+  const [hoveredNodeId, setHoveredNodeId] = useState<string | null>(null);
 
   const simRef = useRef<Simulation<GraphNode, GraphLink> | null>(null);
   const draggingRef = useRef<{ node: GraphNode | null; pointerId: number | null }>({
@@ -471,15 +491,7 @@ function NetworkGraph({
     pointerId: null,
   });
 
-  const palette = useMemo(
-    () => [
-      { fill: "#1e293b", stroke: "rgba(148,163,184,0.55)" },
-      { fill: "#2563eb", stroke: "rgba(147,197,253,0.8)" },
-      { fill: "#f59e0b", stroke: "rgba(253,230,138,0.85)" },
-      { fill: "#dc2626", stroke: "rgba(254,202,202,0.85)" },
-    ],
-    []
-  );
+  const palette = useMemo(() => getGraphPalette(), []);
 
   useEffect(() => {
     if (!wrapRef.current) return;
@@ -540,6 +552,29 @@ function NetworkGraph({
 
   const renderedNodeIds = labelVisibleIds;
 
+  const hoveredNeighborIds = useMemo(() => {
+    if (!hoveredNodeId) return new Set<string>();
+
+    const ids = new Set<string>([hoveredNodeId]);
+
+    for (const link of simData.links) {
+      const sourceId = typeof link.source === "string" ? link.source : link.source.id;
+      const targetId = typeof link.target === "string" ? link.target : link.target.id;
+
+      if (sourceId === hoveredNodeId) ids.add(targetId);
+      if (targetId === hoveredNodeId) ids.add(sourceId);
+    }
+
+    return ids;
+  }, [hoveredNodeId, simData.links]);
+
+  const hoveredNodeColor = useMemo(() => {
+    if (!hoveredNodeId) return null;
+    const node = simData.nodeMap.get(hoveredNodeId);
+    if (!node) return null;
+    return getGraphNodePalette(node, palette).line;
+  }, [hoveredNodeId, palette, simData.nodeMap]);
+
   const resolveNode = (x: string | GraphNode) => {
     if (typeof x === "string") return simData.nodeMap.get(x) ?? null;
     return x;
@@ -561,6 +596,8 @@ function NetworkGraph({
 
     draggingRef.current.node = node;
     draggingRef.current.pointerId = e.pointerId;
+
+    setHoveredNodeId(node.id);
 
     const p = pointerToSvg(e);
     node.fx = p.x;
@@ -672,6 +709,11 @@ function NetworkGraph({
         aria-label="공동 언급 네트워크"
         onPointerMove={onSvgPointerMove}
         onPointerUp={onSvgPointerUp}
+        onPointerLeave={() => {
+          if (!draggingRef.current.node) {
+            setHoveredNodeId(null);
+          }
+        }}
       >
         <g className={styles.networkLinks}>
           {simData.links.map((l, idx) => {
@@ -680,9 +722,21 @@ function NetworkGraph({
             if (!s || !t) return null;
             if (!renderedNodeIds.has(s.id) || !renderedNodeIds.has(t.id)) return null;
 
+            const isHoveredConnection = Boolean(
+              hoveredNodeId && (s.id === hoveredNodeId || t.id === hoveredNodeId)
+            );
             const w = clamp(l.value ?? 1, 0.6, 3.0);
-            const strokeW = clamp(1.4 + w * 0.9, 1.4, 4.2);
-            const opacity = clamp(0.18 + w * 0.18, 0.2, 0.75);
+            const strokeW = isHoveredConnection
+              ? clamp(2.2 + w * 1.2, 2.2, 5.4)
+              : clamp(1.4 + w * 0.9, 1.4, 4.2);
+            const opacity = hoveredNodeId
+              ? isHoveredConnection
+                ? 0.95
+                : 0.12
+              : clamp(0.18 + w * 0.18, 0.2, 0.75);
+            const stroke = isHoveredConnection
+              ? hoveredNodeColor ?? "rgba(148, 163, 184, 0.9)"
+              : "rgba(148, 163, 184, 0.55)";
 
             return (
               <line
@@ -692,7 +746,7 @@ function NetworkGraph({
                 x2={t.x ?? 0}
                 y2={t.y ?? 0}
                 className={styles.networkLink}
-                style={{ strokeWidth: strokeW, opacity }}
+                style={{ strokeWidth: strokeW, opacity, stroke }}
               />
             );
           })}
@@ -702,10 +756,14 @@ function NetworkGraph({
           {simData.nodes.map((n) => {
             if (!renderedNodeIds.has(n.id)) return null;
 
-            const c = palette[n.group % palette.length];
+            const c = getGraphNodePalette(n, palette);
             const r = getGraphNodeRadius(n);
             const x = n.x ?? width / 2;
             const y = n.y ?? height / 2;
+            const isHovered = hoveredNodeId === n.id;
+            const isNeighborHighlighted = hoveredNodeId ? hoveredNeighborIds.has(n.id) : false;
+            const circleOpacity = hoveredNodeId ? (isNeighborHighlighted ? 1 : 0.38) : 1;
+            const labelOpacity = hoveredNodeId ? (isNeighborHighlighted ? 1 : 0.45) : 1;
 
             return (
               <g
@@ -713,6 +771,12 @@ function NetworkGraph({
                 transform={`translate(${x}, ${y})`}
                 className={styles.networkNode}
                 onPointerDown={(e) => onNodePointerDown(e, n)}
+                onPointerEnter={() => setHoveredNodeId(n.id)}
+                onPointerLeave={() => {
+                  if (draggingRef.current.node?.id !== n.id) {
+                    setHoveredNodeId(null);
+                  }
+                }}
                 role="button"
                 aria-label={`${n.label} 노드`}
               >
@@ -722,12 +786,20 @@ function NetworkGraph({
                   style={{
                     fill: c.fill,
                     stroke: c.stroke,
-                    strokeWidth: 1.6,
-                    opacity: 1,
+                    strokeWidth: isHovered ? 2.8 : 1.6,
+                    opacity: circleOpacity,
+                    filter: isHovered
+                      ? `drop-shadow(0 0 14px ${c.line}) drop-shadow(0 10px 18px rgba(2, 6, 23, 0.75))`
+                      : "drop-shadow(0 10px 18px rgba(2, 6, 23, 0.6))",
                   }}
                 />
                 {n.label ? (
-                  <text className={styles.networkLabel} textAnchor="middle" y={r + 16}>
+                  <text
+                    className={styles.networkLabel}
+                    textAnchor="middle"
+                    y={r + 16}
+                    style={{ opacity: labelOpacity }}
+                  >
                     {n.label}
                   </text>
                 ) : null}
@@ -738,7 +810,7 @@ function NetworkGraph({
       </svg>
 
       <div className={styles.networkHint}>
-        상위 핵심 노드/연결만 표시합니다(라벨 비표시 노드는 화면에서 제외). 노드를 드래그해 배치할 수 있고, 놓으면 고정되며 다시 누르면 고정이 해제됩니다.
+        상위 핵심 노드/연결만 표시합니다(라벨 비표시 노드는 화면에서 제외). 노드에 마우스를 올리면 연결된 관계를 강조해 볼 수 있고, 드래그 후 놓으면 고정되며 다시 누르면 고정이 해제됩니다.
       </div>
     </div>
   );
