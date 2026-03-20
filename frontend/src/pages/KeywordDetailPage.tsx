@@ -362,12 +362,41 @@ function getGraphNodeRadius(node: Pick<GraphNode, "value">) {
   return clamp(10 + (node.value ?? 0) * 2.0, 14, 34);
 }
 
+const NETWORK_PAD_X = 20;
+const NETWORK_PAD_TOP = 20;
+const NETWORK_PAD_BOTTOM = 44;
+
+function clampGraphNodeToBounds(node: GraphNode, width: number, height: number) {
+  const r = getGraphNodeRadius(node);
+
+  const minX = NETWORK_PAD_X + r;
+  const maxX = Math.max(minX, width - NETWORK_PAD_X - r);
+
+  const minY = NETWORK_PAD_TOP + r;
+  const maxY = Math.max(minY, height - NETWORK_PAD_BOTTOM - r);
+
+  if (typeof node.x === "number") {
+    node.x = clamp(node.x, minX, maxX);
+  }
+  if (typeof node.y === "number") {
+    node.y = clamp(node.y, minY, maxY);
+  }
+
+  if (typeof node.fx === "number") {
+    node.fx = clamp(node.fx, minX, maxX);
+  }
+  if (typeof node.fy === "number") {
+    node.fy = clamp(node.fy, minY, maxY);
+  }
+}
+
 function getGraphPalette() {
   return [
-    { fill: "#1e293b", stroke: "rgba(148,163,184,0.55)", line: "rgba(148,163,184,0.78)" },
-    { fill: "#2563eb", stroke: "rgba(147,197,253,0.8)", line: "rgba(96,165,250,0.95)" },
-    { fill: "#f59e0b", stroke: "rgba(253,230,138,0.85)", line: "rgba(245,158,11,0.95)" },
-    { fill: "#dc2626", stroke: "rgba(254,202,202,0.85)", line: "rgba(239,68,68,0.95)" },
+    { fill: "#2563eb", stroke: "rgba(147,197,253,0.82)", line: "rgba(96,165,250,0.96)" },
+    { fill: "#f59e0b", stroke: "rgba(253,230,138,0.88)", line: "rgba(245,158,11,0.96)" },
+    { fill: "#dc2626", stroke: "rgba(254,202,202,0.88)", line: "rgba(239,68,68,0.96)" },
+    { fill: "#14b8a6", stroke: "rgba(153,246,228,0.84)", line: "rgba(45,212,191,0.96)" },
+    { fill: "#8b5cf6", stroke: "rgba(221,214,254,0.84)", line: "rgba(167,139,250,0.96)" },
   ] satisfies GraphPaletteItem[];
 }
 
@@ -439,7 +468,7 @@ function buildApiCoMentionGraph(
     return {
       id: String(n.id),
       label: normalizedLabel,
-      group: 1 + (hashInt(normalizedLabel) % 3),
+      group: hashInt(normalizedLabel) % 5,
       value: normalizedValue,
       x: (rand() - 0.5) * 80,
       y: (rand() - 0.5) * 80,
@@ -527,6 +556,7 @@ function NetworkGraph({
     for (const n of nodes) {
       if (typeof n.x !== "number") n.x = width / 2 + (randPos() - 0.5) * 40;
       if (typeof n.y !== "number") n.y = height / 2 + (randPos() - 0.5) * 40;
+      clampGraphNodeToBounds(n, width, height);
     }
 
     const nodeMap = new Map(nodes.map((n) => [n.id, n] as const));
@@ -602,6 +632,7 @@ function NetworkGraph({
     const p = pointerToSvg(e);
     node.fx = p.x;
     node.fy = p.y;
+    clampGraphNodeToBounds(node, width, height);
 
     sim.alphaTarget(0.25).restart();
   };
@@ -616,6 +647,7 @@ function NetworkGraph({
     const p = pointerToSvg(e);
     d.node.fx = p.x;
     d.node.fy = p.y;
+    clampGraphNodeToBounds(d.node, width, height);
   };
 
   const onSvgPointerUp = (e: React.PointerEvent) => {
@@ -663,7 +695,7 @@ function NetworkGraph({
             return clamp(0.22 + v * 0.06, 0.18, 0.45);
           })
       )
-      .force("charge", forceManyBody().strength(-420))
+      .force("charge", forceManyBody().strength(-320))
       .force("center", forceCenter(width / 2, height / 2))
       .force(
         "collide",
@@ -672,6 +704,10 @@ function NetworkGraph({
 
     let raf = 0;
     sim.on("tick", () => {
+      for (const node of simData.nodes) {
+        clampGraphNodeToBounds(node, width, height);
+      }
+
       if (raf) return;
       raf = window.requestAnimationFrame(() => {
         raf = 0;
