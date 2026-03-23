@@ -108,7 +108,7 @@ function mapInquiryDetailToView(item: InquiryDetail): InquiryDetailView {
 
   const answerBody = (item.admin_message ?? "").trim();
   const answerAt = item.answered_at ?? item.answer_updated_at ?? item.processed_at ?? null;
-  const answerTeamLabel = (item.answer_team_label ?? item.answered_by ?? "운영팀").trim() || "운영팀";
+  const answerTeamLabel = "Newsight 운영팀";
 
   return {
     inquirySeq: Number(item.inquiry_seq),
@@ -404,7 +404,7 @@ export default function InquiryDetailPage() {
               <div>
                 <div className={styles.cardTitle}>관리자 답변</div>
               </div>
-              <span className={styles.badgeSoft}>Newsight 운영팀</span>
+              <span className={styles.badgeSoft}>운영팀</span>
             </div>
 
             <div className={styles.answerMeta}>
