@@ -404,7 +404,7 @@ export default function InquiryDetailPage() {
               <div>
                 <div className={styles.cardTitle}>관리자 답변</div>
               </div>
-              <span className={styles.badgeSoft}>운영팀</span>
+              <span className={styles.badgeSoft}>Newsight 운영팀</span>
             </div>
 
             <div className={styles.answerMeta}>
