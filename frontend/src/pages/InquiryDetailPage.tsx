@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Link, Navigate, useLocation, useParams } from "react-router-dom";
 import styles from "./InquiryDetailPage.module.css";
 import { getInquiryDetail, type InquiryDetail } from "../api/inquiries";
+import { ApiClientError } from "../api/types";
 import { useAuth } from "../hooks/useAuth";
 import type { InquiryTypeKey } from "../components/inquiries/InquiryCreateModal";
 
@@ -25,6 +26,12 @@ type InquiryDetailView = {
   };
 };
 
+type InquiryDetailUiError = {
+  title: string;
+  body: string;
+  badgeLabel: string;
+};
+
 const TYPE_LABEL: Record<InquiryTypeKey, string> = {
   bug: "오류 제보",
   idea: "기능 제안",
@@ -32,22 +39,6 @@ const TYPE_LABEL: Record<InquiryTypeKey, string> = {
   account: "계정/로그인",
   etc: "기타",
 };
-
-function getErrorMessage(error: unknown, fallback = "요청 처리 중 오류가 발생했습니다.") {
-  if (error instanceof Error && error.message) return error.message;
-
-  if (typeof error === "object" && error !== null) {
-    const anyErr = error as {
-      response?: { data?: { message?: string; details?: string } };
-      message?: string;
-    };
-    const serverMessage = anyErr.response?.data?.message ?? anyErr.response?.data?.details;
-    if (typeof serverMessage === "string" && serverMessage.trim()) return serverMessage.trim();
-    if (typeof anyErr.message === "string" && anyErr.message.trim()) return anyErr.message.trim();
-  }
-
-  return fallback;
-}
 
 function toNumberSafe(v: string | undefined) {
   const n = Number(v);
@@ -111,8 +102,8 @@ function mapInquiryDetailToView(item: InquiryDetail): InquiryDetailView {
   const body = (typeof item.content === "string" && item.content.trim()
     ? item.content
     : typeof item.message === "string"
-    ? item.message
-    : ""
+      ? item.message
+      : ""
   ).trim();
 
   const answerBody = (item.admin_message ?? "").trim();
@@ -141,6 +132,40 @@ function mapInquiryDetailToView(item: InquiryDetail): InquiryDetailView {
   };
 }
 
+function resolveInquiryDetailUiError(error: unknown): InquiryDetailUiError {
+  if (error instanceof ApiClientError) {
+    if (error.isNetworkError) {
+      return {
+        title: "서버에 연결할 수 없습니다.",
+        body: "네트워크 연결 상태를 확인한 뒤 잠시 후 다시 시도해주세요.",
+        badgeLabel: "연결 오류",
+      };
+    }
+
+    if (error.status === 403) {
+      return {
+        title: "비공개 문의입니다.",
+        body: "비공개 문의글은 작성자만 열람할 수 있습니다.",
+        badgeLabel: "접근 제한",
+      };
+    }
+
+    if (error.status === 404) {
+      return {
+        title: "문의를 찾을 수 없습니다.",
+        body: "삭제되었거나 존재하지 않는 문의입니다.",
+        badgeLabel: "없음",
+      };
+    }
+  }
+
+  return {
+    title: "문의를 불러올 수 없습니다.",
+    body: "잠시 후 다시 시도해주세요.",
+    badgeLabel: "오류",
+  };
+}
+
 export default function InquiryDetailPage() {
   const { auth } = useAuth();
   const location = useLocation();
@@ -148,7 +173,7 @@ export default function InquiryDetailPage() {
 
   const inquiryId = toNumberSafe(params.inquiryId);
   const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [uiError, setUiError] = useState<InquiryDetailUiError | null>(null);
   const [inquiry, setInquiry] = useState<InquiryDetailView | null>(null);
 
   const myAuthorTokens = useMemo(() => {
@@ -167,22 +192,27 @@ export default function InquiryDetailPage() {
 
       if (!Number.isFinite(inquiryId)) {
         setInquiry(null);
-        setError("잘못된 문의 번호입니다.");
+        setUiError({
+          title: "잘못된 문의 번호입니다.",
+          body: "문의 번호를 다시 확인한 뒤 목록에서 다시 선택해주세요.",
+          badgeLabel: "잘못된 요청",
+        });
         setIsLoading(false);
         return;
       }
 
       setIsLoading(true);
-      setError(null);
+      setUiError(null);
 
       try {
         const res = await getInquiryDetail(inquiryId);
         if (cancelled) return;
         setInquiry(mapInquiryDetailToView(res.inquiry));
-      } catch (e) {
+      } catch (error) {
         if (cancelled) return;
+        console.error("문의 상세 조회 실패", error);
         setInquiry(null);
-        setError(getErrorMessage(e, "문의 상세 정보를 불러오지 못했습니다."));
+        setUiError(resolveInquiryDetailUiError(error));
       } finally {
         if (!cancelled) setIsLoading(false);
       }
@@ -229,7 +259,7 @@ export default function InquiryDetailPage() {
     );
   }
 
-  if (error || !inquiry) {
+  if (uiError || !inquiry) {
     return (
       <main className={styles.pageRoot}>
         <div className={styles.breadcrumb}>
@@ -253,12 +283,12 @@ export default function InquiryDetailPage() {
         <article className={styles.card}>
           <div className={styles.cardHeader}>
             <div>
-              <div className={styles.cardTitle}>문의를 불러올 수 없습니다.</div>
+              <div className={styles.cardTitle}>{uiError?.title ?? "문의를 불러올 수 없습니다."}</div>
             </div>
-            <span className={styles.badgeSoft}>오류</span>
+            <span className={styles.badgeSoft}>{uiError?.badgeLabel ?? "오류"}</span>
           </div>
 
-          <div className={styles.bodyText}>{error ?? "요청하신 문의를 찾을 수 없습니다."}</div>
+          <div className={styles.bodyText}>{uiError?.body ?? "잠시 후 다시 시도해주세요."}</div>
         </article>
       </main>
     );
@@ -293,7 +323,7 @@ export default function InquiryDetailPage() {
             <span className={styles.badgeSoft}>접근 제한</span>
           </div>
 
-          <div className={styles.bodyText}>작성자 본인 또는 관리자만 확인할 수 있습니다.</div>
+          <div className={styles.bodyText}>비공개 문의글은 작성자 또는 관리자만 열람할 수 있습니다.</div>
         </article>
       </main>
     );
