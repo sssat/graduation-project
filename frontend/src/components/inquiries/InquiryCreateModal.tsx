@@ -1,6 +1,6 @@
 // frontend/src/components/inquiries/InquiryCreateModal.tsx
 
-import { useRef, useState, type ChangeEvent } from "react";
+import { useState, type ChangeEvent } from "react";
 import styles from "./InquiryCreateModal.module.css";
 
 export type InquiryTypeKey = "bug" | "idea" | "data" | "account" | "etc";
@@ -62,8 +62,6 @@ function getErrorMessage(error: unknown, fallback = "문의 등록 중 오류가
 }
 
 export default function InquiryCreateModal({ onClose, onSubmit }: Props) {
-  const dialogRef = useRef<HTMLDivElement | null>(null);
-
   const [typeKey, setTypeKey] = useState<InquiryTypeKey | "">("");
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
@@ -71,12 +69,6 @@ export default function InquiryCreateModal({ onClose, onSubmit }: Props) {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const [errors, setErrors] = useState<FieldErrors>({});
-
-  const onBackdropClick = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (isSubmitting) return;
-    if (!dialogRef.current) return;
-    if (!dialogRef.current.contains(e.target as Node)) onClose();
-  };
 
   const validate = (): FieldErrors => {
     const next: FieldErrors = {};
@@ -166,10 +158,12 @@ export default function InquiryCreateModal({ onClose, onSubmit }: Props) {
   };
 
   return (
-    <div className={styles.modalBackdrop} onClick={onBackdropClick} aria-hidden={false}>
-      <div ref={dialogRef} className={styles.modalDialog} role="dialog" aria-modal="true">
+    <div className={styles.modalBackdrop} aria-hidden={false}>
+      <div className={styles.modalDialog} role="dialog" aria-modal="true" aria-labelledby="inquiry-create-title">
         <div className={styles.modalHeader}>
-          <div className={styles.modalTitle}>새 문의 작성</div>
+          <div id="inquiry-create-title" className={styles.modalTitle}>
+            새 문의 작성
+          </div>
           <button
             type="button"
             className={styles.modalCloseBtn}
