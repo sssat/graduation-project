@@ -284,7 +284,7 @@ export default function AdminUserManagementPage() {
     if (actingUserSeq != null) return;
 
     const ok = window.confirm(
-      `"${u.userId}" 회원을 탈퇴 처리(삭제)하시겠습니까?\n\n이 작업은 실제 accounts API를 호출합니다.`,
+      `"${u.userId}" 회원을 탈퇴 처리(삭제)하시겠습니까?`,
     );
     if (!ok) return;
 
