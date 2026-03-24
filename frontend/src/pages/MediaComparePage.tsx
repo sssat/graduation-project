@@ -679,7 +679,7 @@ export default function MediaComparePage() {
             <div>
               <div className={styles.cardTitle}>언론사별 기사량 TOP</div>
               <div className={styles.cardSub}>
-                선택한 키워드에 대해 {metaRangeLabel} 기준 수집된 기사 건수를 언론사별로 정렬한 결과입니다.
+                선택한 키워드에 대해 수집된 기사 건수를 언론사별로 정렬한 결과입니다.
               </div>
             </div>
             <span className={styles.badgeSoft}>기사량 지표</span>
@@ -690,7 +690,7 @@ export default function MediaComparePage() {
           </div>
 
           <div className={styles.biasCaption}>
-            막대가 길수록 {metaRangeLabel} 선택 키워드에 대해 더 많은 기사를 보도한 언론사입니다.
+            막대가 길수록 선택 키워드에 대해 더 많은 기사를 보도한 언론사입니다.
           </div>
           {detailError && <div className={styles.statusError}>{detailError}</div>}
         </article>
@@ -711,7 +711,7 @@ export default function MediaComparePage() {
           </div>
 
           <div className={styles.biasCaption}>
-            <strong>양수</strong>일수록 긍정적인 톤, <strong>음수</strong>일수록 비판적인 톤이 강한 언론사입니다.
+            <strong>양수</strong>일수록 긍정적인 톤, <strong>음수</strong>일수록 비판적인 톤이 강한 언론사입니다. 점수가 <strong>0에 가까운 경우</strong>에는 그래프상에서 눈에 잘 띄지 않거나 거의 표시되지 않을 수 있습니다.
           </div>
           {detailError && <div className={styles.statusError}>{detailError}</div>}
         </article>
