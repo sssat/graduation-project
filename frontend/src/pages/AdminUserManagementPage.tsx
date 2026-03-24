@@ -1,6 +1,7 @@
 // frontend/src/pages/AdminUserManagementPage.tsx
 
 import { useEffect, useMemo, useState } from "react";
+import type { FormEvent } from "react";
 import styles from "./AdminUserManagementPage.module.css";
 import {
   demoteAdmin,
@@ -158,7 +159,9 @@ async function fetchAllUsersByQuery(q: string): Promise<AdminUserRow[]> {
 export default function AdminUserManagementPage() {
   const [allUsers, setAllUsers] = useState<AdminUserRow[]>([]);
   const [page, setPage] = useState(1);
-  const [q, setQ] = useState("");
+  const [searchInput, setSearchInput] = useState("");
+  const [submittedQ, setSubmittedQ] = useState("");
+  const [searchVersion, setSearchVersion] = useState(0);
   const [roleFilter, setRoleFilter] = useState<AdminUiRole | "ALL">("ALL");
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -166,11 +169,12 @@ export default function AdminUserManagementPage() {
 
   useEffect(() => {
     let cancelled = false;
-    const timer = window.setTimeout(async () => {
+
+    async function loadUsers() {
       setIsLoading(true);
       setErrorMessage(null);
       try {
-        const rows = await fetchAllUsersByQuery(q);
+        const rows = await fetchAllUsersByQuery(submittedQ);
         if (cancelled) return;
         setAllUsers(rows);
       } catch (error) {
@@ -180,13 +184,14 @@ export default function AdminUserManagementPage() {
       } finally {
         if (!cancelled) setIsLoading(false);
       }
-    }, 250);
+    }
+
+    void loadUsers();
 
     return () => {
       cancelled = true;
-      window.clearTimeout(timer);
     };
-  }, [q]);
+  }, [submittedQ, searchVersion]);
 
   const filtered = useMemo(() => {
     return allUsers.filter((u) => {
@@ -302,8 +307,14 @@ export default function AdminUserManagementPage() {
   }
 
   function onQueryChange(v: string) {
-    setQ(v);
+    setSearchInput(v);
+  }
+
+  function onSubmitSearch(e?: FormEvent<HTMLFormElement>) {
+    e?.preventDefault();
     setPage(1);
+    setSubmittedQ(searchInput.trim());
+    setSearchVersion((prev) => prev + 1);
   }
 
   function onRoleFilterChange(v: string) {
@@ -331,22 +342,36 @@ export default function AdminUserManagementPage() {
           <div className={styles.cardMeta}>
             전체 <strong>{filtered.length}</strong>명
             <br />
+            검색어: <strong>{submittedQ || "전체"}</strong>
           </div>
         </div>
 
         <div className={styles.controls}>
-          <div className={styles.searchBox}>
-            <label className={styles.ctrlLabel} htmlFor="user-search">
-              검색
-            </label>
-            <input
-              id="user-search"
-              className={styles.input}
-              placeholder="이름 / 아이디 검색"
-              value={q}
-              onChange={(e) => onQueryChange(e.target.value)}
-            />
-          </div>
+          <form className={styles.searchForm} onSubmit={onSubmitSearch}>
+            <div className={styles.searchBox}>
+              <label className={styles.ctrlLabel} htmlFor="user-search">
+                검색
+              </label>
+              <input
+                id="user-search"
+                className={styles.input}
+                placeholder="이름 / 아이디 검색"
+                value={searchInput}
+                onChange={(e) => onQueryChange(e.target.value)}
+              />
+            </div>
+
+            <div className={styles.searchActionBox}>
+              <span className={styles.ctrlLabel}>&nbsp;</span>
+              <button
+                type="submit"
+                className={styles.searchButton}
+                disabled={isLoading || actingUserSeq != null}
+              >
+                {isLoading ? "조회 중..." : "검색"}
+              </button>
+            </div>
+          </form>
 
           <div className={styles.filterBox}>
             <label className={styles.ctrlLabel} htmlFor="role-filter">

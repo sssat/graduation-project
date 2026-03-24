@@ -418,24 +418,15 @@ public class AccountsService {
         int size = Math.max(1, Math.min(100, query.size()));
         int offset = (page - 1) * size;
 
-        List<String> terms = splitTerms(safe(query.q()));
-        Integer roleHint = extractRoleHint(terms);
-
-        List<String> filteredTerms = terms.stream()
-                .filter(t -> !isRoleWord(t) && !isPureRoleCode(t))
-                .toList();
+        List<String> filteredTerms = splitTerms(safe(query.q()));
 
         StringBuilder where = new StringBuilder(" where 1=1 ");
-        if (roleHint != null) {
-            where.append(" and ul.gradeCode = :roleHint ");
-        }
 
         for (int i = 0; i < filteredTerms.size(); i++) {
             String p = "t" + i;
             where.append(" and (")
                     .append(" lower(u.userId) like :").append(p)
                     .append(" or lower(u.userName) like :").append(p)
-                    .append(" or lower(u.email) like :").append(p)
                     .append(" ) ");
         }
 
@@ -445,11 +436,6 @@ public class AccountsService {
 
         var countQuery = em.createQuery(countJpql, Long.class);
         var dataQuery = em.createQuery(dataJpql, User.class);
-
-        if (roleHint != null) {
-            countQuery.setParameter("roleHint", (short) roleHint.intValue());
-            dataQuery.setParameter("roleHint", (short) roleHint.intValue());
-        }
 
         for (int i = 0; i < filteredTerms.size(); i++) {
             String p = "t" + i;
