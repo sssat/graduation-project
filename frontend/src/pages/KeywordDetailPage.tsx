@@ -1408,7 +1408,7 @@ export default function KeywordDetailPage() {
         <article className={styles.card}>
           <div className={styles.cardHeader}>
             <div>
-              <div className={styles.cardTitle}>독자 반응 워드 클라우드</div>
+              <div className={styles.cardTitle}>뉴스 댓글 워드 클라우드</div>
               <div className={styles.cardSub}>뉴스 댓글에서 자주 등장한 단어를 시각화한 결과입니다.</div>
             </div>
             <span className={styles.badgeSoft}>댓글 기반</span>
