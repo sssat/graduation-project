@@ -51,7 +51,6 @@ function formatIsoDateTimeForTable(input?: string | null) {
   const s = input.trim();
   if (!s) return "—";
 
-  // 이미 화면 포맷이면 그대로 사용
   if (/^\d{4}-\d{2}-\d{2}\s\d{2}:\d{2}$/.test(s)) return s;
 
   const dt = new Date(s);
@@ -68,8 +67,6 @@ function normalizeRoleFromApi(item: UserListItem): AdminUiRole {
     .toUpperCase()
     .replace(/\s+/g, "_");
 
-  // grade_name이 내려오면 이름을 우선 신뢰하고, 없거나 불명확할 때만 grade_code로 보정한다.
-  // 현재 시스템(DB 기준): 0=USER, 1=ADMIN, 2=SUPER_ADMIN
   if (gradeNameUpper.includes("SUPER")) return "SUPER_ADMIN";
   if (gradeNameUpper === "ADMIN" || gradeNameUpper.includes("관리자")) return "ADMIN";
   if (gradeNameUpper === "USER" || gradeNameUpper.includes("회원")) return "USER";
@@ -104,8 +101,6 @@ function getOptionalGenderField<T extends object>(obj: T, key: string): Gender {
 }
 
 function mapUserListItemToRow(item: UserListItem): AdminUserRow {
-  // 현재 /api/admins/users DTO는 최소 필드만 내려주므로, 없는 필드는 "—"로 표시한다.
-  // 추후 백엔드가 필드를 확장하면 자동으로 매핑되도록 런타임 키도 함께 확인한다.
   const email = getOptionalStringField(item, "email") ?? "—";
   const birthDate = getOptionalStringField(item, "birth_date") ?? "—";
   const lastLoginAt = formatIsoDateTimeForTable(getOptionalStringField(item, "last_login_at"));
@@ -146,7 +141,6 @@ async function fetchAllUsersByQuery(q: string): Promise<AdminUserRow[]> {
   const rows = allItems.map(mapUserListItemToRow);
 
   rows.sort((a, b) => {
-    // 가입일이 있으면 가입일 우선, 없으면 userSeq 내림차순
     const aJoined = a.joinedAt === "—" ? 0 : new Date(a.joinedAt.replace(" ", "T")).getTime() || 0;
     const bJoined = b.joinedAt === "—" ? 0 : new Date(b.joinedAt.replace(" ", "T")).getTime() || 0;
     if (bJoined !== aJoined) return bJoined - aJoined;
@@ -341,8 +335,6 @@ export default function AdminUserManagementPage() {
           <div className={styles.cardTitle}>회원 목록</div>
           <div className={styles.cardMeta}>
             전체 <strong>{filtered.length}</strong>명
-            <br />
-            검색어: <strong>{submittedQ || "전체"}</strong>
           </div>
         </div>
 
@@ -361,6 +353,23 @@ export default function AdminUserManagementPage() {
               />
             </div>
 
+            <div className={styles.filterBox}>
+              <label className={styles.ctrlLabel} htmlFor="role-filter">
+                역할
+              </label>
+              <select
+                id="role-filter"
+                className={styles.select}
+                value={roleFilter}
+                onChange={(e) => onRoleFilterChange(e.target.value)}
+              >
+                <option value="ALL">전체</option>
+                <option value="USER">USER</option>
+                <option value="ADMIN">ADMIN</option>
+                <option value="SUPER_ADMIN">SUPER ADMIN</option>
+              </select>
+            </div>
+
             <div className={styles.searchActionBox}>
               <span className={styles.ctrlLabel}>&nbsp;</span>
               <button
@@ -372,23 +381,6 @@ export default function AdminUserManagementPage() {
               </button>
             </div>
           </form>
-
-          <div className={styles.filterBox}>
-            <label className={styles.ctrlLabel} htmlFor="role-filter">
-              역할
-            </label>
-            <select
-              id="role-filter"
-              className={styles.select}
-              value={roleFilter}
-              onChange={(e) => onRoleFilterChange(e.target.value)}
-            >
-              <option value="ALL">전체</option>
-              <option value="USER">USER</option>
-              <option value="ADMIN">ADMIN</option>
-              <option value="SUPER_ADMIN">SUPER ADMIN</option>
-            </select>
-          </div>
         </div>
 
         {errorMessage ? (
