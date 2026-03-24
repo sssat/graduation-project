@@ -348,9 +348,14 @@ type GraphPaletteItem = {
   line: string;
 };
 
-const COOC_RENDER_MAX_NODES = 18;
-const COOC_RENDER_MAX_LINKS = 45;
-const COOC_LABEL_TOP_N = 8;
+// 화면에 보여질 노드 수 상한
+const COOC_RENDER_MAX_NODES = 20;
+
+// 화면에 보여질 엣지 수 상한
+const COOC_RENDER_MAX_LINKS = 60;
+
+// 실제로 화면에 보이게 할 상위 노드 수 상한
+const COOC_LABEL_TOP_N = 12;
 
 function normalizeGraphLabel(label: unknown): string {
   return String(label ?? "")
