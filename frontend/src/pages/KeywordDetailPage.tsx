@@ -846,7 +846,7 @@ function NetworkGraph({
       </svg>
 
       <div className={styles.networkHint}>
-        상위 핵심 노드/연결만 표시합니다(라벨 비표시 노드는 화면에서 제외). 노드에 마우스를 올리면 연결된 관계를 강조해 볼 수 있고, 드래그 후 놓으면 고정되며 다시 누르면 고정이 해제됩니다.
+        상위 핵심 노드의 연결만 표시합니다. 노드에 마우스를 올리면 연결된 관계를 강조해 볼 수 있고, 드래그 후 놓으면 고정되며 다시 누르면 고정이 해제됩니다.
       </div>
     </div>
   );
@@ -1143,9 +1143,6 @@ export default function KeywordDetailPage() {
         <section className={styles.grid1}>
           <article className={`${styles.card} ${styles.statusCard}`}>
             <div className={styles.statusTitle}>잘못된 접근입니다</div>
-            <div className={styles.statusText}>
-              URL에 <code>keyword_seq</code> 값이 필요합니다.
-            </div>
             <div className={styles.statusActions}>
               <Link to="/" className={styles.primaryLinkButton}>
                 메인으로 이동
@@ -1365,7 +1362,7 @@ export default function KeywordDetailPage() {
             <div>
               <div className={styles.cardTitle}>언론사별 편향도 지수</div>
               <div className={styles.cardSub}>
-                선택 키워드 기사들의 제목 톤을 기반으로 산출한 지표입니다 (0에 가까울수록 중립).
+                기사들의 제목 톤을 기반으로 산출한 지표입니다 (0에 가까울수록 중립).
               </div>
             </div>
             <span className={styles.badgeSoft}>편향 분석</span>
@@ -1378,7 +1375,7 @@ export default function KeywordDetailPage() {
               </div>
 
               <div className={styles.biasCaption}>
-                <strong>양수</strong>일수록 긍정적인 톤, <strong>음수</strong>일수록 비판적인 톤이 강한 언론사입니다.
+                <strong>양수</strong>일수록 긍정적인 톤, <strong>음수</strong>일수록 비판적인 톤이 강한 언론사입니다. 점수가 <strong>0에 가까운 경우</strong>에는 그래프상에서 눈에 잘 띄지 않거나 거의 표시되지 않을 수 있습니다.
               </div>
             </>
           ) : (
@@ -1391,10 +1388,10 @@ export default function KeywordDetailPage() {
             <div>
               <div className={styles.cardTitle}>관계도 분석</div>
               <div className={styles.cardSub}>
-                {displayKeyword}과(와) 함께 언급되는 인물·조직을 공동 언급 관계로 연결해 시각화했습니다.
+                {displayKeyword}과(와) 함께 언급되는 인물·조직·단어를 공동 언급 관계로 연결해 시각화했습니다.
               </div>
             </div>
-            <span className={styles.badgeSoft}>공동 언급 네트워크</span>
+            <span className={styles.badgeSoft}>공동 출현 네트워크</span>
           </div>
 
           <NetworkGraph
