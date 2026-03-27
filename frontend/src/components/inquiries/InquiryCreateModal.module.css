@@ -144,3 +144,57 @@
   transform: translateY(1px);
   box-shadow: 0 6px 18px rgba(37, 99, 235, 0.6);
 }
+
+
+@media (max-width: 768px) {
+  .modalBackdrop {
+    align-items: flex-end;
+    padding: 0;
+  }
+
+  .modalDialog {
+    width: 100%;
+    max-height: min(88dvh, 760px);
+    border-radius: 20px 20px 0 0;
+    padding: 16px 14px calc(18px + env(safe-area-inset-bottom));
+    overflow-y: auto;
+  }
+
+  .modalHeader {
+    align-items: flex-start;
+  }
+
+  .modalTitle {
+    line-height: 1.4;
+  }
+
+  .modalDesc {
+    line-height: 1.6;
+    word-break: keep-all;
+  }
+
+  .formFooter {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .checkboxRow {
+    align-items: flex-start;
+    line-height: 1.5;
+  }
+
+  .submitBtn {
+    width: 100%;
+  }
+}
+
+@media (max-width: 420px) {
+  .modalDialog {
+    padding-left: 12px;
+    padding-right: 12px;
+  }
+
+  .textareaInput {
+    min-height: 180px;
+  }
+}

@@ -598,3 +598,164 @@ select:focus {
     grid-template-columns: 1fr;
   }
 }
+
+
+@media (max-width: 768px) {
+  .heroTitle {
+    font-size: 22px;
+  }
+
+  .heroSub {
+    line-height: 1.6;
+    word-break: keep-all;
+  }
+
+  .card {
+    padding: 16px 14px 18px;
+    border-radius: 18px;
+  }
+
+  .cardHeader,
+  .viewHeader {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .cardHeaderRight,
+  .viewHeaderRight {
+    width: 100%;
+    align-items: stretch;
+  }
+
+  .tableMetaTop {
+    text-align: left;
+  }
+
+  .btnPrimary,
+  .btnSecondary {
+    width: 100%;
+  }
+
+  .logTableFrame {
+    border: none;
+    border-radius: 0;
+    overflow: visible;
+  }
+
+  .logTableScrollInner {
+    max-height: none;
+    overflow: visible;
+  }
+
+  .logTable,
+  .logTable thead,
+  .logTable tbody,
+  .logTable tr,
+  .logTable td,
+  .inquiryTable,
+  .inquiryTable thead,
+  .inquiryTable tbody,
+  .inquiryTable tr,
+  .inquiryTable td {
+    display: block;
+    width: 100%;
+  }
+
+  .logTable thead,
+  .inquiryTable thead {
+    display: none;
+  }
+
+  .logTable tbody,
+  .inquiryTable tbody {
+    display: grid;
+    gap: 12px;
+  }
+
+  .logTable tr,
+  .inquiryTable tr {
+    border: 1px solid rgba(148, 163, 184, 0.22);
+    border-radius: 16px;
+    overflow: hidden;
+    background: rgba(15, 23, 42, 0.72);
+  }
+
+  .logTable td,
+  .inquiryTable td {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 10px 12px;
+    text-align: right;
+    border-bottom: 1px solid rgba(31, 41, 55, 0.85);
+    white-space: normal;
+    word-break: break-word;
+    overflow-wrap: anywhere;
+  }
+
+  .logTable td:last-child,
+  .inquiryTable td:last-child {
+    border-bottom: none;
+  }
+
+  .logTable td::before,
+  .inquiryTable td::before {
+    content: attr(data-label);
+    flex: 0 0 112px;
+    max-width: 112px;
+    text-align: left;
+    color: var(--text-muted);
+    font-size: 11px;
+    font-weight: 600;
+    line-height: 1.45;
+  }
+
+  .inquiryTable {
+    border: none;
+  }
+
+  .btnTable {
+    width: 100%;
+  }
+
+  .viewMetaInlineRow {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+  }
+
+  .viewMetaLabel {
+    min-width: 56px;
+  }
+
+  .answerViewHead,
+  .answerActions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .formRowInline {
+    max-width: none;
+  }
+}
+
+@media (max-width: 420px) {
+  .pageRoot {
+    padding: 18px 14px 28px;
+  }
+
+  .logTable td,
+  .inquiryTable td {
+    flex-direction: column;
+    gap: 6px;
+    align-items: stretch;
+    text-align: left;
+  }
+
+  .logTable td::before,
+  .inquiryTable td::before {
+    flex: 0 0 auto;
+    max-width: none;
+  }
+}

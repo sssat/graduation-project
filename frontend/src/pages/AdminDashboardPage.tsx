@@ -669,15 +669,15 @@ export default function AdminDashboardPage() {
                     const status: LogStatus = row.isSuccess ? "success" : "fail";
                     return (
                       <tr key={row.loginLogSeq}>
-                        <td>{row.loginLogSeq}</td>
-                        <td>{row.inputId}</td>
-                        <td>{row.attemptedAt}</td>
-                        <td>
+                        <td data-label="시도일련번호">{row.loginLogSeq}</td>
+                        <td data-label="입력 아이디">{row.inputId}</td>
+                        <td data-label="시도 시각">{row.attemptedAt}</td>
+                        <td data-label="로그인 성공 여부">
                           <span className={logStatusClass(status)}>{row.isSuccess ? "성공" : "실패"}</span>
                         </td>
-                        <td>{formatIpAddress(row.ipAddress)}</td>
-                        <td>{row.isSuccess ? row.userSeq ?? "—" : "—"}</td>
-                        <td className={styles.cellWrap}>{row.userAgent ?? "—"}</td>
+                        <td data-label="IP주소">{formatIpAddress(row.ipAddress)}</td>
+                        <td data-label="회원일련번호">{row.isSuccess ? row.userSeq ?? "—" : "—"}</td>
+                        <td data-label="User-Agent" className={styles.cellWrap}>{row.userAgent ?? "—"}</td>
                       </tr>
                     );
                   })}
@@ -754,13 +754,13 @@ export default function AdminDashboardPage() {
                 const isDone = row.status === "done";
                 return (
                   <tr key={row.id}>
-                    <td>{row.id}</td>
-                    <td><span className={typePillClass(row.typeKey)}>{row.typeLabel}</span></td>
-                    <td className={styles.cellWrap}>{row.title}</td>
-                    <td>{row.author}</td>
-                    <td>{row.date}</td>
-                    <td><span className={statusPillClass(row.status)}>{isDone ? "답변 완료" : "처리 중"}</span></td>
-                    <td>
+                    <td data-label="번호">{row.id}</td>
+                    <td data-label="문의 유형"><span className={typePillClass(row.typeKey)}>{row.typeLabel}</span></td>
+                    <td data-label="제목" className={styles.cellWrap}>{row.title}</td>
+                    <td data-label="작성자">{row.author}</td>
+                    <td data-label="등록일">{row.date}</td>
+                    <td data-label="상태"><span className={statusPillClass(row.status)}>{isDone ? "답변 완료" : "처리 중"}</span></td>
+                    <td data-label="답변">
                       <button
                         type="button"
                         className={`${styles.btnTable} ${isDone ? styles.btnViewAnswer : ""}`}
@@ -770,7 +770,7 @@ export default function AdminDashboardPage() {
                         {isDone ? "답변 보기" : "답변 하기"}
                       </button>
                     </td>
-                    <td>
+                    <td data-label="삭제">
                       <button type="button" className={`${styles.btnTable} ${styles.btnDelete}`} onClick={() => void onDelete(row.id)}>
                         삭제
                       </button>

@@ -356,3 +356,76 @@
     justify-content: flex-end;
   }
 }
+
+
+@media (max-width: 768px) {
+  .compareTitleRow {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .compareSub {
+    line-height: 1.6;
+    word-break: keep-all;
+  }
+
+  .keywordFilterRow {
+    align-items: stretch;
+  }
+
+  .keywordChipGroup {
+    width: 100%;
+  }
+
+  .keywordChip {
+    padding: 7px 12px;
+    font-size: 12px;
+  }
+
+  .periodFilterInline {
+    width: 100%;
+    margin-left: 0;
+    justify-content: flex-start;
+    flex-wrap: wrap;
+  }
+
+  .cardHeader {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .chartWrapper,
+  .chartWrapperTall {
+    height: 220px;
+  }
+
+  .chartLegend {
+    flex-direction: column;
+    gap: 6px;
+  }
+}
+
+@media (max-width: 420px) {
+  .pageRoot {
+    padding: 18px 14px 28px;
+  }
+
+  .compareMainTitle {
+    font-size: 20px;
+    line-height: 1.4;
+  }
+
+  .keywordChipGroup {
+    gap: 6px;
+  }
+
+  .filterChipGroup {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .filterChip {
+    flex: 1 1 0;
+    text-align: center;
+  }
+}

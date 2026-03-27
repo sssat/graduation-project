@@ -364,3 +364,119 @@
     width: auto;
   }
 }
+
+
+@media (max-width: 768px) {
+  .heroTitle {
+    font-size: 22px;
+  }
+
+  .heroSub {
+    line-height: 1.6;
+    word-break: keep-all;
+  }
+
+  .card {
+    padding: 16px 14px 18px;
+    border-radius: 18px;
+  }
+
+  .cardHeader {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .cardMeta {
+    text-align: left;
+  }
+
+  .tableScroll {
+    max-height: none;
+    overflow: visible;
+    border: none;
+    border-radius: 0;
+  }
+
+  .table,
+  .table thead,
+  .table tbody,
+  .table tr,
+  .table td {
+    display: block;
+    width: 100%;
+  }
+
+  .table thead {
+    display: none;
+  }
+
+  .table tbody {
+    display: grid;
+    gap: 12px;
+  }
+
+  .table tr {
+    border: 1px solid rgba(148, 163, 184, 0.22);
+    border-radius: 16px;
+    overflow: hidden;
+    background: rgba(15, 23, 42, 0.72);
+  }
+
+  .table td {
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+    justify-content: space-between;
+    padding: 10px 12px;
+    text-align: right;
+    border-bottom: 1px solid rgba(31, 41, 55, 0.85);
+    white-space: normal;
+    word-break: break-word;
+    overflow-wrap: anywhere;
+  }
+
+  .table td:last-child {
+    border-bottom: none;
+  }
+
+  .table td::before {
+    content: attr(data-label);
+    flex: 0 0 112px;
+    max-width: 112px;
+    text-align: left;
+    color: var(--text-muted);
+    font-size: 11px;
+    font-weight: 600;
+    line-height: 1.45;
+  }
+
+  .cellStrong {
+    text-align: right;
+  }
+
+  .btnTable {
+    width: 100%;
+  }
+
+  .pagination {
+    margin-top: 16px;
+  }
+}
+
+@media (max-width: 420px) {
+  .pageRoot {
+    padding: 18px 14px 28px;
+  }
+
+  .table td {
+    flex-direction: column;
+    gap: 6px;
+    align-items: stretch;
+    text-align: left;
+  }
+
+  .table td::before {
+    flex: 0 0 auto;
+    max-width: none;
+  }
+}

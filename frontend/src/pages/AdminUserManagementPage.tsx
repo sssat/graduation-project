@@ -435,22 +435,22 @@ export default function AdminUserManagementPage() {
 
                 return (
                   <tr key={u.userSeq}>
-                    <td>{no}</td>
-                    <td className={styles.cellStrong}>{u.name}</td>
-                    <td>{u.userId}</td>
-                    <td>
+                    <td data-label="NO">{no}</td>
+                    <td data-label="이름" className={styles.cellStrong}>{u.name}</td>
+                    <td data-label="아이디">{u.userId}</td>
+                    <td data-label="역할">
                       <span className={rolePill}>{roleLabel(u.role)}</span>
                     </td>
-                    <td className={styles.cellWrap}>{u.email}</td>
-                    <td>{u.birthDate}</td>
-                    <td>{genderLabel(u.gender)}</td>
-                    <td>{u.lastLoginAt}</td>
-                    <td>{u.joinedAt}</td>
-                    <td>{u.userSeq}</td>
-                    <td>{u.grantedAt}</td>
-                    <td>{u.passwordChangedAt}</td>
+                    <td data-label="이메일" className={styles.cellWrap}>{u.email}</td>
+                    <td data-label="생년월일">{u.birthDate}</td>
+                    <td data-label="성별">{genderLabel(u.gender)}</td>
+                    <td data-label="최근 로그인 시간">{u.lastLoginAt}</td>
+                    <td data-label="회원가입 날짜">{u.joinedAt}</td>
+                    <td data-label="회원일련번호">{u.userSeq}</td>
+                    <td data-label="관리자 등급 부여일시">{u.grantedAt}</td>
+                    <td data-label="비밀번호 변경일시">{u.passwordChangedAt}</td>
 
-                    <td>
+                    <td data-label="승급/강등">
                       <button
                         type="button"
                         className={actionBtnClass}
@@ -462,7 +462,7 @@ export default function AdminUserManagementPage() {
                       </button>
                     </td>
 
-                    <td>
+                    <td data-label="회원탈퇴">
                       <button
                         type="button"
                         className={`${styles.btnTable} ${styles.btnDanger}`}
