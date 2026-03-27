@@ -2,6 +2,7 @@
 
 .section {
   min-height: calc(100vh - 120px);
+  min-height: calc(100dvh - 120px);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -9,13 +10,12 @@
   background: #0b1220;
 }
 
-/* 폭 제어 */
 .wrap {
   --card-width: 420px;
-  width: min(var(--card-width), 92vw);
+  width: min(var(--card-width), 100%);
+  max-width: 100%;
 }
 
-/* 흰 카드 */
 .card {
   width: 100%;
   background: #ffffff;
@@ -27,7 +27,6 @@
   color-scheme: light;
 }
 
-/* 핵심: 카드 내부 요소는 전부 border-box로 */
 .card,
 .card * {
   box-sizing: border-box;
@@ -36,6 +35,7 @@
 .logo {
   display: block;
   width: 240px;
+  max-width: 100%;
   height: auto;
   margin: 0 auto 14px;
   object-fit: contain;
@@ -50,15 +50,16 @@
   display: flex;
   flex-direction: column;
   gap: 8px;
+  min-width: 0;
 }
 
 .label {
   font-size: 13px;
   font-weight: 600;
   color: #111827;
+  line-height: 1.4;
 }
 
-/* grid 안에서 넘침 방지 */
 .inlineOut {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
@@ -93,7 +94,7 @@
 
 .triple {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 8px;
   min-width: 0;
 }
@@ -107,6 +108,7 @@
   background: #f3f4f6;
   color: #111827;
   cursor: pointer;
+  font-size: 13px;
 }
 
 .sideBtn:disabled {
@@ -118,7 +120,7 @@
 .okText {
   margin: -6px 0 0;
   font-size: 12px;
-  line-height: 1.4;
+  line-height: 1.45;
 }
 
 .errorText {
@@ -133,7 +135,7 @@
   border-radius: 10px;
   padding: 10px 12px;
   font-size: 12px;
-  line-height: 1.4;
+  line-height: 1.45;
   color: #dc2626;
   background: #fef2f2;
   border: 1px solid #fecaca;
@@ -145,15 +147,18 @@
   align-items: center;
   gap: 8px;
   font-size: 12px;
+  line-height: 1.5;
   color: #111827;
   margin-top: 4px;
 }
 
 .terms input[type="checkbox"] {
   accent-color: #3ba1ff;
+  flex-shrink: 0;
 }
 
 .submit {
+  width: 100%;
   height: 45px;
   border-radius: 8px;
   background: linear-gradient(135deg, #0ea5e9, #6366f1);
@@ -179,6 +184,11 @@
 }
 
 @media (max-width: 520px) {
+  .section {
+    align-items: flex-start;
+    padding: 20px 14px 28px;
+  }
+
   .card {
     padding: 18px 14px 14px;
   }
@@ -194,5 +204,15 @@
 
   .sideBtn {
     width: 100%;
+  }
+
+  .terms {
+    align-items: flex-start;
+  }
+}
+
+@media (max-width: 400px) {
+  .triple {
+    grid-template-columns: 1fr;
   }
 }

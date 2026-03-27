@@ -1,8 +1,8 @@
 /* frontend/src/components/Auth/FindID/FindIdCard/FindIdCard.module.css */
 
-/* 전체 화면 가운데 정렬 + 검은 배경 (LoginCard와 동일) */
 .section {
   min-height: calc(100vh - 120px);
+  min-height: calc(100dvh - 120px);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -10,29 +10,32 @@
   background: #0b1220;
 }
 
-/* 카드 + 링크바 스택 (LoginCard와 동일) */
 .wrap {
   --card-width: 420px;
+  width: min(var(--card-width), 100%);
+  max-width: 100%;
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 8px;
 }
 
-/* 흰색 카드 (LoginCard와 동일 톤) */
 .card {
-  width: min(var(--card-width), 92vw);
+  width: min(var(--card-width), 100%);
   background: #ffffff;
   border: 1px solid #eef2f7;
   border-radius: 12px;
   padding: 26px 18px 16px;
   box-shadow: 0 10px 30px rgba(16, 24, 40, 0.12);
-
   color: #111827;
   color-scheme: light;
 }
 
-/* 타이틀 (로고 없이 중앙 큰 글씨) */
+.card,
+.card * {
+  box-sizing: border-box;
+}
+
 .title {
   margin: 2px 0 18px;
   text-align: center;
@@ -40,9 +43,9 @@
   font-weight: 900;
   letter-spacing: -0.4px;
   color: #60a5fa;
+  line-height: 1.35;
 }
 
-/* 폼 */
 .form {
   display: grid;
   gap: 12px;
@@ -50,6 +53,8 @@
 }
 
 .input {
+  width: 100%;
+  min-width: 0;
   height: 45px;
   border: 1px solid #e5e7eb;
   border-radius: 8px;
@@ -74,14 +79,13 @@
   cursor: not-allowed;
 }
 
-/* 에러 */
 .error {
   margin: -6px 0 2px;
   font-size: 12px;
+  line-height: 1.45;
   color: #dc2626;
 }
 
-/* 결과 표시 (옵션) */
 .result {
   border: 1px solid #e5e7eb;
   background: #f9fafb;
@@ -100,10 +104,11 @@
 .resultValue {
   font-size: 14px;
   color: #111827;
+  word-break: break-all;
 }
 
-/* 확인 버튼 (LoginCard와 동일 톤) */
 .submit {
+  width: 100%;
   height: 45px;
   border-radius: 8px;
   background: linear-gradient(135deg, #0ea5e9, #6366f1);
@@ -129,9 +134,8 @@
   cursor: not-allowed;
 }
 
-/* 카드 바깥 링크바 (LoginCard와 동일: 좌/우 배치) */
 .linksBar {
-  width: min(var(--card-width), 92vw);
+  width: min(var(--card-width), 100%);
   margin-top: 2px;
   display: flex;
   align-items: center;
@@ -140,10 +144,15 @@
 }
 
 .link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 40px;
   font-size: 12px;
   color: rgba(229, 231, 235, 0.9);
   text-decoration: none;
   font-weight: 600;
+  white-space: nowrap;
 }
 
 .link:hover {
@@ -151,7 +160,6 @@
   color: #ffffff;
 }
 
-/* 접근성 */
 .srOnly {
   position: absolute;
   width: 1px;
@@ -164,9 +172,9 @@
   border: 0;
 }
 
-/* 모바일 대응 */
 @media (max-width: 520px) {
   .section {
+    align-items: flex-start;
     padding: 20px 14px 28px;
   }
 
@@ -182,5 +190,12 @@
     flex-direction: column;
     align-items: stretch;
     gap: 10px;
+  }
+
+  .link {
+    width: 100%;
+    padding: 10px 12px;
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.08);
   }
 }

@@ -1,8 +1,8 @@
 /* frontend/src/components/Auth/FindID/FindIDResultFail/FindIdResultFail.module.css */
 
-/* 전체 화면 가운데 정렬 + 검은 배경 (LoginCard/FindIdCard와 통일) */
 .section {
   min-height: calc(100vh - 120px);
+  min-height: calc(100dvh - 120px);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -10,14 +10,13 @@
   background: #0b1220;
 }
 
-/* 카드 래퍼 */
 .wrap {
   --card-width: 420px;
-  width: min(var(--card-width), 92vw);
+  width: min(var(--card-width), 100%);
+  max-width: 100%;
   margin: 0 auto;
 }
 
-/* 흰색 카드 */
 .card {
   background: #ffffff;
   border: 1px solid #eef2f7;
@@ -29,28 +28,29 @@
   color-scheme: light;
 }
 
+.card,
 .card * {
   box-sizing: border-box;
 }
 
-/* 타이틀 */
 .title {
   margin: 0 0 14px;
   font-size: 20px;
   font-weight: 900;
   color: #60a5fa;
   letter-spacing: -0.2px;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
 }
 
-/* 메시지 */
 .message {
   margin: 6px 2px 0;
   font-size: 14px;
   color: #111827;
-  line-height: 1.5;
+  line-height: 1.6;
+  overflow-wrap: anywhere;
 }
 
-/* 버튼들 */
 .actions {
   display: flex;
   gap: 12px;
@@ -59,6 +59,7 @@
 
 .btn {
   flex: 1;
+  min-width: 0;
   height: 45px;
   border: 0;
   border-radius: 8px;
@@ -69,13 +70,13 @@
   justify-content: center;
   transition: transform 0.12s ease, box-shadow 0.2s ease, filter 0.12s ease, opacity 0.2s ease;
   user-select: none;
+  text-align: center;
 }
 
 .btn:active {
   transform: translateY(1px);
 }
 
-/* 회색 버튼: 아이디 찾기 */
 .secondary {
   background: #e5e7eb;
   color: #374151;
@@ -85,7 +86,6 @@
   opacity: 0.92;
 }
 
-/* 파란 버튼: 회원가입 (LoginCard의 submit 톤과 통일) */
 .primary {
   background: linear-gradient(135deg, #0ea5e9, #6366f1);
   box-shadow: 0 14px 26px rgba(37, 99, 235, 0.35);
@@ -98,6 +98,7 @@
 
 @media (max-width: 520px) {
   .section {
+    align-items: flex-start;
     padding: 20px 14px 28px;
   }
 
