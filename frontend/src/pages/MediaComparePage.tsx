@@ -7,12 +7,14 @@ import styles from "./MediaComparePage.module.css";
 import {
   getAiSummary,
   getContentSentiment,
+  getKeywordMeta,
   getMediaArticleCounts,
   getMediaCompareContentSentiment,
   getMediaCompareTitleTopWords,
   getMediaCompareTopKeywords,
   getTitleBiasByMedia,
   type ContentSentimentResponse,
+  type KeywordMetaResponse,
   type MediaArticleCountsResponse,
   type MediaCompareTopKeywordsResponse,
   type MediaContentSentimentCompareResponse,
@@ -213,6 +215,7 @@ export default function MediaComparePage() {
   const [selectedKeywordSeq, setSelectedKeywordSeq] = useState<number | null>(null);
 
   const [rows, setRows] = useState<MediaRow[]>([]);
+  const [keywordMeta, setKeywordMeta] = useState<KeywordMetaResponse | null>(null);
   const [overallSentiment, setOverallSentiment] = useState<ContentSentimentResponse | null>(null);
   const [isHeaderLoading, setIsHeaderLoading] = useState(false);
   const [isDetailLoading, setIsDetailLoading] = useState(false);
@@ -254,6 +257,7 @@ export default function MediaComparePage() {
         if (cancelled) return;
         setHeaderData(null);
         setSelectedKeywordSeq(null);
+        setKeywordMeta(null);
         setRows([]);
         setOverallSentiment(null);
         setHeaderError(getErrorMessage(err));
@@ -268,6 +272,33 @@ export default function MediaComparePage() {
       cancelled = true;
     };
   }, [period]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadKeywordMeta(keywordSeq: number) {
+      try {
+        const data = await getKeywordMeta(keywordSeq, { period: toApiPeriod(period) });
+
+        if (cancelled) return;
+        setKeywordMeta(data);
+      } catch {
+        if (cancelled) return;
+        setKeywordMeta(null);
+      }
+    }
+
+    if (selectedKeywordSeq == null) {
+      setKeywordMeta(null);
+      return;
+    }
+
+    loadKeywordMeta(selectedKeywordSeq);
+
+    return () => {
+      cancelled = true;
+    };
+  }, [period, selectedKeywordSeq]);
 
   useEffect(() => {
     let cancelled = false;
@@ -406,8 +437,16 @@ export default function MediaComparePage() {
     };
   }, [rows]);
 
-  const metaRangeLabel = useMemo(() => formatRangeLabelFromApi(headerData, period), [headerData, period]);
+  const metaRangeLabel = useMemo(() => {
+    if (keywordMeta?.period_start && keywordMeta?.period_end) {
+      return `${keywordMeta.period_start} ~ ${keywordMeta.period_end}`;
+    }
 
+    return formatRangeLabelFromApi(headerData, period);
+  }, [headerData, keywordMeta, period]);
+
+  const headerArticleCount = keywordMeta?.article_count ?? summary.totalArticles;
+  const headerMediaCount = keywordMeta?.media_count ?? summary.mediaCount;
 
   useEffect(() => {
     if (!volumeCanvasRef.current) return;
@@ -594,7 +633,7 @@ export default function MediaComparePage() {
             <h1 className={styles.compareMainTitle}>언론사별 키워드 보도 비교 대시보드</h1>
 
             <p className={styles.compareSub}>
-              분석 기간: {metaRangeLabel} · 기사 수: {summary.totalArticles}건 · 분석 언론사: {summary.mediaCount}개
+              분석 기간: {metaRangeLabel} · 기사 수: {headerArticleCount}건 · 분석 언론사: {headerMediaCount}개
             </p>
           </div>
         </div>
