@@ -1,7 +1,12 @@
 // frontend/src/components/layout/Header.tsx
 
-import { Link, NavLink, type NavLinkRenderProps, useNavigate } from "react-router-dom";
-import { useEffect, useMemo, useRef, useState } from "react";
+import {
+  Link,
+  NavLink,
+  type NavLinkRenderProps,
+  useNavigate,
+} from "react-router-dom";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import styles from "./Header.module.css";
 import logo from "../../assets/logo.png";
 import { useAuth } from "../../hooks/useAuth";
@@ -32,15 +37,40 @@ function AdminShieldIcon(props: { className?: string }) {
   );
 }
 
+function HamburgerIcon(props: { className?: string }) {
+  return (
+    <svg
+      className={props.className}
+      viewBox="0 0 24 24"
+      fill="none"
+      aria-hidden="true"
+      focusable="false"
+    >
+      <path d="M4 7h16" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+      <path d="M4 12h16" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+      <path d="M4 17h16" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+    </svg>
+  );
+}
+
 export default function Header() {
   const nav = useNavigate();
   const { auth, logout } = useAuth();
 
   const [menuOpen, setMenuOpen] = useState(false);
-  const menuRef = useRef<HTMLDivElement | null>(null);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  const userMenuRef = useRef<HTMLDivElement | null>(null);
+  const mobileMenuRef = useRef<HTMLDivElement | null>(null);
+  const mobileMenuButtonRef = useRef<HTMLButtonElement | null>(null);
 
   const linkClass = (navData: NavLinkRenderProps) =>
     navData.isActive ? `${styles.navLink} ${styles.active}` : styles.navLink;
+
+  const mobileLinkClass = (navData: NavLinkRenderProps) =>
+    navData.isActive
+      ? `${styles.mobileNavLink} ${styles.mobileNavLinkActive}`
+      : styles.mobileNavLink;
 
   const displayName = useMemo(() => {
     return auth.userName?.trim() || auth.userId?.trim() || "내 계정";
@@ -50,67 +80,112 @@ export default function Header() {
   const isSuperAdmin = auth.role === "SUPER_ADMIN";
   const adminLabel = isSuperAdmin ? "SUPER ADMIN" : "ADMIN";
 
-  const closeMenu = () => setMenuOpen(false);
-  const toggleMenu = () => setMenuOpen((v) => !v);
+  const closeDesktopMenu = useCallback(() => {
+    setMenuOpen(false);
+  }, []);
+
+  const closeMobileMenu = useCallback(() => {
+    setMobileMenuOpen(false);
+  }, []);
+
+  const closeAllMenus = useCallback(() => {
+    setMenuOpen(false);
+    setMobileMenuOpen(false);
+  }, []);
+
+  const toggleDesktopMenu = useCallback(() => {
+    setMenuOpen((prev) => !prev);
+  }, []);
+
+  const toggleMobileMenu = useCallback(() => {
+    setMenuOpen(false);
+    setMobileMenuOpen((prev) => !prev);
+  }, []);
 
   useEffect(() => {
     const onDocMouseDown = (e: MouseEvent) => {
-      const el = menuRef.current;
-      if (!el) return;
-      if (e.target instanceof Node && !el.contains(e.target)) closeMenu();
+      const target = e.target;
+      if (!(target instanceof Node)) return;
+
+      const userMenuEl = userMenuRef.current;
+      if (userMenuEl && !userMenuEl.contains(target)) {
+        closeDesktopMenu();
+      }
+
+      const mobileMenuEl = mobileMenuRef.current;
+      const mobileButtonEl = mobileMenuButtonRef.current;
+      const clickedInsideMobileMenu = mobileMenuEl?.contains(target) ?? false;
+      const clickedMobileButton = mobileButtonEl?.contains(target) ?? false;
+      if (!clickedInsideMobileMenu && !clickedMobileButton) {
+        closeMobileMenu();
+      }
     };
 
     const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape") closeMenu();
+      if (e.key === "Escape") {
+        closeAllMenus();
+      }
     };
 
     document.addEventListener("mousedown", onDocMouseDown);
     document.addEventListener("keydown", onKeyDown);
+
     return () => {
       document.removeEventListener("mousedown", onDocMouseDown);
       document.removeEventListener("keydown", onKeyDown);
     };
-  }, []);
+  }, [closeAllMenus, closeDesktopMenu, closeMobileMenu]);
 
-  const handleLogout = async () => {
-    closeMenu();
+  const handleLogout = useCallback(async () => {
+    closeAllMenus();
     await logout();
     nav("/", { replace: true });
-  };
+  }, [closeAllMenus, logout, nav]);
 
   return (
     <header className={styles.siteHeader}>
       <div className={styles.headerInner}>
-        <Link to="/" className={styles.logoArea} aria-label="Newsight 홈으로">
+        <Link
+          to="/"
+          className={styles.logoArea}
+          aria-label="Newsight 홈으로"
+          onClick={closeAllMenus}
+        >
           <img src={logo} alt="Newsight 로고" className={styles.logoImage} />
         </Link>
 
         <nav className={styles.mainNav} aria-label="메인 메뉴">
-          <NavLink to="/" end className={linkClass}>
+          <NavLink to="/" end className={linkClass} onClick={closeAllMenus}>
             메인
           </NavLink>
 
-          <NavLink to="/media" className={linkClass}>
+          <NavLink to="/media" className={linkClass} onClick={closeAllMenus}>
             언론사 비교
           </NavLink>
 
-          <NavLink to="/inquiries" className={linkClass}>
+          <NavLink to="/inquiries" className={linkClass} onClick={closeAllMenus}>
             문의하기
           </NavLink>
 
           <div className={styles.authGroup}>
             {auth.isAuthed ? (
-              <div className={styles.userMenu} ref={menuRef}>
+              <div className={styles.userMenu} ref={userMenuRef}>
                 <button
                   type="button"
                   className={styles.userButton}
-                  onClick={toggleMenu}
+                  onClick={toggleDesktopMenu}
                   aria-haspopup="menu"
                   aria-expanded={menuOpen}
                 >
                   <span className={styles.userNameWrap}>
                     {isAdminLike ? (
-                      <span className={isSuperAdmin ? `${styles.adminBadge} ${styles.superBadge}` : styles.adminBadge}>
+                      <span
+                        className={
+                          isSuperAdmin
+                            ? `${styles.adminBadge} ${styles.superBadge}`
+                            : styles.adminBadge
+                        }
+                      >
                         <AdminShieldIcon className={styles.adminShield} />
                         <span className={styles.adminBadgeText}>{adminLabel}</span>
                       </span>
@@ -131,7 +206,7 @@ export default function Header() {
                             to="/admin/users"
                             className={styles.dropdownItem}
                             role="menuitem"
-                            onClick={closeMenu}
+                            onClick={closeDesktopMenu}
                           >
                             회원 관리
                           </NavLink>
@@ -143,7 +218,7 @@ export default function Header() {
                           to="/admin"
                           className={styles.dropdownItem}
                           role="menuitem"
-                          onClick={closeMenu}
+                          onClick={closeDesktopMenu}
                         >
                           관리자 페이지
                         </NavLink>
@@ -156,7 +231,7 @@ export default function Header() {
                       to="/auth/change-password"
                       className={styles.dropdownItem}
                       role="menuitem"
-                      onClick={closeMenu}
+                      onClick={closeDesktopMenu}
                     >
                       비밀번호 변경
                     </NavLink>
@@ -176,20 +251,116 @@ export default function Header() {
               </div>
             ) : (
               <>
-                <NavLink to="/auth/login" className={linkClass}>
+                <NavLink to="/auth/login" className={linkClass} onClick={closeAllMenus}>
                   로그인
                 </NavLink>
                 <span className={styles.authSeparator} aria-hidden="true">
                   |
                 </span>
-                <NavLink to="/auth/signup" className={linkClass}>
+                <NavLink to="/auth/signup" className={linkClass} onClick={closeAllMenus}>
                   회원가입
                 </NavLink>
               </>
             )}
           </div>
         </nav>
+
+        <button
+          ref={mobileMenuButtonRef}
+          type="button"
+          className={styles.mobileMenuButton}
+          aria-label={mobileMenuOpen ? "모바일 메뉴 닫기" : "모바일 메뉴 열기"}
+          aria-controls="mobile-navigation"
+          aria-expanded={mobileMenuOpen}
+          onClick={toggleMobileMenu}
+        >
+          <HamburgerIcon className={styles.mobileMenuIcon} />
+        </button>
       </div>
+
+      {mobileMenuOpen ? (
+        <div id="mobile-navigation" className={styles.mobileMenuPanel} ref={mobileMenuRef}>
+          <nav className={styles.mobileNav} aria-label="모바일 메인 메뉴">
+            <NavLink to="/" end className={mobileLinkClass} onClick={closeMobileMenu}>
+              메인
+            </NavLink>
+
+            <NavLink to="/media" className={mobileLinkClass} onClick={closeMobileMenu}>
+              언론사 비교
+            </NavLink>
+
+            <NavLink to="/inquiries" className={mobileLinkClass} onClick={closeMobileMenu}>
+              문의하기
+            </NavLink>
+          </nav>
+
+          <div className={styles.mobileMenuDivider} />
+
+          {auth.isAuthed ? (
+            <div className={styles.mobileAccountSection}>
+              <div className={styles.mobileAccountSummary}>
+                <div className={styles.mobileAccountTitle}>내 계정</div>
+                <div className={styles.mobileAccountNameRow}>
+                  {isAdminLike ? (
+                    <span
+                      className={
+                        isSuperAdmin
+                          ? `${styles.adminBadge} ${styles.superBadge}`
+                          : styles.adminBadge
+                      }
+                    >
+                      <AdminShieldIcon className={styles.adminShield} />
+                      <span className={styles.adminBadgeText}>{adminLabel}</span>
+                    </span>
+                  ) : null}
+                  <span className={styles.mobileAccountName}>{displayName}님</span>
+                </div>
+              </div>
+
+              <div className={styles.mobileActionGroup}>
+                {isAdminLike ? (
+                  <>
+                    {isSuperAdmin ? (
+                      <NavLink
+                        to="/admin/users"
+                        className={styles.mobileActionLink}
+                        onClick={closeMobileMenu}
+                      >
+                        회원 관리
+                      </NavLink>
+                    ) : null}
+
+                    <NavLink to="/admin" className={styles.mobileActionLink} onClick={closeMobileMenu}>
+                      관리자 페이지
+                    </NavLink>
+                  </>
+                ) : null}
+
+                <NavLink
+                  to="/auth/change-password"
+                  className={styles.mobileActionLink}
+                  onClick={closeMobileMenu}
+                >
+                  비밀번호 변경
+                </NavLink>
+
+                <button type="button" className={styles.mobileActionButton} onClick={handleLogout}>
+                  로그아웃
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className={styles.mobileGuestActions}>
+              <NavLink to="/auth/login" className={styles.mobilePrimaryLink} onClick={closeMobileMenu}>
+                로그인
+              </NavLink>
+              <NavLink to="/auth/signup" className={styles.mobileSecondaryLink} onClick={closeMobileMenu}>
+                회원가입
+              </NavLink>
+            </div>
+          )}
+        </div>
+      ) : null}
     </header>
   );
 }

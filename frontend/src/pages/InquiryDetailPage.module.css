@@ -121,6 +121,9 @@
 .cardTitle {
   font-size: 16px;
   font-weight: 600;
+  line-height: 1.5;
+  word-break: keep-all;
+  overflow-wrap: anywhere;
 }
 
 .badgeSoft {
@@ -241,6 +244,7 @@
 .metaItemValue {
   color: #e5e7eb;
   margin-left: 6px;
+  word-break: break-word;
 }
 
 .dividerLine {
@@ -297,5 +301,99 @@
 
   .detailTitle {
     font-size: 24px;
+  }
+
+  .cardHeader {
+    flex-wrap: wrap;
+  }
+
+  .metaRowBottom {
+    gap: 10px 14px;
+  }
+}
+
+@media (max-width: 768px) {
+  .pageRoot {
+    padding: 18px 14px 28px;
+  }
+
+  .breadcrumb {
+    flex-wrap: wrap;
+    row-gap: 4px;
+  }
+
+  .backLink {
+    margin-top: 2px;
+    flex-wrap: wrap;
+  }
+
+  .detailHero {
+    margin-top: 8px;
+    margin-bottom: 16px;
+  }
+
+  .detailTitle {
+    font-size: 22px;
+    line-height: 1.4;
+    word-break: keep-all;
+    overflow-wrap: anywhere;
+  }
+
+  .detailLayout {
+    gap: 14px;
+  }
+
+  .card {
+    padding: 16px;
+    border-radius: 18px;
+  }
+
+  .cardHeader {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+
+  .badgeSoft {
+    align-self: flex-start;
+  }
+
+  .metaRowTop {
+    gap: 6px;
+  }
+
+  .metaRowBottom {
+    flex-direction: column;
+    gap: 8px;
+    margin-bottom: 10px;
+  }
+
+  .metaRowBottom > div {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+  }
+
+  .metaItemValue {
+    margin-left: 0;
+  }
+
+  .dividerLine {
+    margin: 10px 0 14px;
+  }
+
+  .inquiryBody,
+  .answerBody,
+  .bodyText {
+    font-size: 14px;
+    line-height: 1.75;
+    word-break: keep-all;
+    overflow-wrap: anywhere;
+  }
+
+  .answerMeta {
+    line-height: 1.6;
+    word-break: keep-all;
+    overflow-wrap: anywhere;
   }
 }

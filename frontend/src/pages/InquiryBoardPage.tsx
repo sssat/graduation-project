@@ -427,28 +427,16 @@ export default function InquiryBoardPage() {
           </div>
 
           {isListLoading ? (
-            <div className={styles.inquiryRow}>
-              <div className={styles.inquiryIndex}>-</div>
-              <div>-</div>
-              <div className={styles.inquiryTitleCell}>문의 목록을 불러오는 중입니다...</div>
-              <div className={styles.inquiryDate}>-</div>
-              <div>-</div>
+            <div className={`${styles.inquiryRow} ${styles.feedbackRow}`}>
+              <div className={styles.feedbackMessage}>문의 목록을 불러오는 중입니다...</div>
             </div>
           ) : listError ? (
-            <div className={styles.inquiryRow}>
-              <div className={styles.inquiryIndex}>!</div>
-              <div>-</div>
-              <div className={styles.inquiryTitleCell}>{listError}</div>
-              <div className={styles.inquiryDate}>-</div>
-              <div>-</div>
+            <div className={`${styles.inquiryRow} ${styles.feedbackRow}`}>
+              <div className={styles.feedbackMessage}>{listError}</div>
             </div>
           ) : items.length === 0 ? (
-            <div className={styles.inquiryRow}>
-              <div className={styles.inquiryIndex}>-</div>
-              <div>-</div>
-              <div className={styles.inquiryTitleCell}>조건에 맞는 문의가 없습니다.</div>
-              <div className={styles.inquiryDate}>-</div>
-              <div>-</div>
+            <div className={`${styles.inquiryRow} ${styles.feedbackRow}`}>
+              <div className={styles.feedbackMessage}>조건에 맞는 문의가 없습니다.</div>
             </div>
           ) : (
             items.map((row, idx) => {
@@ -456,24 +444,34 @@ export default function InquiryBoardPage() {
 
               return (
                 <div key={row.id} className={styles.inquiryRow}>
-                  <div className={styles.inquiryIndex}>{displayNo}</div>
+                  <div className={styles.inquiryIndex}>
+                    <span className={styles.mobileMetaLabel}>번호</span>
+                    <span>{displayNo}</span>
+                  </div>
 
-                  <div>
+                  <div className={styles.inquiryTypeCell}>
+                    <span className={styles.mobileMetaLabel}>유형</span>
                     <span className={pillClassByType(row.typeKey)}>{row.typeLabel}</span>
                   </div>
 
                   <div className={styles.inquiryTitleCell}>
-                    {row.isMine ? <span className={styles.myPill}>MY</span> : null}
-                    {row.isPrivate ? <span className={styles.lockPill}>🔒비공개</span> : null}
+                    <div className={styles.titleMetaRow}>
+                      {row.isMine ? <span className={styles.myPill}>MY</span> : null}
+                      {row.isPrivate ? <span className={styles.lockPill}>🔒비공개</span> : null}
+                    </div>
 
                     <Link to={`/inquiries/${row.id}`} className={styles.inquiryTitleLink}>
                       {row.title}
                     </Link>
                   </div>
 
-                  <div className={styles.inquiryDate}>{row.date}</div>
+                  <div className={styles.inquiryDate}>
+                    <span className={styles.mobileMetaLabel}>등록일</span>
+                    <span>{row.date}</span>
+                  </div>
 
-                  <div>
+                  <div className={styles.statusCell}>
+                    <span className={styles.mobileMetaLabel}>처리 상태</span>
                     <span className={styles.statusBadge} title={row.createdAt}>
                       <span
                         className={`${styles.statusDot} ${
