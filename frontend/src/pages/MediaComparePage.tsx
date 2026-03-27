@@ -408,7 +408,6 @@ export default function MediaComparePage() {
 
   const metaRangeLabel = useMemo(() => formatRangeLabelFromApi(headerData, period), [headerData, period]);
 
-  const rangeLabel = period === "7d" ? "최근 7일" : "최근 14일";
 
   useEffect(() => {
     if (!volumeCanvasRef.current) return;
@@ -617,7 +616,7 @@ export default function MediaComparePage() {
             ))}
 
             {noKeywordAvailable && (
-              <div className={styles.statusText}>표시 가능한 키워드(ALL + 기간 기준 10건 이상)가 없습니다.</div>
+              <div className={styles.statusText}>표시 가능한 키워드(최근 7일 기사 수 10건 이상)가 없습니다.</div>
             )}
           </div>
 
@@ -663,7 +662,7 @@ export default function MediaComparePage() {
             ) : isSummaryCardLoading ? (
               "데이터를 불러오는 중입니다..."
             ) : selectedKeywordSeq == null || !selectedKeywordLabel ? (
-              `${rangeLabel} 기준으로 비교 가능한 키워드가 없습니다.`
+              `최근 7일 기준으로 비교 가능한 키워드가 없습니다.`
             ) : aiSummaryText.trim() ? (
               aiSummaryText
             ) : (

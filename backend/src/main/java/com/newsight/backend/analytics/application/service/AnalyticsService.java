@@ -343,36 +343,51 @@ public class AnalyticsService {
      */
     public MediaCompareTopKeywordsResult getMediaCompareTopKeywords(String period, Integer limit) {
         PeriodFilter pf = parsePeriodFilter(period);
-        int resolvedLimit = normalizePositive(limit, DEFAULT_LIMIT, 1, 50);    
+        int resolvedLimit = normalizePositive(limit, DEFAULT_LIMIT, 1, 50);
 
         TrendRunRef latestRun = getLatestTrendRunOrThrow();
-        PeriodRange fallbackRange = toPeriodRange(latestRun.getBaseDate(), pf);    
+        PeriodRange fallbackRange = toPeriodRange(latestRun.getBaseDate(), pf);
+
+        // 상단 pill 노출 기준은 항상 D7 분석 가능 여부로 고정한다.
+        // 즉, 최근 14일 기사 수가 10건 이상이더라도 최근 7일 기사 수가 10건 미만이면
+        // 언론사 비교 페이지 상단 pill 후보에서 제외한다.
+        List<TrendKeywordFinalRank> d7Ranks =
+                trendKeywordFinalRankRepository.findByTrendRunSeqAndPeriodFilterOrderByFinalRankAsc(
+                        latestRun.getTrendRunSeq(), PeriodFilter.D7
+                );
+
+        Map<Long, Integer> d7ArticleCountMap = d7Ranks.stream()
+                .collect(Collectors.toMap(
+                        TrendKeywordFinalRank::getKeywordSeq,
+                        r -> r.getArticleCount() == null ? 0 : r.getArticleCount(),
+                        (left, right) -> left,
+                        LinkedHashMap::new
+                ));
 
         List<TrendKeywordFinalRank> ranks =
                 trendKeywordFinalRankRepository.findByTrendRunSeqAndPeriodFilterOrderByFinalRankAsc(
                         latestRun.getTrendRunSeq(), pf
-                );    
+                );
 
-        // 핵심: 10건 미만은 TOP 리스트에서 제외 → 버튼이 애초에 안 보임
         List<TrendKeywordFinalRank> top = ranks.stream()
-                .filter(r -> (r.getArticleCount() == null ? 0 : r.getArticleCount()) >= ANALYZABLE_MIN_ARTICLE_COUNT)
+                .filter(r -> d7ArticleCountMap.getOrDefault(r.getKeywordSeq(), 0) >= ANALYZABLE_MIN_ARTICLE_COUNT)
                 .limit(resolvedLimit)
-                .toList();    
+                .toList();
 
         Map<Long, String> keywordNameMap = loadKeywordNameMap(
                 top.stream().map(TrendKeywordFinalRank::getKeywordSeq).toList()
-        );    
+        );
 
         List<KeywordPillItem> items = top.stream()
                 .map(r -> new KeywordPillItem(
                         r.getKeywordSeq(),
                         keywordNameMap.getOrDefault(r.getKeywordSeq(), "(unknown)")
                 ))
-                .toList();    
+                .toList();
 
         Long selectedKeywordSeq = top.isEmpty() ? null : top.get(0).getKeywordSeq();
         String selectedKeyword = selectedKeywordSeq == null ? null : keywordNameMap.getOrDefault(selectedKeywordSeq, "(unknown)");
-        Integer selectedArticleCount = top.isEmpty() ? null : top.get(0).getArticleCount();    
+        Integer selectedArticleCount = top.isEmpty() ? null : top.get(0).getArticleCount();
 
         Integer selectedMediaCount = null;
         if (selectedKeywordSeq != null) {
@@ -383,7 +398,7 @@ public class AnalyticsService {
                     ALL_MEDIA_CODE
             );
             selectedMediaCount = (int) c;
-        }    
+        }
 
         PeriodRange displayRange = selectedKeywordSeq == null
                 ? fallbackRange
