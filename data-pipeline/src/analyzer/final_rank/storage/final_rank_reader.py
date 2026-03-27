@@ -4,10 +4,8 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
 from typing import Dict, List, Optional
 
-from src.common.db import get_conn
 from src.analyzer.final_rank.core.final_rank_calc import KeywordRow
 
 
@@ -59,15 +57,25 @@ def select_sum_counts_by_keyword(
     period_filter: str,
 ) -> Dict[int, int]:
     """
-    T_ANALYZE_MEDIA_STAT에서 (키워드×언론사) 기사수를 SUM 해서
-    KEYWORD_SEQ -> SUM(ARTICLE_COUNT)
+    T_ANALYZE_MEDIA_STAT에서 키워드별 전체 기사수를 읽어온다.
+
+    우선순위:
+    1) MEDIA_CODE = 0 (전체 합계 행)이 있으면 그 값을 사용
+    2) 전체 합계 행이 없는 경우에만 MEDIA_CODE <> 0 합계를 fallback으로 사용
+
+    기존 구현은 MEDIA_CODE 조건 없이 SUM(ARTICLE_COUNT)를 수행해서,
+    전체 행(MEDIA_CODE=0) + 언론사별 행(MEDIA_CODE<>0)을 함께 더하는 바람에
+    값이 2배로 저장될 수 있었다.
     """
     with conn.cursor() as cur:
         cur.execute(
             """
             SELECT
               KEYWORD_SEQ,
-              SUM(ARTICLE_COUNT) AS CNT
+              COALESCE(
+                MAX(CASE WHEN MEDIA_CODE = 0 THEN ARTICLE_COUNT END),
+                SUM(CASE WHEN MEDIA_CODE <> 0 THEN ARTICLE_COUNT ELSE 0 END)
+              ) AS CNT
             FROM T_ANALYZE_MEDIA_STAT
             WHERE TREND_RUN_SEQ = %s
               AND PERIOD_FILTER = %s
