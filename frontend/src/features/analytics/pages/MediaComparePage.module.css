@@ -250,7 +250,8 @@
 }
 
 .biasChartWrapper {
-  height: 280px;
+  height: 320px;
+  min-height: 320px;
 }
 
 .chartWrapperTall {
@@ -355,7 +356,8 @@
   }
 
   .biasChartWrapper {
-    height: 240px;
+    height: 280px;
+    min-height: 280px;
   }
 
   .chartWrapperTall {

@@ -236,11 +236,11 @@ function WordCloudD3({
     const minWeight = Math.min(...items.map((w) => w.weight));
 
     const toPx = (weight: number) => {
-      if (!Number.isFinite(weight)) return 22;
-      if (maxWeight <= 0 && minWeight <= 0) return 24;
-      if (maxWeight === minWeight) return 30;
+      if (!Number.isFinite(weight)) return 26;
+      if (maxWeight <= 0 && minWeight <= 0) return 30;
+      if (maxWeight === minWeight) return 38;
       const ratio = (weight - minWeight) / (maxWeight - minWeight);
-      return clamp(18 + ratio * 38, 16, 58);
+      return clamp(24 + ratio * 46, 20, 72);
     };
 
     const seedValue = hashInt(`${seed}-${width}-${height}`);
@@ -267,7 +267,7 @@ function WordCloudD3({
         const normalized = (out as CloudWord[]).map((w) => ({
           ...w,
           rotate: 0,
-          size: clamp(w.size, 14, 64),
+          size: clamp(w.size, 18, 76),
         }));
         setWords(normalized);
       });
@@ -364,12 +364,12 @@ function normalizeGraphLabel(label: unknown): string {
 }
 
 function getGraphNodeRadius(node: Pick<GraphNode, "value">) {
-  return clamp(10 + (node.value ?? 0) * 2.0, 14, 34);
+  return clamp(14 + (node.value ?? 0) * 2.55, 20, 42);
 }
 
-const NETWORK_PAD_X = 20;
-const NETWORK_PAD_TOP = 20;
-const NETWORK_PAD_BOTTOM = 44;
+const NETWORK_PAD_X = 28;
+const NETWORK_PAD_TOP = 28;
+const NETWORK_PAD_BOTTOM = 56;
 
 function clampGraphNodeToBounds(node: GraphNode, width: number, height: number) {
   const r = getGraphNodeRadius(node);
@@ -693,18 +693,18 @@ function NetworkGraph({
           .id((d: GraphNode) => d.id)
           .distance((l: GraphLink) => {
             const v = l.value ?? 1;
-            return clamp(180 - v * 30, 96, 210);
+            return clamp(228 - v * 28, 138, 268);
           })
           .strength((l: GraphLink) => {
             const v = l.value ?? 1;
-            return clamp(0.22 + v * 0.06, 0.18, 0.45);
+            return clamp(0.2 + v * 0.05, 0.16, 0.4);
           })
       )
-      .force("charge", forceManyBody().strength(-320))
+      .force("charge", forceManyBody().strength(-460))
       .force("center", forceCenter(width / 2, height / 2))
       .force(
         "collide",
-        forceCollide<GraphNode>().radius((d: GraphNode) => getGraphNodeRadius(d) + 12)
+        forceCollide<GraphNode>().radius((d: GraphNode) => getGraphNodeRadius(d) + 20)
       );
 
     let raf = 0;
@@ -838,7 +838,7 @@ function NetworkGraph({
                   <text
                     className={styles.networkLabel}
                     textAnchor="middle"
-                    y={r + 16}
+                    y={r + 20}
                     style={{ opacity: labelOpacity }}
                   >
                     {n.label}
@@ -1340,22 +1340,44 @@ export default function KeywordDetailPage() {
             <span className={styles.badgeSoft}>텍스트 감성</span>
           </div>
 
-          <div className={styles.chartWrapper}>
-            <canvas ref={sentimentCanvasRef} />
-          </div>
+          <div className={styles.sentimentLayout}>
+            <div className={styles.sentimentSummary}>
+              <div className={`${styles.sentimentMetric} ${styles.sentimentMetricPositive}`}>
+                <div className={styles.sentimentMetricHeader}>
+                  <span className={`${styles.sentimentMetricSwatch} ${styles.swatchPositive}`} />
+                  <span className={styles.sentimentMetricLabel}>긍정 (Positive)</span>
+                </div>
+                <div className={styles.sentimentMetricValueRow}>
+                  <div className={styles.sentimentMetricValue}>{sentiment.positive}</div>
+                  <span className={styles.sentimentMetricUnit}>%</span>
+                </div>
+              </div>
 
-          <div className={styles.chartLegend}>
-            <div className={styles.legendItem}>
-              <span className={`${styles.legendSwatch} ${styles.swatchPositive}`} />
-              긍정 (Positive) <strong>{sentiment.positive}%</strong>
+              <div className={`${styles.sentimentMetric} ${styles.sentimentMetricNeutral}`}>
+                <div className={styles.sentimentMetricHeader}>
+                  <span className={`${styles.sentimentMetricSwatch} ${styles.swatchNeutral}`} />
+                  <span className={styles.sentimentMetricLabel}>중립 (Neutral)</span>
+                </div>
+                <div className={styles.sentimentMetricValueRow}>
+                  <div className={styles.sentimentMetricValue}>{sentiment.neutral}</div>
+                  <span className={styles.sentimentMetricUnit}>%</span>
+                </div>
+              </div>
+
+              <div className={`${styles.sentimentMetric} ${styles.sentimentMetricNegative}`}>
+                <div className={styles.sentimentMetricHeader}>
+                  <span className={`${styles.sentimentMetricSwatch} ${styles.swatchNegative}`} />
+                  <span className={styles.sentimentMetricLabel}>부정 (Negative)</span>
+                </div>
+                <div className={styles.sentimentMetricValueRow}>
+                  <div className={styles.sentimentMetricValue}>{sentiment.negative}</div>
+                  <span className={styles.sentimentMetricUnit}>%</span>
+                </div>
+              </div>
             </div>
-            <div className={styles.legendItem}>
-              <span className={`${styles.legendSwatch} ${styles.swatchNeutral}`} />
-              중립 (Neutral) <strong>{sentiment.neutral}%</strong>
-            </div>
-            <div className={styles.legendItem}>
-              <span className={`${styles.legendSwatch} ${styles.swatchNegative}`} />
-              부정 (Negative) <strong>{sentiment.negative}%</strong>
+
+            <div className={`${styles.chartWrapper} ${styles.sentimentChartWrapper}`}>
+              <canvas ref={sentimentCanvasRef} />
             </div>
           </div>
         </article>
