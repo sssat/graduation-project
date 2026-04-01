@@ -1328,7 +1328,7 @@ export default function KeywordDetailPage() {
             <span className={styles.badgeSoft}>제목 기반</span>
           </div>
 
-          <WordCloudD3 items={viewData.titleWordcloud} height={220} seed={`${displayKeyword}-${period}-title`} />
+          <WordCloudD3 items={viewData.titleWordcloud} height={320} seed={`${displayKeyword}-${period}-title`} />
         </article>
 
         <article className={styles.card}>
@@ -1375,7 +1375,7 @@ export default function KeywordDetailPage() {
 
           {viewData.biasItems.length ? (
             <>
-              <div className={`${styles.chartWrapper} ${styles.chartWrapperStretch}`}>
+              <div className={`${styles.chartWrapper} ${styles.biasChartWrapper}`}>
                 <canvas ref={biasCanvasRef} />
               </div>
 
@@ -1403,7 +1403,7 @@ export default function KeywordDetailPage() {
             keyword={displayKeyword}
             apiNodes={viewData.coocNodes}
             apiEdges={viewData.coocEdges}
-            height={340}
+            height={440}
             seed={`${displayKeyword}-${period}-cooc`}
           />
         </article>
@@ -1419,7 +1419,7 @@ export default function KeywordDetailPage() {
             <span className={styles.badgeSoft}>댓글 기반</span>
           </div>
 
-          <WordCloudD3 items={viewData.commentWordcloud} height={220} seed={`${displayKeyword}-${period}-comment`} />
+          <WordCloudD3 items={viewData.commentWordcloud} height={320} seed={`${displayKeyword}-${period}-comment`} />
         </article>
       </section>
     </main>

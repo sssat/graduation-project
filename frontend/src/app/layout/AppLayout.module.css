@@ -35,4 +35,23 @@
   width: 100%;
   min-width: 0;
   flex: 0 0 auto;
+  padding-top: 112px;
+}
+
+@media (max-width: 1080px) {
+  .main {
+    padding-top: 102px;
+  }
+}
+
+@media (max-width: 768px) {
+  .main {
+    padding-top: 96px;
+  }
+}
+
+@media (max-width: 480px) {
+  .main {
+    padding-top: 88px;
+  }
 }

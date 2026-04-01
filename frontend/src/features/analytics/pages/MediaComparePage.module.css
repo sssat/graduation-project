@@ -21,13 +21,13 @@
 
 .pageRoot {
   width: 100%;
-  max-width: 1200px;
+  max-width: 1360px;
   margin: 0 auto;
-  padding: 28px 32px 40px;
+  padding: 32px 36px 52px;
 }
 
 .compareHeader {
-  margin-bottom: 24px;
+  margin-bottom: 28px;
 }
 
 .breadcrumb {
@@ -67,13 +67,13 @@
 }
 
 .compareMainTitle {
-  font-size: 26px;
-  font-weight: 700;
+  font-size: 30px;
+  font-weight: 800;
   margin: 0;
 }
 
 .compareSub {
-  font-size: 13px;
+  font-size: 14px;
   color: var(--ns-text-muted);
   margin: 0;
 }
@@ -167,36 +167,39 @@
 
 /* 카드 공통 */
 .card {
-  border-radius: 20px;
+  border-radius: 24px;
   background: #ffffff;
   border: 1px solid var(--ns-border-soft);
-  padding: 18px 20px 18px;
-  box-shadow: 0 18px 36px rgba(15, 23, 42, 0.08);
+  padding: 24px 28px 24px;
+  box-shadow: 0 22px 40px rgba(15, 23, 42, 0.08);
 }
 
 .cardHeader {
   display: flex;
   justify-content: space-between;
-  align-items: baseline;
-  margin-bottom: 10px;
-  gap: 10px;
+  align-items: flex-start;
+  margin-bottom: 16px;
+  gap: 14px;
+  flex-wrap: wrap;
 }
 
 .cardTitle {
-  font-size: 15px;
-  font-weight: 600;
+  font-size: 18px;
+  font-weight: 700;
 }
 
 .cardSub {
-  font-size: 12px;
+  margin-top: 6px;
+  font-size: 13px;
+  line-height: 1.6;
   color: var(--ns-text-muted);
 }
 
 .badgeSoft {
   display: inline-flex;
   align-items: center;
-  font-size: 11px;
-  padding: 4px 8px;
+  font-size: 12px;
+  padding: 6px 10px;
   border-radius: 999px;
   background: #eff6ff;
   color: #1d4ed8;
@@ -207,56 +210,60 @@
 .grid1 {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
-  gap: 16px;
-  margin-bottom: 18px;
+  gap: 20px;
+  margin-bottom: 20px;
 }
 
 .grid2 {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 16px;
-  margin-bottom: 18px;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 20px;
+  margin-bottom: 20px;
 }
 
 /* 요약 */
 .summaryText {
-  font-size: 13px;
-  line-height: 1.7;
+  font-size: 15px;
+  line-height: 1.9;
   color: #334155;
   white-space: pre-line;
   word-break: keep-all;
 }
 
 .statusText {
-  font-size: 12px;
+  font-size: 13px;
   color: var(--ns-text-muted);
-  line-height: 1.5;
+  line-height: 1.7;
 }
 
 .statusError {
-  margin-top: 8px;
-  font-size: 12px;
+  margin-top: 12px;
+  font-size: 13px;
   color: #dc2626;
-  line-height: 1.5;
+  line-height: 1.6;
 }
 
 /* 차트 */
 .chartWrapper {
   position: relative;
-  height: 240px;
+  height: 340px;
+}
+
+.biasChartWrapper {
+  height: 280px;
 }
 
 .chartWrapperTall {
   position: relative;
-  height: 240px;
+  height: 400px;
 }
 
 .chartLegend {
-  margin-top: 10px;
-  font-size: 11px;
+  margin-top: 16px;
+  font-size: 13px;
   color: var(--ns-text-muted);
   display: flex;
-  gap: 10px;
+  gap: 14px;
   flex-wrap: wrap;
 }
 
@@ -267,8 +274,8 @@
 }
 
 .legendSwatch {
-  width: 10px;
-  height: 10px;
+  width: 12px;
+  height: 12px;
   border-radius: 999px;
 }
 
@@ -285,32 +292,34 @@
 }
 
 .biasCaption {
-  font-size: 11px;
+  font-size: 13px;
+  line-height: 1.7;
   color: var(--ns-text-muted);
-  margin-top: 8px;
+  margin-top: 14px;
 }
 
 /* 대표 단어(프레이밍) 리스트 */
 .framingList {
-  margin-top: 6px;
-  font-size: 13px;
+  margin-top: 12px;
+  font-size: 14px;
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 10px;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 14px;
 }
 
 .framingItem {
-  padding: 10px 12px;
-  border-radius: 14px;
+  min-height: 120px;
+  padding: 16px 18px;
+  border-radius: 18px;
   background: #f8fbff;
   border: 1px solid rgba(226, 232, 240, 0.95);
 }
 
 .framingMedia {
-  font-size: 12px;
-  font-weight: 600;
+  font-size: 14px;
+  font-weight: 700;
   color: #0f172a;
-  margin-bottom: 4px;
+  margin-bottom: 8px;
 }
 
 .framingKeywords {
@@ -321,8 +330,8 @@
 
 /* 강조 제거: 전부 동일 스타일만 사용 */
 .keywordTagNeutral {
-  font-size: 11px;
-  padding: 3px 8px;
+  font-size: 12px;
+  padding: 5px 10px;
   border-radius: 999px;
   background: #eef4ff;
   color: #475569;
@@ -330,19 +339,27 @@
 
 @media (max-width: 900px) {
   .pageRoot {
-    padding: 22px 18px 32px;
-  }
-
-  .grid2 {
-    grid-template-columns: minmax(0, 1fr);
+    padding: 24px 18px 36px;
   }
 
   .compareMainTitle {
-    font-size: 22px;
+    font-size: 24px;
   }
 
   .framingList {
     grid-template-columns: minmax(0, 1fr);
+  }
+
+  .chartWrapper {
+    height: 280px;
+  }
+
+  .biasChartWrapper {
+    height: 240px;
+  }
+
+  .chartWrapperTall {
+    height: 320px;
   }
 }
 

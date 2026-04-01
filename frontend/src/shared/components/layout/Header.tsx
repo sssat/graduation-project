@@ -11,6 +11,16 @@ import styles from "./Header.module.css";
 import logo from "../../../assets/logo.png";
 import { useAuth } from "../../../features/auth/hooks/useAuth";
 
+type HeaderScrollState = "top" | "visible" | "hidden";
+type HeaderScrollDirection = "up" | "down" | null;
+
+const HEADER_TOP_THRESHOLD = 20;
+const HEADER_HIDE_THRESHOLD = 132;
+const HEADER_LOCK_HIDDEN_THRESHOLD = 180;
+const HEADER_REVEAL_THRESHOLD = 72;
+const HEADER_HIDE_DISTANCE = 28;
+const HEADER_SHOW_DISTANCE = 18;
+
 function AdminShieldIcon(props: { className?: string }) {
   return (
     <svg
@@ -60,9 +70,16 @@ export default function Header() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
+  const headerRef = useRef<HTMLElement | null>(null);
   const userMenuRef = useRef<HTMLDivElement | null>(null);
   const mobileMenuRef = useRef<HTMLDivElement | null>(null);
   const mobileMenuButtonRef = useRef<HTMLButtonElement | null>(null);
+  const lastScrollYRef = useRef(0);
+  const scrollStateRef = useRef<HeaderScrollState>("top");
+  const scrollDirectionRef = useRef<HeaderScrollDirection>(null);
+  const scrollTravelRef = useRef(0);
+  const hiddenLockRef = useRef(false);
+  const menusOpenRef = useRef(false);
 
   const linkClass = (navData: NavLinkRenderProps) =>
     navData.isActive ? `${styles.navLink} ${styles.active}` : styles.navLink;
@@ -102,6 +119,14 @@ export default function Header() {
     setMobileMenuOpen((prev) => !prev);
   }, []);
 
+  const setHeaderScrollState = useCallback((nextState: HeaderScrollState) => {
+    const headerEl = headerRef.current;
+    if (!headerEl || scrollStateRef.current === nextState) return;
+
+    headerEl.dataset.scrollState = nextState;
+    scrollStateRef.current = nextState;
+  }, []);
+
   useEffect(() => {
     const onDocMouseDown = (e: MouseEvent) => {
       const target = e.target;
@@ -136,6 +161,129 @@ export default function Header() {
     };
   }, [closeAllMenus, closeDesktopMenu, closeMobileMenu]);
 
+  useEffect(() => {
+    menusOpenRef.current = menuOpen || mobileMenuOpen;
+
+    if (menusOpenRef.current) {
+      setHeaderScrollState("visible");
+    }
+  }, [menuOpen, mobileMenuOpen, setHeaderScrollState]);
+
+  useEffect(() => {
+    const headerEl = headerRef.current;
+    if (!headerEl) return;
+
+    let rafId: number | null = null;
+
+    headerEl.dataset.scrollState = "top";
+    scrollStateRef.current = "top";
+    lastScrollYRef.current = window.scrollY || 0;
+
+    const updateHeaderOnScroll = () => {
+      rafId = null;
+
+      const currentScrollY = Math.max(window.scrollY || 0, 0);
+      const previousScrollY = lastScrollYRef.current;
+      const delta = currentScrollY - previousScrollY;
+      const absDelta = Math.abs(delta);
+
+      if (menusOpenRef.current) {
+        lastScrollYRef.current = currentScrollY;
+        scrollDirectionRef.current = null;
+        scrollTravelRef.current = 0;
+        hiddenLockRef.current = false;
+        setHeaderScrollState("visible");
+        return;
+      }
+
+      if (currentScrollY <= HEADER_TOP_THRESHOLD) {
+        scrollDirectionRef.current = null;
+        scrollTravelRef.current = 0;
+        hiddenLockRef.current = false;
+        setHeaderScrollState("top");
+        lastScrollYRef.current = currentScrollY;
+        return;
+      }
+
+      if (currentScrollY >= HEADER_LOCK_HIDDEN_THRESHOLD) {
+        scrollDirectionRef.current = null;
+        scrollTravelRef.current = 0;
+        hiddenLockRef.current = true;
+        setHeaderScrollState("hidden");
+        lastScrollYRef.current = currentScrollY;
+        return;
+      }
+
+      if (hiddenLockRef.current) {
+        if (currentScrollY <= HEADER_REVEAL_THRESHOLD) {
+          hiddenLockRef.current = false;
+          scrollDirectionRef.current = null;
+          scrollTravelRef.current = 0;
+          setHeaderScrollState("visible");
+        } else {
+          setHeaderScrollState("hidden");
+        }
+
+        lastScrollYRef.current = currentScrollY;
+        return;
+      }
+
+      if (currentScrollY <= HEADER_REVEAL_THRESHOLD) {
+        scrollDirectionRef.current = null;
+        scrollTravelRef.current = 0;
+        setHeaderScrollState("visible");
+        lastScrollYRef.current = currentScrollY;
+        return;
+      }
+
+      if (absDelta < 2) {
+        lastScrollYRef.current = currentScrollY;
+        return;
+      }
+
+      const nextDirection: HeaderScrollDirection = delta > 0 ? "down" : "up";
+
+      if (scrollDirectionRef.current !== nextDirection) {
+        scrollDirectionRef.current = nextDirection;
+        scrollTravelRef.current = 0;
+      }
+
+      scrollTravelRef.current += absDelta;
+
+      if (
+        nextDirection === "down" &&
+        currentScrollY >= HEADER_HIDE_THRESHOLD &&
+        scrollTravelRef.current >= HEADER_HIDE_DISTANCE
+      ) {
+        setHeaderScrollState("hidden");
+        scrollTravelRef.current = 0;
+      } else if (
+        nextDirection === "up" &&
+        scrollTravelRef.current >= HEADER_SHOW_DISTANCE
+      ) {
+        setHeaderScrollState("visible");
+        scrollTravelRef.current = 0;
+      }
+
+      lastScrollYRef.current = currentScrollY;
+    };
+
+    const onScroll = () => {
+      if (rafId !== null) return;
+      rafId = window.requestAnimationFrame(updateHeaderOnScroll);
+    };
+
+    window.addEventListener("scroll", onScroll, { passive: true });
+
+    return () => {
+      if (rafId !== null) {
+        window.cancelAnimationFrame(rafId);
+      }
+
+      window.removeEventListener("scroll", onScroll);
+    };
+  }, [setHeaderScrollState]);
+
   const handleLogout = useCallback(async () => {
     closeAllMenus();
     await logout();
@@ -143,7 +291,7 @@ export default function Header() {
   }, [closeAllMenus, logout, nav]);
 
   return (
-    <header className={styles.siteHeader}>
+    <header ref={headerRef} className={styles.siteHeader} data-scroll-state="top">
       <div className={styles.headerInner}>
         <Link
           to="/"

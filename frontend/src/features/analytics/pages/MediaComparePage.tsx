@@ -744,7 +744,7 @@ export default function MediaComparePage() {
             <span className={styles.badgeSoft}>편향 분석</span>
           </div>
 
-          <div className={styles.chartWrapper}>
+          <div className={`${styles.chartWrapper} ${styles.biasChartWrapper}`}>
             <canvas ref={biasCanvasRef} />
           </div>
 

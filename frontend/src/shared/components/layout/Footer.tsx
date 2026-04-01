@@ -1,5 +1,6 @@
 // frontend/src/components/layout/Footer.tsx
 
+import { Link } from "react-router-dom";
 import styles from "./Footer.module.css";
 
 export default function Footer() {
@@ -22,15 +23,15 @@ export default function Footer() {
           <div className={styles.linkBlock} aria-label="푸터 링크">
             <div className={styles.linkCol}>
               <div className={styles.linkTitle}>서비스</div>
-              <a className={styles.link} href="/">
+              <Link className={styles.link} to="/">
                 메인
-              </a>
-              <a className={styles.link} href="/media">
+              </Link>
+              <Link className={styles.link} to="/media">
                 언론사 비교
-              </a>
-              <a className={styles.link} href="/inquiries">
+              </Link>
+              <Link className={styles.link} to="/inquiries">
                 문의하기
-              </a>
+              </Link>
             </div>
 
             <div className={styles.linkCol}>
