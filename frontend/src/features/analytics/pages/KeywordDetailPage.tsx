@@ -355,7 +355,9 @@ const COOC_RENDER_MAX_NODES = 20;
 const COOC_RENDER_MAX_LINKS = 60;
 
 // 실제로 화면에 보이게 할 상위 노드 수 상한
-const COOC_LABEL_TOP_N = 12;
+const COOC_VISIBLE_MAX_NODES = 18;
+
+const GRAPH_NODE_COLOR_VARIANTS = 6;
 
 function normalizeGraphLabel(label: unknown): string {
   return String(label ?? "")
@@ -402,6 +404,7 @@ function getGraphPalette() {
     { fill: "#dc2626", stroke: "rgba(254,202,202,0.88)", line: "rgba(239,68,68,0.96)" },
     { fill: "#14b8a6", stroke: "rgba(153,246,228,0.84)", line: "rgba(45,212,191,0.96)" },
     { fill: "#8b5cf6", stroke: "rgba(221,214,254,0.84)", line: "rgba(167,139,250,0.96)" },
+    { fill: "#ec4899", stroke: "rgba(251,207,232,0.9)", line: "rgba(236,72,153,0.96)" },
   ] satisfies GraphPaletteItem[];
 }
 
@@ -473,7 +476,7 @@ function buildApiCoMentionGraph(
     return {
       id: String(n.id),
       label: normalizedLabel,
-      group: hashInt(normalizedLabel) % 5,
+      group: hashInt(`graph-color-${seed}-${normalizedLabel}-${n.id}`) % GRAPH_NODE_COLOR_VARIANTS,
       value: normalizedValue,
       x: (rand() - 0.5) * 80,
       y: (rand() - 0.5) * 80,
@@ -578,7 +581,8 @@ function NetworkGraph({
         ids.add(n.id);
       }
     }
-    for (const n of sorted.slice(0, COOC_LABEL_TOP_N)) {
+    for (const n of sorted) {
+      if (ids.size >= COOC_VISIBLE_MAX_NODES) break;
       ids.add(n.id);
     }
 
