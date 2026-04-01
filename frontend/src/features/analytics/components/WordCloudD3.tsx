@@ -1,7 +1,11 @@
 // frontend/src/components/WordCloudD3.tsx
 import { useEffect, useMemo, useRef, useState } from "react";
 import cloud from "d3-cloud";
-import type { WordItem } from "../../../mocks/keywordMockData";
+
+type WordItem = {
+  text: string;
+  size: 1 | 2 | 3;
+};
 
 type CloudWord = {
   text: string;

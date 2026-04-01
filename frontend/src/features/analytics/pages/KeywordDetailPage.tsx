@@ -155,7 +155,7 @@ function getChartColors(el: HTMLElement | null): ChartColors {
   const style = window.getComputedStyle(base);
 
   const sentPos = readCssVar(style, "--ns-sent-pos") || "#22c55e";
-  const sentNeu = readCssVar(style, "--ns-sent-neu") || "#e5e7eb";
+  const sentNeu = readCssVar(style, "--ns-sent-neu") || "#cbd5e1";
   const sentNeg = readCssVar(style, "--ns-sent-neg") || "#ef4444";
   const biasPos = readCssVar(style, "--ns-bias-pos") || "#38bdf8";
   const biasNeg = readCssVar(style, "--ns-bias-neg") || "#f97316";
@@ -1091,13 +1091,13 @@ export default function KeywordDetailPage() {
         scales: {
           x: {
             grid: { display: false },
-            ticks: { color: "#9ca3af", font: { size: 11 } },
+            ticks: { color: "#64748b", font: { size: 11 } },
           },
           y: {
             min: -10,
             max: 10,
-            grid: { color: "rgba(55,65,81,0.5)" },
-            ticks: { color: "#9ca3af", font: { size: 11 } },
+            grid: { color: "rgba(148,163,184,0.32)" },
+            ticks: { color: "#64748b", font: { size: 11 } },
           },
         },
         plugins: {

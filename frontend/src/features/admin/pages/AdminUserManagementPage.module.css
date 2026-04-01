@@ -1,13 +1,13 @@
 /* frontend/src/pages/AdminUserManagementPage.module.css */
 
 :global(:root) {
-  --bg-body: #020617;
-  --accent-yellow: #facc15;
-  --accent-blue: #38bdf8;
-  --accent-purple: #8b5cf6;
-  --accent-pink: #f472b6;
-  --border-soft: rgba(148, 163, 184, 0.35);
-  --text-muted: #9ca3af;
+  --bg-body: #f4f7fb;
+  --accent-yellow: #f59e0b;
+  --accent-blue: #2563eb;
+  --accent-purple: #0ea5e9;
+  --accent-pink: #14b8a6;
+  --border-soft: rgba(148, 163, 184, 0.22);
+  --text-muted: #64748b;
 }
 
 .pageRoot {
@@ -54,7 +54,7 @@
   margin: 0;
   font-size: 26px;
   font-weight: 700;
-  color: #f9fafb;
+  color: #0f172a;
 }
 
 .heroSub {
@@ -65,9 +65,9 @@
 
 .card {
   border-radius: 20px;
-  background: radial-gradient(circle at top left, #111827 0, #020617 60%);
+  background: #ffffff;
   border: 1px solid var(--border-soft);
-  box-shadow: 0 18px 40px rgba(15, 23, 42, 0.7);
+  box-shadow: 0 18px 40px rgba(15, 23, 42, 0.08);
   padding: 18px 20px 20px;
 }
 
@@ -82,7 +82,7 @@
 .cardTitle {
   font-size: 14px;
   font-weight: 600;
-  color: #e5e7eb;
+  color: #0f172a;
 }
 
 .cardMeta {
@@ -129,11 +129,11 @@
 .input,
 .select {
   width: 100%;
-  background: rgba(15, 23, 42, 0.95);
-  border: 1px solid rgba(55, 65, 81, 0.95);
+  background: #ffffff;
+  border: 1px solid rgba(203, 213, 225, 0.95);
   border-radius: 12px;
   padding: 10px 12px;
-  color: #e5e7eb;
+  color: #0f172a;
   font-family: inherit;
   font-size: 12px;
 }
@@ -149,9 +149,9 @@
   width: 100%;
   height: 38px;
   border-radius: 12px;
-  border: 1px solid rgba(148, 163, 184, 0.45);
-  background: rgba(15, 23, 42, 0.95);
-  color: #e5e7eb;
+  border: 1px solid rgba(148, 163, 184, 0.32);
+  background: #ffffff;
+  color: #334155;
   font-family: inherit;
   font-size: 12px;
   font-weight: 700;
@@ -160,9 +160,9 @@
 }
 
 .searchButton:hover:not(:disabled) {
-  border-color: rgba(129, 140, 248, 0.7);
-  background: rgba(30, 41, 59, 0.96);
-  box-shadow: 0 14px 28px rgba(2, 6, 23, 0.35);
+  border-color: rgba(37, 99, 235, 0.35);
+  background: #f8fbff;
+  box-shadow: 0 14px 28px rgba(37, 99, 235, 0.08);
 }
 
 .searchButton:active:not(:disabled) {
@@ -177,7 +177,7 @@
 .tableScroll {
   max-height: 520px;
   overflow: auto;
-  border: 1px solid rgba(148, 163, 184, 0.25);
+  border: 1px solid rgba(226, 232, 240, 0.95);
   border-radius: 14px;
 }
 
@@ -191,7 +191,7 @@
 .table th,
 .table td {
   padding: 8px 10px;
-  border-bottom: 1px solid rgba(31, 41, 55, 0.85);
+  border-bottom: 1px solid rgba(226, 232, 240, 0.95);
   vertical-align: middle;
   text-align: left;
 }
@@ -200,7 +200,7 @@
   position: sticky;
   top: 0;
   z-index: 1;
-  background: #0b1220;
+  background: #f8fbff;
   color: var(--text-muted);
   font-weight: 500;
 }
@@ -214,7 +214,7 @@
 
 .cellStrong {
   font-weight: 600;
-  color: #e5e7eb;
+  color: #0f172a;
 }
 
 .emptyRow {
@@ -230,26 +230,26 @@
   padding: 3px 10px;
   border-radius: 999px;
   font-size: 11px;
-  border: 1px solid rgba(148, 163, 184, 0.45);
-  background: rgba(15, 23, 42, 0.95);
+  border: 1px solid rgba(148, 163, 184, 0.32);
+  background: #ffffff;
   white-space: nowrap;
 }
 
 .roleUser {
-  border-color: rgba(148, 163, 184, 0.55);
-  color: #e5e7eb;
+  border-color: rgba(148, 163, 184, 0.32);
+  color: #334155;
 }
 
 .roleAdmin {
-  border-color: rgba(56, 189, 248, 0.7);
-  color: #bae6fd;
-  background: rgba(56, 189, 248, 0.12);
+  border-color: rgba(37, 99, 235, 0.24);
+  color: #1d4ed8;
+  background: rgba(37, 99, 235, 0.08);
 }
 
 .roleSuper {
-  border-color: rgba(139, 92, 246, 0.7);
-  color: #ddd6fe;
-  background: rgba(139, 92, 246, 0.12);
+  border-color: rgba(14, 165, 233, 0.24);
+  color: #0369a1;
+  background: rgba(14, 165, 233, 0.08);
 }
 
 .btnTable {
@@ -258,9 +258,9 @@
   justify-content: center;
   padding: 6px 10px;
   border-radius: 999px;
-  border: 1px solid rgba(148, 163, 184, 0.7);
-  background: rgba(15, 23, 42, 0.95);
-  color: #e5e7eb;
+  border: 1px solid rgba(148, 163, 184, 0.32);
+  background: #ffffff;
+  color: #334155;
   font-size: 11px;
   cursor: pointer;
   line-height: 1;
@@ -270,8 +270,8 @@
 }
 
 .btnTable:hover:not(:disabled) {
-  border-color: rgba(129, 140, 248, 0.7);
-  box-shadow: 0 14px 28px rgba(2, 6, 23, 0.35);
+  border-color: rgba(37, 99, 235, 0.35);
+  box-shadow: 0 14px 28px rgba(37, 99, 235, 0.08);
 }
 
 .btnTable:active:not(:disabled) {
@@ -284,34 +284,34 @@
 }
 
 .btnPromote {
-  border-color: rgba(34, 197, 94, 0.8);
-  color: #4ade80;
-  background: rgba(15, 23, 42, 0.95);
+  border-color: rgba(34, 197, 94, 0.28);
+  color: #15803d;
+  background: #ffffff;
   font-weight: 700;
 }
 
 .btnPromote:hover:not(:disabled) {
   background: rgba(34, 197, 94, 0.08);
-  border-color: rgba(34, 197, 94, 0.95);
+  border-color: rgba(34, 197, 94, 0.4);
   box-shadow: none;
 }
 
 .btnDemote {
-  border-color: rgba(250, 204, 21, 0.8);
-  color: #facc15;
-  background: rgba(15, 23, 42, 0.95);
+  border-color: rgba(245, 158, 11, 0.28);
+  color: #a16207;
+  background: #ffffff;
   font-weight: 700;
 }
 
 .btnDemote:hover:not(:disabled) {
   background: rgba(250, 204, 21, 0.08);
-  border-color: rgba(250, 204, 21, 0.95);
+  border-color: rgba(245, 158, 11, 0.4);
   box-shadow: none;
 }
 
 .btnDanger {
-  border-color: rgba(248, 113, 113, 0.8);
-  color: #fecaca;
+  border-color: rgba(248, 113, 113, 0.32);
+  color: #b91c1c;
 }
 
 .pagination {
@@ -327,15 +327,16 @@
   min-width: 28px;
   height: 26px;
   border-radius: 999px;
-  border: 1px solid rgba(148, 163, 184, 0.5);
-  background: rgba(15, 23, 42, 0.9);
-  color: #e5e7eb;
+  border: 1px solid rgba(148, 163, 184, 0.32);
+  background: #ffffff;
+  color: #334155;
   cursor: pointer;
 }
 
 .pageActive {
-  background: linear-gradient(135deg, #0ea5e9, #6366f1);
+  background: linear-gradient(135deg, #2563eb, #38bdf8);
   border-color: transparent;
+  color: #ffffff;
 }
 
 .pageBtn:disabled {
@@ -419,7 +420,7 @@
     border: 1px solid rgba(148, 163, 184, 0.22);
     border-radius: 16px;
     overflow: hidden;
-    background: rgba(15, 23, 42, 0.72);
+    background: #ffffff;
   }
 
   .table td {

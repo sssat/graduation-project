@@ -3,19 +3,19 @@
 .pageRoot {
   /* 차트 색상은 CSS 모듈에서만 정의 */
   --ns-sent-pos: #22c55e;
-  --ns-sent-neu: #e5e7eb;
+  --ns-sent-neu: #cbd5e1;
   --ns-sent-neg: #ef4444;
   --ns-bias-pos: #38bdf8;
   --ns-bias-neg: #f97316;
 
-  --ns-accent-yellow: #facc15;
-  --ns-accent-blue: #38bdf8;
-  --ns-accent-purple: #8b5cf6;
-  --ns-accent-pink: #f472b6;
+  --ns-accent-yellow: #f59e0b;
+  --ns-accent-blue: #2563eb;
+  --ns-accent-purple: #0ea5e9;
+  --ns-accent-pink: #14b8a6;
 
-  --ns-border-soft: rgba(148, 163, 184, 0.35);
-  --ns-text-muted: #9ca3af;
-  --ns-text-main: #e5e7eb;
+  --ns-border-soft: rgba(148, 163, 184, 0.22);
+  --ns-text-muted: #64748b;
+  --ns-text-main: #0f172a;
 
   width: 100%;
   max-width: 1200px;
@@ -69,10 +69,10 @@
   gap: 6px;
   padding: 4px 10px;
   border-radius: 999px;
-  background: rgba(15, 23, 42, 0.8);
-  border: 1px solid rgba(148, 163, 184, 0.4);
+  background: #eff6ff;
+  border: 1px solid rgba(191, 219, 254, 0.95);
   font-size: 12px;
-  color: #e5e7eb;
+  color: #1d4ed8;
   width: fit-content;
 }
 
@@ -93,7 +93,7 @@
 
 .periodNote {
   font-size: 12px;
-  color: rgba(148, 163, 184, 0.95);
+  color: #64748b;
 }
 
 .filterBar {
@@ -112,8 +112,8 @@
   display: inline-flex;
   border-radius: 999px;
   padding: 2px;
-  background: rgba(15, 23, 42, 0.8);
-  border: 1px solid rgba(148, 163, 184, 0.4);
+  background: #eef4ff;
+  border: 1px solid rgba(191, 219, 254, 0.95);
 }
 
 .filterChip {
@@ -122,7 +122,7 @@
   border-radius: 999px;
   border: none;
   background: transparent;
-  color: #e5e7eb;
+  color: #475569;
   cursor: pointer;
   transition: transform 0.08s ease, opacity 0.15s ease;
 }
@@ -136,17 +136,18 @@
 }
 
 .active {
-  background: linear-gradient(135deg, rgba(56, 189, 248, 0.45), rgba(129, 140, 248, 0.6));
+  background: linear-gradient(135deg, #2563eb, #38bdf8);
+  color: #ffffff;
 }
 
 .card {
   --card-pad-x: 20px;
 
   border-radius: 20px;
-  background: radial-gradient(circle at top left, #111827 0, #020617 60%);
+  background: #ffffff;
   border: 1px solid var(--ns-border-soft);
   padding: 18px var(--card-pad-x) 18px;
-  box-shadow: 0 14px 32px rgba(15, 23, 42, 0.6);
+  box-shadow: 0 18px 36px rgba(15, 23, 42, 0.08);
 }
 
 .cardFill {
@@ -179,8 +180,8 @@
   font-size: 11px;
   padding: 4px 8px;
   border-radius: 999px;
-  background: rgba(148, 163, 184, 0.18);
-  color: #e5e7eb;
+  background: #eff6ff;
+  color: #1d4ed8;
   white-space: nowrap;
 }
 
@@ -208,7 +209,7 @@
 .summaryText {
   font-size: 13px;
   line-height: 1.7;
-  color: #e5e7eb;
+  color: #334155;
   white-space: pre-line;
   word-break: keep-all;
 }
@@ -223,7 +224,7 @@
 .statusTitle {
   font-size: 16px;
   font-weight: 700;
-  color: #f8fafc;
+  color: #0f172a;
 }
 
 .statusText {
@@ -233,11 +234,11 @@
 }
 
 .statusText code {
-  background: rgba(148, 163, 184, 0.18);
-  border: 1px solid rgba(148, 163, 184, 0.2);
+  background: #eff6ff;
+  border: 1px solid rgba(191, 219, 254, 0.95);
   border-radius: 6px;
   padding: 2px 6px;
-  color: #e5e7eb;
+  color: #1d4ed8;
 }
 
 .statusActions {
@@ -262,8 +263,8 @@
 }
 
 .primaryLinkButton {
-  background: linear-gradient(135deg, rgba(56, 189, 248, 0.85), rgba(129, 140, 248, 0.9));
-  color: #03111f;
+  background: linear-gradient(135deg, #2563eb, #38bdf8);
+  color: #ffffff;
   border: none;
 }
 
@@ -272,13 +273,13 @@
 }
 
 .secondaryButton {
-  background: rgba(148, 163, 184, 0.12);
-  color: #e5e7eb;
-  border: 1px solid rgba(148, 163, 184, 0.3);
+  background: #ffffff;
+  color: #334155;
+  border: 1px solid rgba(148, 163, 184, 0.32);
 }
 
 .secondaryButton:hover {
-  background: rgba(148, 163, 184, 0.18);
+  background: #f8fafc;
 }
 
 .wordcloudClassic {
@@ -306,9 +307,9 @@
 .emptyBox {
   width: calc(100% - (var(--card-pad-x) * 2));
   min-height: 140px;
-  border: 1px dashed rgba(148, 163, 184, 0.35);
+  border: 1px dashed rgba(148, 163, 184, 0.45);
   border-radius: 14px;
-  background: rgba(15, 23, 42, 0.22);
+  background: #f8fbff;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -349,7 +350,7 @@
 }
 
 .chartLegend strong {
-  color: #e5e7eb;
+  color: #0f172a;
   font-weight: 700;
 }
 
@@ -420,15 +421,15 @@
 }
 
 .networkCircle {
-  filter: drop-shadow(0 10px 18px rgba(2, 6, 23, 0.6));
+  filter: drop-shadow(0 10px 16px rgba(37, 99, 235, 0.14));
 }
 
 .networkLabel {
-  fill: #e5e7eb;
+  fill: #0f172a;
   font-size: 12px;
   font-weight: 700;
   paint-order: stroke;
-  stroke: rgba(2, 6, 23, 0.85);
+  stroke: rgba(255, 255, 255, 0.92);
   stroke-width: 3px;
   letter-spacing: -0.02em;
 }

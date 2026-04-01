@@ -1,14 +1,14 @@
 /* frontend/src/pages/AdminDashboardPage.module.css */
 
 :global(:root) {
-  --bg-body: #020617;
-  --accent-yellow: #facc15;
-  --accent-blue: #38bdf8;
-  --accent-purple: #8b5cf6;
-  --accent-pink: #f472b6;
-  --border-soft: rgba(148, 163, 184, 0.35);
-  --text-muted: #9ca3af;
-  --card-bg: rgba(15, 23, 42, 0.96);
+  --bg-body: #f4f7fb;
+  --accent-yellow: #f59e0b;
+  --accent-blue: #2563eb;
+  --accent-purple: #0ea5e9;
+  --accent-pink: #14b8a6;
+  --border-soft: rgba(148, 163, 184, 0.22);
+  --text-muted: #64748b;
+  --card-bg: #ffffff;
 }
 
 .pageRoot {
@@ -53,7 +53,7 @@
   margin: 0;
   font-size: 26px;
   font-weight: 700;
-  color: #f9fafb;
+  color: #0f172a;
 }
 
 .heroSub {
@@ -69,9 +69,9 @@
 /* 카드 공통 */
 .card {
   border-radius: 20px;
-  background: radial-gradient(circle at top left, #111827 0, #020617 60%);
+  background: #ffffff;
   border: 1px solid var(--border-soft);
-  box-shadow: 0 18px 40px rgba(15, 23, 42, 0.7);
+  box-shadow: 0 18px 40px rgba(15, 23, 42, 0.08);
   padding: 18px 20px 20px;
 }
 
@@ -98,7 +98,7 @@
 .cardTitle {
   font-size: 15px;
   font-weight: 600;
-  color: #e5e7eb;
+  color: #0f172a;
 }
 
 .cardSub {
@@ -125,8 +125,9 @@
 .summaryCard {
   border-radius: 18px;
   padding: 14px 16px;
-  background: radial-gradient(circle at top left, #1f2937 0, #020617 85%);
-  border: 1px solid rgba(55, 65, 81, 0.9);
+  background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
+  border: 1px solid rgba(219, 234, 254, 0.95);
+  box-shadow: 0 14px 30px rgba(15, 23, 42, 0.06);
 }
 
 .summaryLabel {
@@ -144,7 +145,7 @@
 .summaryValue {
   font-size: 22px;
   font-weight: 600;
-  color: #f9fafb;
+  color: #0f172a;
 }
 
 .summaryUnit {
@@ -156,7 +157,7 @@
 .summaryMeta {
   margin-top: 4px;
   font-size: 11px;
-  color: #a5b4fc;
+  color: #2563eb;
 }
 
 /* 로그 테이블 */
@@ -170,7 +171,7 @@
 .logTable th,
 .logTable td {
   padding: 8px 10px;
-  border-bottom: 1px solid rgba(31, 41, 55, 0.85);
+  border-bottom: 1px solid rgba(226, 232, 240, 0.95);
   vertical-align: top;
   text-align: left;
 }
@@ -191,31 +192,31 @@
   padding: 3px 8px;
   border-radius: 999px;
   font-size: 11px;
-  border: 1px solid rgba(148, 163, 184, 0.5);
-  background: rgba(15, 23, 42, 0.95);
+  border: 1px solid rgba(148, 163, 184, 0.32);
+  background: #ffffff;
   white-space: nowrap;
 }
 
 .logStatusSuccess {
-  border-color: rgba(34, 197, 94, 0.8);
-  color: #4ade80;
+  border-color: rgba(34, 197, 94, 0.28);
+  color: #15803d;
 }
 
 .logStatusFail {
-  border-color: rgba(248, 113, 113, 0.8);
-  color: #fecaca;
+  border-color: rgba(248, 113, 113, 0.32);
+  color: #b91c1c;
 }
 
 .logTable thead th {
   position: sticky;
   top: 0;
   z-index: 1;
-  background: #0b1220;
+  background: #f8fbff;
 }
 
 /* 로그인 시도 기록: 둥근 모서리 클리핑 보장용 프레임/내부 스크롤 */
 .logTableFrame {
-  border: 1px solid rgba(148, 163, 184, 0.25);
+  border: 1px solid rgba(226, 232, 240, 0.95);
   border-radius: 14px;
   overflow: hidden;
 }
@@ -241,15 +242,15 @@
 
 .btnPrimary {
   border: none;
-  background: linear-gradient(90deg, var(--accent-blue), var(--accent-purple), var(--accent-pink));
-  color: #0b1120;
+  background: linear-gradient(90deg, var(--accent-blue), #38bdf8, #22d3ee);
+  color: #ffffff;
   font-weight: 600;
 }
 
 .btnSecondary {
-  border: 1px solid rgba(148, 163, 184, 0.7);
-  background: rgba(15, 23, 42, 0.95);
-  color: #e5e7eb;
+  border: 1px solid rgba(148, 163, 184, 0.32);
+  background: #ffffff;
+  color: #334155;
 }
 
 /* 문의 관리 테이블 */
@@ -263,7 +264,7 @@
 .inquiryTable th,
 .inquiryTable td {
   padding: 8px 10px;
-  border-bottom: 1px solid rgba(31, 41, 55, 0.85);
+  border-bottom: 1px solid rgba(226, 232, 240, 0.95);
   vertical-align: middle;
   text-align: left;
 }
@@ -283,19 +284,19 @@
   padding: 3px 8px;
   border-radius: 999px;
   font-size: 11px;
-  border: 1px solid rgba(148, 163, 184, 0.5);
-  background: rgba(15, 23, 42, 0.95);
+  border: 1px solid rgba(148, 163, 184, 0.32);
+  background: #ffffff;
   white-space: nowrap;
 }
 
 .statusPillProcessing {
-  border-color: rgba(234, 179, 8, 0.7);
-  color: #facc15;
+  border-color: rgba(245, 158, 11, 0.24);
+  color: #a16207;
 }
 
 .statusPillDone {
-  border-color: rgba(34, 197, 94, 0.8);
-  color: #4ade80;
+  border-color: rgba(34, 197, 94, 0.24);
+  color: #15803d;
 }
 
 .btnTable {
@@ -304,9 +305,9 @@
   justify-content: center;
   padding: 6px 10px;
   border-radius: 999px;
-  border: 1px solid rgba(148, 163, 184, 0.7);
-  background: rgba(15, 23, 42, 0.95);
-  color: #e5e7eb;
+  border: 1px solid rgba(148, 163, 184, 0.32);
+  background: #ffffff;
+  color: #334155;
   font-size: 11px;
   cursor: pointer;
   line-height: 1;
@@ -327,10 +328,22 @@
   background: rgba(15, 23, 42, 0.9);
 }
 
+.btnViewAnswer {
+  border-color: rgba(148, 163, 184, 0.28);
+  color: #475569;
+  background: #f8fafc;
+}
+
+.btnViewAnswer:hover {
+  border-color: rgba(148, 163, 184, 0.32);
+  color: #334155;
+  background: #f1f5f9;
+}
+
 
 .btnDelete {
-  border-color: rgba(248, 113, 113, 0.8);
-  color: #fecaca;
+  border-color: rgba(248, 113, 113, 0.32);
+  color: #b91c1c;
 }
 
 /* 답변 완료 시 비활성 버튼(흐릿하게) */
@@ -350,8 +363,8 @@
   margin-top: 14px;
   padding: 14px 16px 18px;
   border-radius: 14px;
-  background: rgba(15, 23, 42, 0.98);
-  border: 1px solid rgba(55, 65, 81, 0.95);
+  background: #f8fbff;
+  border: 1px solid rgba(226, 232, 240, 0.95);
 }
 
 .viewHeader {
@@ -370,7 +383,7 @@
 .viewTitle {
   font-size: 13px;
   font-weight: 600;
-  color: #e5e7eb;
+  color: #0f172a;
 }
 
 .viewSub {
@@ -395,7 +408,7 @@
 }
 
 .viewMetaValue {
-  color: #e5e7eb;
+  color: #0f172a;
   font-size: 12px;
   line-height: 1.2;
   white-space: nowrap;
@@ -418,7 +431,7 @@
 .answerTitle {
   font-size: 13px;
   font-weight: 600;
-  color: #e5e7eb;
+  color: #0f172a;
 }
 
 .formRow {
@@ -436,19 +449,19 @@
 .formReadonly {
   padding: 10px 12px;
   border-radius: 10px;
-  background: rgba(15, 23, 42, 0.9);
-  border: 1px solid rgba(55, 65, 81, 0.9);
+  background: #ffffff;
+  border: 1px solid rgba(203, 213, 225, 0.95);
   font-size: 12px;
-  color: #e5e7eb;
+  color: #0f172a;
 }
 
 textarea,
 select {
-  background: rgba(15, 23, 42, 0.95);
-  border: 1px solid rgba(55, 65, 81, 0.95);
+  background: #ffffff;
+  border: 1px solid rgba(203, 213, 225, 0.95);
   border-radius: 10px;
   padding: 10px 12px;
-  color: #e5e7eb;
+  color: #0f172a;
   font-family: inherit;
   font-size: 12px;
   resize: vertical;
@@ -488,42 +501,42 @@ select:focus {
   padding: 4px 8px;
   border-radius: 999px;
   font-size: 11px;
-  background: rgba(56, 189, 248, 0.16);
-  color: #bae6fd;
+  background: rgba(37, 99, 235, 0.1);
+  color: #1d4ed8;
   white-space: nowrap;
 }
 
 .inquiryTypePillBug {
-  background: rgba(248, 113, 113, 0.18);
-  color: #fecaca;
+  background: rgba(248, 113, 113, 0.12);
+  color: #b91c1c;
 }
 
 .inquiryTypePillIdea {
-  background: rgba(129, 140, 248, 0.18);
-  color: #c7d2fe;
+  background: rgba(99, 102, 241, 0.12);
+  color: #4338ca;
 }
 
 .inquiryTypePillData {
-  background: rgba(34, 211, 238, 0.16);
-  color: #a5f3fc;
+  background: rgba(20, 184, 166, 0.12);
+  color: #0f766e;
 }
 
 .inquiryTypePillAccount {
-  background: rgba(250, 204, 21, 0.18);
-  color: #facc15;
+  background: rgba(245, 158, 11, 0.14);
+  color: #a16207;
 }
 
 .inquiryTypePillEtc {
-  background: rgba(148, 163, 184, 0.18);
-  color: #e5e7eb;
+  background: rgba(148, 163, 184, 0.14);
+  color: #475569;
 }
 
 /* 상세 화면에서 답변 표시 박스 */
 .answerViewBox {
   margin-top: 10px;
   border-radius: 14px;
-  border: 1px solid rgba(148, 163, 184, 0.35);
-  background: rgba(2, 6, 23, 0.55);
+  border: 1px solid rgba(203, 213, 225, 0.95);
+  background: #ffffff;
   padding: 12px 12px 10px;
 }
 
@@ -532,7 +545,7 @@ select:focus {
   justify-content: space-between;
   gap: 10px;
   margin-bottom: 8px;
-  color: #e5e7eb;
+  color: #0f172a;
   font-size: 12px;
 }
 
@@ -547,7 +560,7 @@ select:focus {
 
 .answerBody {
   font-size: 12px;
-  color: #e5e7eb;
+  color: #334155;
   line-height: 1.7;
 }
 
@@ -573,15 +586,16 @@ select:focus {
   min-width: 28px;
   height: 26px;
   border-radius: 999px;
-  border: 1px solid rgba(148, 163, 184, 0.5);
-  background: rgba(15, 23, 42, 0.9);
-  color: #e5e7eb;
+  border: 1px solid rgba(148, 163, 184, 0.32);
+  background: #ffffff;
+  color: #334155;
   cursor: pointer;
 }
 
 .pageActive {
-  background: linear-gradient(135deg, #0ea5e9, #6366f1);
+  background: linear-gradient(135deg, #2563eb, #38bdf8);
   border-color: transparent;
+  color: #ffffff;
 }
 
 .pageBtn:disabled {
@@ -677,7 +691,7 @@ select:focus {
     border: 1px solid rgba(148, 163, 184, 0.22);
     border-radius: 16px;
     overflow: hidden;
-    background: rgba(15, 23, 42, 0.72);
+    background: #ffffff;
   }
 
   .logTable td,

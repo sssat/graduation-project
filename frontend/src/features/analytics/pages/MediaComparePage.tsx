@@ -476,11 +476,11 @@ export default function MediaComparePage() {
         responsive: true,
         maintainAspectRatio: false,
         scales: {
-          x: { grid: { display: false }, ticks: { color: "#9ca3af", font: { size: 11 } } },
+          x: { grid: { display: false }, ticks: { color: "#64748b", font: { size: 11 } } },
           y: {
             beginAtZero: true,
-            grid: { color: "rgba(55,65,81,0.5)" },
-            ticks: { color: "#9ca3af", font: { size: 11 }, precision: 0 },
+            grid: { color: "rgba(148,163,184,0.32)" },
+            ticks: { color: "#64748b", font: { size: 11 }, precision: 0 },
           },
         },
         plugins: {
@@ -531,12 +531,12 @@ export default function MediaComparePage() {
         responsive: true,
         maintainAspectRatio: false,
         scales: {
-          x: { grid: { display: false }, ticks: { color: "#9ca3af", font: { size: 11 } } },
+          x: { grid: { display: false }, ticks: { color: "#64748b", font: { size: 11 } } },
           y: {
             suggestedMin: -10,
             suggestedMax: 10,
-            grid: { color: "rgba(55,65,81,0.5)" },
-            ticks: { color: "#9ca3af", font: { size: 11 } },
+            grid: { color: "rgba(148,163,184,0.32)" },
+            ticks: { color: "#64748b", font: { size: 11 } },
           },
         },
         plugins: {
@@ -567,7 +567,7 @@ export default function MediaComparePage() {
     const negative = sentimentRows.map((r) => r.sentiment.negative);
 
     const sentPos = readCssVar("--ns-sent-pos", "#22c55e");
-    const sentNeu = readCssVar("--ns-sent-neu", "#e5e7eb");
+    const sentNeu = readCssVar("--ns-sent-neu", "#cbd5e1");
     const sentNeg = readCssVar("--ns-sent-neg", "#ef4444");
 
     const chart = new Chart(ctx, {
@@ -584,14 +584,14 @@ export default function MediaComparePage() {
         responsive: true,
         maintainAspectRatio: false,
         scales: {
-          x: { stacked: true, grid: { display: false }, ticks: { color: "#9ca3af", font: { size: 11 } } },
+          x: { stacked: true, grid: { display: false }, ticks: { color: "#64748b", font: { size: 11 } } },
           y: {
             stacked: true,
             beginAtZero: true,
             max: 100,
-            grid: { color: "rgba(55,65,81,0.5)" },
+            grid: { color: "rgba(148,163,184,0.32)" },
             ticks: {
-              color: "#9ca3af",
+              color: "#64748b",
               font: { size: 11 },
               callback(value) {
                 return `${value}%`;
@@ -600,7 +600,7 @@ export default function MediaComparePage() {
           },
         },
         plugins: {
-          legend: { labels: { color: "#e5e7eb", font: { size: 11 } } },
+          legend: { labels: { color: "#334155", font: { size: 11 } } },
           tooltip: {
             callbacks: {
               label(context) {

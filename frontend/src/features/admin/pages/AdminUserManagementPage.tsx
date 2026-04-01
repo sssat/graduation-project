@@ -384,7 +384,7 @@ export default function AdminUserManagementPage() {
         </div>
 
         {errorMessage ? (
-          <div className={styles.cardMeta} style={{ marginBottom: 10, color: "#fca5a5", textAlign: "left" }}>
+          <div className={styles.cardMeta} style={{ marginBottom: 10, color: "#dc2626", textAlign: "left" }}>
             {errorMessage}
           </div>
         ) : null}

@@ -2,16 +2,17 @@
 
 .siteFooter {
   margin-top: 0;
-  background: #020617;
-  color: #e5e7eb;
-  border-top: 1px solid rgba(148, 163, 184, 0.18);
+  background: rgba(255, 255, 255, 0.88);
+  color: #334155;
+  border-top: 1px solid rgba(148, 163, 184, 0.2);
+  backdrop-filter: blur(12px);
 }
 
 .footerInner {
   width: 100%;
   max-width: none;
   margin: 0;
-  padding: 46px 46px 20px; /* 76px -> 46px (위 여백 줄이기) */
+  padding: 46px 46px 20px;
 }
 
 .footerTop {
@@ -35,14 +36,14 @@
 
 .brandDesc {
   margin: 0;
-  color: #9ca3af;
+  color: #64748b;
   line-height: 1.7;
   font-size: 12.5px;
 }
 
 .meta {
   margin: 10px 0 0;
-  color: #cbd5e1;
+  color: #475569;
   font-size: 12px;
 }
 
@@ -64,31 +65,31 @@
 .linkTitle {
   font-size: 12px;
   font-weight: 600;
-  color: #e5e7eb;
+  color: #0f172a;
   margin-bottom: 2px;
 }
 
 .link {
   text-decoration: none;
-  color: #9ca3af;
+  color: #64748b;
   font-size: 12.5px;
   line-height: 1.4;
   transition: color 0.15s ease;
 }
 
 .link:hover {
-  color: #e5e7eb;
+  color: #1d4ed8;
 }
 
 .subText {
-  color: #6b7280;
+  color: #64748b;
   font-size: 12px;
 }
 
 .footerBottom {
   margin-top: 18px;
   padding-top: 14px;
-  border-top: 1px solid rgba(148, 163, 184, 0.14);
+  border-top: 1px solid rgba(148, 163, 184, 0.18);
 }
 
 .copy {
@@ -99,7 +100,7 @@
 
 @media (max-width: 768px) {
   .footerInner {
-    padding: 20px 14px 18px; /* 모바일도 좌우 더 바깥으로 */
+    padding: 20px 14px 18px;
   }
 
   .footerTop {
