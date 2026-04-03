@@ -7,6 +7,7 @@ import com.newsight.backend.analytics.domain.model.AnalyzeAiSummary;
 import com.newsight.backend.analytics.domain.model.AnalyzeCoMentionEdge;
 import com.newsight.backend.analytics.domain.model.AnalyzeCoMentionGraph;
 import com.newsight.backend.analytics.domain.model.AnalyzeCoMentionNode;
+import com.newsight.backend.analytics.domain.model.AnalyzeSearchTimeline;
 import com.newsight.backend.analytics.domain.model.AnalyzeMediaBias;
 import com.newsight.backend.analytics.domain.model.AnalyzeMediaStat;
 import com.newsight.backend.analytics.domain.model.AnalyzeSentiment;
@@ -22,6 +23,7 @@ import com.newsight.backend.analytics.infrastructure.persistence.SpringDataAnaly
 import com.newsight.backend.analytics.infrastructure.persistence.SpringDataAnalyzeCoMentionEdgeRepository;
 import com.newsight.backend.analytics.infrastructure.persistence.SpringDataAnalyzeCoMentionGraphRepository;
 import com.newsight.backend.analytics.infrastructure.persistence.SpringDataAnalyzeCoMentionNodeRepository;
+import com.newsight.backend.analytics.infrastructure.persistence.SpringDataAnalyzeSearchTimelineRepository;
 import com.newsight.backend.analytics.infrastructure.persistence.SpringDataAnalyzeMediaBiasRepository;
 import com.newsight.backend.analytics.infrastructure.persistence.SpringDataAnalyzeMediaStatRepository;
 import com.newsight.backend.analytics.infrastructure.persistence.SpringDataAnalyzeSentimentRepository;
@@ -65,6 +67,8 @@ public class AnalyticsService {
     private static final int DEFAULT_LIMIT = 10;
     private static final int DEFAULT_TOP_N = 5;
     private static final int ALL_MEDIA_CODE = 0;
+    private static final long SEARCH_TIMELINE_LOOKBACK_MONTHS = 3L;
+    private static final String SEARCH_TIMELINE_DATA_SOURCE = "NAVER_DATALAB";
 
     private final SpringDataTrendRunRefRepository trendRunRefRepository;
     private final SpringDataTrendKeywordMasterRefRepository trendKeywordMasterRefRepository;
@@ -72,6 +76,7 @@ public class AnalyticsService {
 
     private final SpringDataAnalyzeMediaStatRepository analyzeMediaStatRepository;
     private final SpringDataAnalyzeAiSummaryRepository analyzeAiSummaryRepository;
+    private final SpringDataAnalyzeSearchTimelineRepository analyzeSearchTimelineRepository;
     private final SpringDataAnalyzeWordcloudRepository analyzeWordcloudRepository;
     private final SpringDataAnalyzeWordcloudItemRepository analyzeWordcloudItemRepository;
     private final SpringDataAnalyzeSentimentRepository analyzeSentimentRepository;
@@ -241,6 +246,70 @@ public class AnalyticsService {
      */
     public WordcloudResult getCommentWordcloud(Long keywordSeq, String period) {
         return getWordcloud(keywordSeq, period, WordcloudType.COMMENT);
+    }
+
+    /**
+     * GET /api/analytics/keywords/{keyword_seq}/search-timeline
+     * - period 쿼리가 들어와도 검색 관심도 타임라인은 최근 3개월 고정으로 반환한다.
+     */
+    public SearchTimelineResult getSearchTimeline(Long keywordSeq, String ignoredPeriod) {
+        getKeywordOrThrow(keywordSeq);
+
+        List<AnalyzeSearchTimeline> rows = analyzeSearchTimelineRepository
+                .findByKeywordSeqAndDataSourceOrderByObservedDateAsc(keywordSeq, SEARCH_TIMELINE_DATA_SOURCE);
+
+        if (rows.isEmpty()) {
+            return new SearchTimelineResult(null, null, null, null, null, false, List.of());
+        }
+
+        LocalDate latestObservedDate = rows.stream()
+                .map(AnalyzeSearchTimeline::getObservedDate)
+                .filter(Objects::nonNull)
+                .max(LocalDate::compareTo)
+                .orElse(null);
+
+        if (latestObservedDate == null) {
+            return new SearchTimelineResult(null, null, null, null, null, false, List.of());
+        }
+
+        LocalDate requestedStartDate = latestObservedDate.minusMonths(SEARCH_TIMELINE_LOOKBACK_MONTHS);
+
+        List<SearchTimelinePoint> items = rows.stream()
+                .filter(r -> r.getObservedDate() != null)
+                .filter(r -> !r.getObservedDate().isBefore(requestedStartDate) && !r.getObservedDate().isAfter(latestObservedDate))
+                .map(r -> new SearchTimelinePoint(
+                        r.getObservedDate().toString(),
+                        r.getInterestScore() == null ? 0 : r.getInterestScore(),
+                        Boolean.TRUE.equals(r.getIsPartial())
+                ))
+                .toList();
+
+        if (items.isEmpty()) {
+            return new SearchTimelineResult(null, null, null, null, null, false, List.of());
+        }
+
+        String actualStart = items.get(0).observedDate();
+        String actualEnd = items.get(items.size() - 1).observedDate();
+
+        Integer latestScore = items.isEmpty() ? null : items.get(items.size() - 1).interestScore();
+        Integer peakScore = items.stream()
+                .map(SearchTimelinePoint::interestScore)
+                .max(Integer::compareTo)
+                .orElse(null);
+        Double averageScore = items.isEmpty()
+                ? null
+                : round1(items.stream().mapToInt(SearchTimelinePoint::interestScore).average().orElse(0.0));
+        boolean hasPartial = items.stream().anyMatch(SearchTimelinePoint::isPartial);
+
+        return new SearchTimelineResult(
+                actualStart,
+                actualEnd,
+                latestScore,
+                peakScore,
+                averageScore,
+                hasPartial,
+                items
+        );
     }
 
     /**
@@ -948,6 +1017,22 @@ public class AnalyticsService {
     public record WordItem(
             String word,
             double weight
+    ) {}
+
+    public record SearchTimelineResult(
+            String periodStart,
+            String periodEnd,
+            Integer latestScore,
+            Integer peakScore,
+            Double averageScore,
+            boolean hasPartial,
+            List<SearchTimelinePoint> items
+    ) {}
+
+    public record SearchTimelinePoint(
+            String observedDate,
+            int interestScore,
+            boolean isPartial
     ) {}
 
     public record SentimentResult(

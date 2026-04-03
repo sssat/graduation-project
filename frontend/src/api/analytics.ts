@@ -163,7 +163,41 @@ export async function getCommentWordcloud(
 }
 
 /* =========================================================
- * 6) 본문 감성 분석 - 공개
+ * 6) Naver DataLab 검색 관심도 시계열 - 공개
+ * GET /analytics/keywords/{keyword_seq}/search-timeline
+ * ======================================================= */
+
+export interface SearchTimelinePoint {
+  observed_date: IsoDateString;
+  interest_score: number;
+  is_partial: boolean;
+}
+
+export interface SearchTimelineResponse {
+  period_start: IsoDateString | null;
+  period_end: IsoDateString | null;
+  latest_score: number | null;
+  peak_score: number | null;
+  average_score: number | null;
+  has_partial: boolean;
+  items: SearchTimelinePoint[];
+}
+
+export async function getSearchTimeline(
+  keywordSeq: number,
+  config?: HttpRequestConfig<undefined>,
+): Promise<SearchTimelineResponse> {
+  const response = await http.get<SearchTimelineResponse>(
+    `/analytics/keywords/${keywordSeq}/search-timeline`,
+    {
+      ...publicConfig(config),
+    } as HttpRequestConfig<undefined>,
+  );
+  return response.data;
+}
+
+/* =========================================================
+ * 7) 본문 감성 분석 - 공개
  * GET /analytics/keywords/{keyword_seq}/sentiment/content?period=D7|D14
  * ======================================================= */
 
@@ -189,7 +223,7 @@ export async function getContentSentiment(
 }
 
 /* =========================================================
- * 7) 제목 편향도(언론사별) - 공개
+ * 8) 제목 편향도(언론사별) - 공개
  * GET /analytics/keywords/{keyword_seq}/bias/title?period=D7|D14
  * ======================================================= */
 
@@ -218,7 +252,7 @@ export async function getTitleBiasByMedia(
 }
 
 /* =========================================================
- * 8) 동시언급 네트워크 - 공개
+ * 9) 동시언급 네트워크 - 공개
  * GET /analytics/keywords/{keyword_seq}/cooc-network?period=D7|D14
  * ======================================================= */
 
@@ -419,6 +453,7 @@ export const analyticsApi = {
   getAiSummary,
   getTitleWordcloud,
   getCommentWordcloud,
+  getSearchTimeline,
   getContentSentiment,
   getTitleBiasByMedia,
   getCoocNetwork,

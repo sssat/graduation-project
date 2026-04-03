@@ -6,6 +6,7 @@ import com.newsight.backend.analytics.presentation.dto.AiSummaryDto;
 import com.newsight.backend.analytics.presentation.dto.AnalyticsOverviewDto;
 import com.newsight.backend.analytics.presentation.dto.CoocNetworkDto;
 import com.newsight.backend.analytics.presentation.dto.ContentSentimentDto;
+import com.newsight.backend.analytics.presentation.dto.SearchTimelineDto;
 import com.newsight.backend.analytics.presentation.dto.KeywordMetaDto;
 import com.newsight.backend.analytics.presentation.dto.MediaArticleCountsDto;
 import com.newsight.backend.analytics.presentation.dto.MediaCompareTopKeywordsDto;
@@ -127,6 +128,40 @@ public class AnalyticsController {
                 .toList();
 
         return ResponseEntity.ok(new WordcloudDto.WordcloudResponseDto(items));
+    }
+
+    /**
+     * GET /api/analytics/keywords/{keyword_seq}/search-timeline
+     * GET /api/analytics/keywords/{keyword_seq}/search-timeline/
+     * - period 파라미터가 들어와도 최근 3개월 타임라인을 고정으로 반환한다.
+     */
+    @GetMapping({
+            "/keywords/{keyword_seq}/search-timeline",
+            "/keywords/{keyword_seq}/search-timeline/"
+    })
+    public ResponseEntity<SearchTimelineDto.SearchTimelineResponseDto> getSearchTimeline(
+            @PathVariable("keyword_seq") Long keywordSeq,
+            @RequestParam(value = "period", required = false) String period
+    ) {
+        AnalyticsService.SearchTimelineResult result = analyticsService.getSearchTimeline(keywordSeq, period);
+
+        List<SearchTimelineDto.TimelinePointDto> items = result.items().stream()
+                .map(i -> new SearchTimelineDto.TimelinePointDto(
+                        i.observedDate(),
+                        i.interestScore(),
+                        i.isPartial()
+                ))
+                .toList();
+
+        return ResponseEntity.ok(new SearchTimelineDto.SearchTimelineResponseDto(
+                result.periodStart(),
+                result.periodEnd(),
+                result.latestScore(),
+                result.peakScore(),
+                result.averageScore(),
+                result.hasPartial(),
+                items
+        ));
     }
 
     /**

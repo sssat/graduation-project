@@ -20,12 +20,14 @@ import {
   getCommentWordcloud,
   getContentSentiment,
   getCoocNetwork,
+  getSearchTimeline,
   getKeywordMeta,
   getTitleBiasByMedia,
   getTitleWordcloud,
   type CoocNetworkEdge,
   type CoocNetworkNode,
   type ContentSentimentResponse,
+  type SearchTimelineResponse,
   type KeywordMetaResponse,
   type TitleBiasByMediaItem,
 } from "../../../api/analytics";
@@ -40,6 +42,7 @@ type RenderWordItem = {
 type KeywordDetailViewData = {
   meta: KeywordMetaResponse;
   summaryText: string;
+  trendTimeline: SearchTimelineResponse;
   titleWordcloud: RenderWordItem[];
   commentWordcloud: RenderWordItem[];
   sentiment: ContentSentimentResponse;
@@ -95,6 +98,27 @@ function parsePositiveInt(raw: string | null | undefined): number | null {
 function formatKoreanRange(start: string, end: string): string {
   if (!start || !end) return "-";
   return `${start} ~ ${end}`;
+}
+
+function formatCompactDateLabel(isoDate: string): string {
+  if (!isoDate) return "";
+
+  const [year, month, day] = isoDate.split("-");
+  if (!year || !month || !day) return isoDate;
+
+  return `${Number(month)}.${Number(day)}`;
+}
+
+function createEmptyTrendTimeline(): SearchTimelineResponse {
+  return {
+    period_start: null,
+    period_end: null,
+    latest_score: null,
+    peak_score: null,
+    average_score: null,
+    has_partial: false,
+    items: [],
+  };
 }
 
 function toErrorMessage(error: unknown): string {
@@ -898,9 +922,11 @@ export default function KeywordDetailPage() {
 
   const sentimentCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const biasCanvasRef = useRef<HTMLCanvasElement | null>(null);
+  const trendTimelineCanvasRef = useRef<HTMLCanvasElement | null>(null);
 
   const sentimentChartRef = useRef<Chart | null>(null);
   const biasChartRef = useRef<Chart | null>(null);
+  const trendTimelineChartRef = useRef<Chart | null>(null);
 
   useEffect(() => {
     if (!keywordSeq) {
@@ -924,6 +950,7 @@ export default function KeywordDetailPage() {
           setViewData({
             meta,
             summaryText: "",
+            trendTimeline: createEmptyTrendTimeline(),
             titleWordcloud: [],
             commentWordcloud: [],
             sentiment: { positive: 0, neutral: 0, negative: 0 },
@@ -937,6 +964,7 @@ export default function KeywordDetailPage() {
 
         const [
           summaryRes,
+          trendTimelineRes,
           titleWordcloudRes,
           sentimentRes,
           biasRes,
@@ -944,6 +972,7 @@ export default function KeywordDetailPage() {
           commentWordcloudRes,
         ] = await Promise.all([
           getAiSummary(targetKeywordSeq, { period }),
+          getSearchTimeline(targetKeywordSeq),
           getTitleWordcloud(targetKeywordSeq, { period }),
           getContentSentiment(targetKeywordSeq, { period }),
           getTitleBiasByMedia(targetKeywordSeq, { period }),
@@ -956,6 +985,7 @@ export default function KeywordDetailPage() {
         setViewData({
           meta,
           summaryText: summaryRes.summary_text ?? "",
+          trendTimeline: trendTimelineRes ?? createEmptyTrendTimeline(),
           titleWordcloud: normalizeWordcloudItems(titleWordcloudRes.items ?? []),
           commentWordcloud: normalizeWordcloudItems(commentWordcloudRes.items ?? []),
           sentiment: roundSentiment(sentimentRes),
@@ -1126,6 +1156,105 @@ export default function KeywordDetailPage() {
   }, [isInsufficient, viewData]);
 
   useEffect(() => {
+    if (!viewData || isInsufficient) return;
+    if (!trendTimelineCanvasRef.current) return;
+
+    const ctx = trendTimelineCanvasRef.current.getContext("2d");
+    if (!ctx) return;
+
+    if (trendTimelineChartRef.current) {
+      trendTimelineChartRef.current.destroy();
+      trendTimelineChartRef.current = null;
+    }
+
+    const items = viewData.trendTimeline.items ?? [];
+    if (!items.length) {
+      return;
+    }
+
+    const gradient = ctx.createLinearGradient(0, 0, 0, 260);
+    gradient.addColorStop(0, "rgba(37, 99, 235, 0.26)");
+    gradient.addColorStop(1, "rgba(37, 99, 235, 0.03)");
+
+    const chart = new Chart(ctx, {
+      type: "line",
+      data: {
+        labels: items.map((item) => formatCompactDateLabel(item.observed_date)),
+        datasets: [
+          {
+            label: "검색 관심도",
+            data: items.map((item) => item.interest_score),
+            borderColor: "#2563eb",
+            backgroundColor: gradient,
+            fill: true,
+            pointRadius: 3,
+            pointHoverRadius: 4,
+            pointBackgroundColor: "#2563eb",
+            pointBorderWidth: 0,
+            clip: false,
+            tension: 0.28,
+          },
+        ],
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        layout: {
+          padding: {
+            top: 8,
+          },
+        },
+        scales: {
+          x: {
+            grid: { display: false },
+            ticks: {
+              color: "#64748b",
+              font: { size: 11 },
+              maxRotation: 0,
+              autoSkip: true,
+              maxTicksLimit: items.length > 60 ? 10 : 7,
+            },
+          },
+          y: {
+            min: 0,
+            max: 100,
+            grid: { color: "rgba(148,163,184,0.22)" },
+            ticks: {
+              color: "#64748b",
+              font: { size: 11 },
+              stepSize: 20,
+            },
+          },
+        },
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            callbacks: {
+              title(context) {
+                const idx = context[0]?.dataIndex ?? 0;
+                return items[idx]?.observed_date ?? "";
+              },
+              label(context) {
+                const idx = context.dataIndex;
+                const item = items[idx];
+                const partialLabel = item?.is_partial ? " (마지막 데이터는 집계 중인 값일 수 있습니다.)" : "";
+                return `관심도: ${context.parsed.y}${partialLabel}`;
+              },
+            },
+          },
+        },
+      },
+    });
+
+    trendTimelineChartRef.current = chart;
+
+    return () => {
+      chart.destroy();
+      trendTimelineChartRef.current = null;
+    };
+  }, [isInsufficient, viewData]);
+
+  useEffect(() => {
     return () => {
       if (sentimentChartRef.current) {
         sentimentChartRef.current.destroy();
@@ -1134,6 +1263,10 @@ export default function KeywordDetailPage() {
       if (biasChartRef.current) {
         biasChartRef.current.destroy();
         biasChartRef.current = null;
+      }
+      if (trendTimelineChartRef.current) {
+        trendTimelineChartRef.current.destroy();
+        trendTimelineChartRef.current = null;
       }
     };
   }, []);
@@ -1260,6 +1393,11 @@ export default function KeywordDetailPage() {
   }
 
   const sentiment = viewData.sentiment;
+  const trendTimeline = viewData.trendTimeline;
+  const trendTimelineRangeLabel =
+    trendTimeline.period_start && trendTimeline.period_end
+      ? formatKoreanRange(trendTimeline.period_start, trendTimeline.period_end)
+      : rangeLabel;
 
   return (
     <main ref={rootRef} className={styles.pageRoot}>
@@ -1319,6 +1457,52 @@ export default function KeywordDetailPage() {
           <div className={styles.summaryText}>
             {viewData.summaryText?.trim() ? viewData.summaryText : "요약 데이터가 없습니다."}
           </div>
+        </article>
+      </section>
+
+      <section className={styles.grid1}>
+        <article className={styles.card}>
+          <div className={styles.cardHeader}>
+            <div>
+              <div className={styles.cardTitle}>검색 관심도 흐름</div>
+              <div className={styles.cardSub}>
+                {trendTimelineRangeLabel} 기준 최근 3개월 동안 {displayKeyword} 키워드의 검색 관심도 변화를 보여줍니다.
+              </div>
+            </div>
+            <span className={styles.badgeSoft}>외부 관심도 신호</span>
+          </div>
+
+          {trendTimeline.items.length ? (
+            <>
+              <div className={styles.timelineStats}>
+                <div className={styles.timelineStatCard}>
+                  <div className={styles.timelineStatLabel}>최신 점수</div>
+                  <div className={styles.timelineStatValue}>{trendTimeline.latest_score ?? "-"}</div>
+                </div>
+                <div className={styles.timelineStatCard}>
+                  <div className={styles.timelineStatLabel}>기간 최고점</div>
+                  <div className={styles.timelineStatValue}>{trendTimeline.peak_score ?? "-"}</div>
+                </div>
+                <div className={styles.timelineStatCard}>
+                  <div className={styles.timelineStatLabel}>기간 평균</div>
+                  <div className={styles.timelineStatValue}>
+                    {trendTimeline.average_score == null ? "-" : trendTimeline.average_score.toFixed(1)}
+                  </div>
+                </div>
+              </div>
+
+              <div className={`${styles.chartWrapper} ${styles.timelineChartWrapper}`}>
+                <canvas ref={trendTimelineCanvasRef} />
+              </div>
+
+              <div className={styles.timelineCaption}>
+                이 지수는 절대 검색량이 아니라 해당 기간 내 상대 관심도(0~100)입니다.
+                {trendTimeline.has_partial ? " 마지막 데이터는 집계 중인 값일 수 있습니다." : ""}
+              </div>
+            </>
+          ) : (
+            <div className={styles.emptyBox}>표시할 검색 관심도 시계열 데이터가 없습니다.</div>
+          )}
         </article>
       </section>
 

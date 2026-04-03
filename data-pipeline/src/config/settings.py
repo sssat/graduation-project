@@ -127,6 +127,7 @@ class Settings:
     log_dir_bias_title: str = _get_str("LOG_DIR_BIAS_TITLE", "")
     log_dir_bias_content: str = _get_str("LOG_DIR_BIAS_CONTENT", "")
     log_dir_wordcloud: str = _get_str("LOG_DIR_WORDCLOUD", "")
+    log_dir_search_timeline: str = _get_str("LOG_DIR_SEARCH_TIMELINE", "")
 
     # Selenium 관련 환경변수 읽어오기
     headless: bool = _get_bool01("HEADLESS", True)
@@ -140,6 +141,20 @@ class Settings:
 
     # 트렌드 크롤링에서 가져올 상위 키워드 개수
     trend_top_n: int = _get_int("TREND_TOP_N", 20)
+
+    # Search-interest timeline settings
+    search_timeline_trend_run_seq: int = _get_int("SEARCH_TIMELINE_TREND_RUN_SEQ", 0)
+    search_timeline_keyword_top_n: int = _get_int("SEARCH_TIMELINE_KEYWORD_TOP_N", 10)
+    search_timeline_batch_size: int = _get_int("SEARCH_TIMELINE_BATCH_SIZE", 0)
+    search_timeline_timeframe: str = _get_str("SEARCH_TIMELINE_TIMEFRAME", "today 3-m")
+    search_timeline_sleep_min_seconds: float = _get_float("SEARCH_TIMELINE_SLEEP_MIN_SECONDS", 0.8)
+    search_timeline_sleep_max_seconds: float = _get_float("SEARCH_TIMELINE_SLEEP_MAX_SECONDS", 1.2)
+    naver_datalab_client_id: str = _get_str("NAVER_DATALAB_CLIENT_ID", "")
+    naver_datalab_client_secret: str = _get_str("NAVER_DATALAB_CLIENT_SECRET", "")
+    naver_datalab_device: str = _get_str("NAVER_DATALAB_DEVICE", "")
+    naver_datalab_gender: str = _get_str("NAVER_DATALAB_GENDER", "")
+    naver_datalab_ages: str = _get_str("NAVER_DATALAB_AGES", "")
+    naver_datalab_request_timeout_seconds: float = _get_float("NAVER_DATALAB_REQUEST_TIMEOUT_SECONDS", 20.0)
 
     # 네이버 뉴스 크롤러 관련 환경변수 읽어오기
     news_article_concurrency: int = _get_int("NEWS_ARTICLE_CONCURRENCY", 20)
@@ -361,7 +376,7 @@ class Settings:
     # (추가) run_all 실행 옵션을 .env로 제어
     run_all_steps: str = _get_str(
         "RUN_ALL_STEPS",
-        "trend,news,preprocess,aggregate,final_rank,summary,title_sentiment,content_sentiment,title_bias,content_bias,wordcloud,cooc_network",
+        "trend,search_timeline,news,preprocess,aggregate,final_rank,summary,title_sentiment,content_sentiment,title_bias,content_bias,wordcloud,cooc_network",
     )
     run_all_fail_fast: bool = _get_bool01("RUN_ALL_FAIL_FAST", True)
 
@@ -420,8 +435,57 @@ class Settings:
 
         # 1) trend top_n 안전화
         object.__setattr__(self, "trend_top_n", max(1, int(self.trend_top_n)))
+        object.__setattr__(self, "search_timeline_trend_run_seq", max(0, int(self.search_timeline_trend_run_seq)))
+        object.__setattr__(self, "search_timeline_keyword_top_n", max(0, int(self.search_timeline_keyword_top_n)))
+        object.__setattr__(self, "search_timeline_batch_size", max(0, int(self.search_timeline_batch_size)))
+        object.__setattr__(
+            self,
+            "search_timeline_timeframe",
+            (self.search_timeline_timeframe or "today 3-m").strip() or "today 3-m",
+        )
+        object.__setattr__(
+            self,
+            "search_timeline_sleep_min_seconds",
+            max(0.0, float(self.search_timeline_sleep_min_seconds)),
+        )
+        object.__setattr__(
+            self,
+            "search_timeline_sleep_max_seconds",
+            max(0.0, float(self.search_timeline_sleep_max_seconds)),
+        )
+        if self.search_timeline_sleep_max_seconds < self.search_timeline_sleep_min_seconds:
+            object.__setattr__(
+                self,
+                "search_timeline_sleep_max_seconds",
+                float(self.search_timeline_sleep_min_seconds),
+            )
 
         # 2) News 기본값/입력값 안전화
+        object.__setattr__(self, "naver_datalab_client_id", (self.naver_datalab_client_id or "").strip())
+        object.__setattr__(self, "naver_datalab_client_secret", (self.naver_datalab_client_secret or "").strip())
+
+        device = (self.naver_datalab_device or "").strip().lower()
+        if device not in {"", "pc", "mo"}:
+            device = ""
+        object.__setattr__(self, "naver_datalab_device", device)
+
+        gender = (self.naver_datalab_gender or "").strip().lower()
+        if gender not in {"", "m", "f"}:
+            gender = ""
+        object.__setattr__(self, "naver_datalab_gender", gender)
+
+        ages = ",".join(
+            part
+            for part in ((self.naver_datalab_ages or "").replace(" ", "").split(","))
+            if part in {"1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11"}
+        )
+        object.__setattr__(self, "naver_datalab_ages", ages)
+        object.__setattr__(
+            self,
+            "naver_datalab_request_timeout_seconds",
+            max(1.0, float(self.naver_datalab_request_timeout_seconds)),
+        )
+
         days_back = max(1, int(self.news_days_back))
         start_page = max(1, int(self.news_start_page))
         end_page = max(start_page, int(self.news_end_page))
@@ -752,6 +816,7 @@ class Settings:
         # (추가) run_all steps 정규화
         allowed_steps = {
             "trend",
+            "search_timeline",
             "news",
             "preprocess",
             "aggregate",
@@ -767,7 +832,7 @@ class Settings:
 
         raw_steps = (self.run_all_steps or "").strip()
         if not raw_steps:
-            raw_steps = "trend,news,preprocess,aggregate,final_rank,summary,title_sentiment,content_sentiment,title_bias,content_bias,wordcloud,cooc_network"
+            raw_steps = "trend,search_timeline,news,preprocess,aggregate,final_rank,summary,title_sentiment,content_sentiment,title_bias,content_bias,wordcloud,cooc_network"
 
         out_steps: list[str] = []
         seen_steps: set[str] = set()
@@ -779,7 +844,20 @@ class Settings:
             out_steps.append(s)
 
         if not out_steps:
-            out_steps = ["trend", "news", "preprocess", "aggregate", "final_rank", "summary", "title_sentiment", "content_sentiment", "title_bias", "content_bias", "wordcloud"]
+            out_steps = [
+                "trend",
+                "search_timeline",
+                "news",
+                "preprocess",
+                "aggregate",
+                "final_rank",
+                "summary",
+                "title_sentiment",
+                "content_sentiment",
+                "title_bias",
+                "content_bias",
+                "wordcloud",
+            ]
 
         object.__setattr__(self, "run_all_steps", ",".join(out_steps))
         object.__setattr__(self, "run_all_fail_fast", bool(self.run_all_fail_fast))
@@ -909,6 +987,15 @@ class Settings:
         if not wordcloud_dir:
             wordcloud_dir = "src/analyzer/wordcloud/logs"
         object.__setattr__(self, "log_dir_wordcloud", _resolve_dir(wordcloud_dir))
+
+        search_timeline_dir = (self.log_dir_search_timeline or "").strip()
+        if not search_timeline_dir:
+            search_timeline_dir = "src/analyzer/search_timeline/logs"
+        object.__setattr__(
+            self,
+            "log_dir_search_timeline",
+            _resolve_dir(search_timeline_dir),
+        )
 
 
 # ---------------------------------- 3. 최종 Settings 인스턴스 생성 ----------------------------------

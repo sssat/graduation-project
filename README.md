@@ -300,10 +300,25 @@ DB_PASSWORD=newspass
 OPENAI_API_KEY=your-openai-api-key
 AI_SUMMARY_MODEL=gpt-4o-mini
 
-RUN_ALL_STEPS=trend,news,preprocess,aggregate,final_rank,summary,title_sentiment,content_sentiment,title_bias,content_bias,wordcloud,cooc_network
+RUN_ALL_STEPS=trend,search_timeline,news,preprocess,aggregate,final_rank,summary,title_sentiment,content_sentiment,title_bias,content_bias,wordcloud,cooc_network
 RUN_ALL_FAIL_FAST=1
 HEADLESS=1
+
+SEARCH_TIMELINE_KEYWORD_TOP_N=0
+SEARCH_TIMELINE_BATCH_SIZE=0
+SEARCH_TIMELINE_TIMEFRAME=today 3-m
+SEARCH_TIMELINE_SLEEP_MIN_SECONDS=0.8
+SEARCH_TIMELINE_SLEEP_MAX_SECONDS=1.2
+NAVER_DATALAB_CLIENT_ID=
+NAVER_DATALAB_CLIENT_SECRET=
 ```
+
+## Search Timeline
+
+- 키워드 상세 페이지에 Naver DataLab 검색 관심도 시계열 차트를 추가했습니다.
+- 파이프라인은 Naver DataLab Open API를 사용해 각 키워드의 최근 관심도(기본 `today 3-m`)를 수집합니다.
+- 수집 결과는 검색 타임라인 저장소에 적재되고, 백엔드는 기간 토글과 무관하게 최근 3개월 타임라인을 고정으로 제공합니다.
+- 이 점수는 절대 검색량이 아니라 Naver DataLab이 제공하는 상대 관심도(0~100)입니다.
 
 ## 향후 개선 과제
 
