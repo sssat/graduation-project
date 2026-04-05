@@ -284,7 +284,7 @@ NAVER_DATALAB_REQUEST_TIMEOUT_SECONDS=20
 
 - 실시간 키워드 수집은 Google Trends 기반입니다.
 - 뉴스 수집은 Naver 뉴스 검색 결과 기반입니다.
-- 검색 관심도 흐름은 외부 검색 관심도 API 기반입니다.
+- 검색 관심도 흐름은 Naver 데이터 랩 검색 관심도 API 기반입니다.
 - frontend에서 표시하는 타임라인 기간은 최근 3개월 고정입니다.
 
 ## 향후 개선 과제
