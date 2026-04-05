@@ -1176,8 +1176,31 @@ export default function KeywordDetailPage() {
     gradient.addColorStop(0, "rgba(37, 99, 235, 0.26)");
     gradient.addColorStop(1, "rgba(37, 99, 235, 0.03)");
 
+    const trendTimelineGuidePlugin = {
+      id: "trendTimelineGuide",
+      afterDraw(chartInstance: Chart<"line">) {
+        const activeElements = chartInstance.tooltip?.getActiveElements?.() ?? [];
+        if (!activeElements.length) return;
+
+        const x = activeElements[0]?.element?.x;
+        if (typeof x !== "number") return;
+
+        const { ctx: chartCtx, chartArea } = chartInstance;
+        chartCtx.save();
+        chartCtx.beginPath();
+        chartCtx.moveTo(x, chartArea.top);
+        chartCtx.lineTo(x, chartArea.bottom);
+        chartCtx.lineWidth = 1;
+        chartCtx.strokeStyle = "rgba(37, 99, 235, 0.5)";
+        chartCtx.setLineDash([4, 4]);
+        chartCtx.stroke();
+        chartCtx.restore();
+      },
+    };
+
     const chart = new Chart(ctx, {
       type: "line",
+      plugins: [trendTimelineGuidePlugin],
       data: {
         labels: items.map((item) => formatCompactDateLabel(item.observed_date)),
         datasets: [
@@ -1189,6 +1212,7 @@ export default function KeywordDetailPage() {
             fill: true,
             pointRadius: 3,
             pointHoverRadius: 4,
+            pointHitRadius: 18,
             pointBackgroundColor: "#2563eb",
             pointBorderWidth: 0,
             clip: false,
@@ -1199,6 +1223,11 @@ export default function KeywordDetailPage() {
       options: {
         responsive: true,
         maintainAspectRatio: false,
+        interaction: {
+          mode: "index",
+          axis: "x",
+          intersect: false,
+        },
         layout: {
           padding: {
             top: 8,
@@ -1229,6 +1258,8 @@ export default function KeywordDetailPage() {
         plugins: {
           legend: { display: false },
           tooltip: {
+            mode: "index",
+            intersect: false,
             callbacks: {
               title(context) {
                 const idx = context[0]?.dataIndex ?? 0;
