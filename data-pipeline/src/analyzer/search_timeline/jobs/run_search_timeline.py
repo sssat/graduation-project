@@ -4,7 +4,7 @@ import argparse
 import json
 import random
 import time
-from datetime import date, datetime
+from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List
 from zoneinfo import ZoneInfo
@@ -16,7 +16,7 @@ from src.analyzer.search_timeline.core.search_timeline import (
     fetch_search_timeline,
 )
 from src.analyzer.search_timeline.storage.search_timeline_reader import (
-    fetch_keyword_seqs_collected_for_observed_date,
+    fetch_keyword_seqs_collected_for_trend_run,
 )
 from src.analyzer.search_timeline.storage.search_timeline_writer import (
     SearchTimelineRow,
@@ -29,10 +29,6 @@ from src.crawler.news.storage.keyword_reader import fetch_keywords_for_trend_run
 
 def _now_in_tz() -> datetime:
     return datetime.now(tz=ZoneInfo(settings.tz))
-
-
-def _today_in_tz() -> date:
-    return _now_in_tz().date()
 
 
 def _sleep_between_requests() -> None:
@@ -74,13 +70,14 @@ def _settings_one_line(*, trend_run_seq: int, keyword_limit: int) -> str:
         f"trend_run_seq={trend_run_seq} "
         f"keyword_top_n={keyword_limit} "
         f"batch_size={settings.search_timeline_batch_size} "
+        f"refresh_same_run={1 if settings.search_timeline_refresh else 0} "
         f"timeframe={settings.search_timeline_timeframe} "
         f"device={settings.naver_datalab_device or '(all)'} "
         f"gender={settings.naver_datalab_gender or '(all)'} "
         f"ages={settings.naver_datalab_ages or '(all)'} "
         f"sleep_range={settings.search_timeline_sleep_min_seconds:.1f}~"
         f"{settings.search_timeline_sleep_max_seconds:.1f}s "
-        "skip_if_collected_today=1"
+        f"skip_if_collected_same_run={0 if settings.search_timeline_refresh else 1}"
     )
 
 
@@ -103,7 +100,7 @@ def _append_timeline_item(
     trend_rank: int,
     points_fetched: int,
     points_written: int,
-    skipped_today: bool,
+    skipped_same_run: bool,
     status: str,
     attempts: int | None = None,
     error: str | None = None,
@@ -114,7 +111,7 @@ def _append_timeline_item(
         "trend_rank": int(trend_rank),
         "points_fetched": points_fetched,
         "points_written": points_written,
-        "skipped_today": skipped_today,
+        "skipped_same_run": skipped_same_run,
         "status": status,
     }
     if attempts is not None:
@@ -135,7 +132,7 @@ def run_search_timeline(*, trend_run_seq: int) -> Dict[str, Any]:
 
     items: List[Dict[str, Any]] = []
     total_points_written = 0
-    skipped_today_count = 0
+    skipped_same_run_count = 0
     deferred_batch_count = 0
     success_count = 0
     rate_limited_count = 0
@@ -144,15 +141,18 @@ def run_search_timeline(*, trend_run_seq: int) -> Dict[str, Any]:
 
     conn = get_conn(autocommit=False)
     try:
-        collected_today_keyword_seqs = fetch_keyword_seqs_collected_for_observed_date(
-            conn=conn,
-            keyword_seqs=[row.keyword_seq for row in keyword_rows],
-            observed_date=_today_in_tz(),
-            timeframe_label=settings.search_timeline_timeframe,
-        )
+        if settings.search_timeline_refresh:
+            collected_for_run_keyword_seqs = set()
+        else:
+            collected_for_run_keyword_seqs = fetch_keyword_seqs_collected_for_trend_run(
+                conn=conn,
+                trend_run_seq=int(trend_run_seq),
+                keyword_seqs=[row.keyword_seq for row in keyword_rows],
+                timeframe_label=settings.search_timeline_timeframe,
+            )
         pending_keyword_rows = [
             row for row in keyword_rows
-            if row.keyword_seq not in collected_today_keyword_seqs
+            if row.keyword_seq not in collected_for_run_keyword_seqs
         ]
         batch_size = int(settings.search_timeline_batch_size)
         batch_target_count = len(pending_keyword_rows) if batch_size <= 0 else min(len(pending_keyword_rows), batch_size)
@@ -161,8 +161,8 @@ def run_search_timeline(*, trend_run_seq: int) -> Dict[str, Any]:
         for idx, keyword_row in enumerate(keyword_rows, start=1):
             did_request = False
 
-            if keyword_row.keyword_seq in collected_today_keyword_seqs:
-                skipped_today_count += 1
+            if keyword_row.keyword_seq in collected_for_run_keyword_seqs:
+                skipped_same_run_count += 1
                 _append_timeline_item(
                     items,
                     keyword_seq=int(keyword_row.keyword_seq),
@@ -170,8 +170,8 @@ def run_search_timeline(*, trend_run_seq: int) -> Dict[str, Any]:
                     trend_rank=int(keyword_row.trend_rank),
                     points_fetched=0,
                     points_written=0,
-                    skipped_today=True,
-                    status="skipped_today",
+                    skipped_same_run=True,
+                    status="skipped_same_run",
                 )
                 continue
 
@@ -184,7 +184,7 @@ def run_search_timeline(*, trend_run_seq: int) -> Dict[str, Any]:
                     trend_rank=int(keyword_row.trend_rank),
                     points_fetched=0,
                     points_written=0,
-                    skipped_today=False,
+                    skipped_same_run=False,
                     status="deferred_batch",
                 )
                 continue
@@ -201,7 +201,7 @@ def run_search_timeline(*, trend_run_seq: int) -> Dict[str, Any]:
                 written = upsert_search_timeline_rows(
                     conn=conn,
                     keyword_seq=keyword_row.keyword_seq,
-                    last_trend_run_seq=int(trend_run_seq),
+                    trend_run_seq=int(trend_run_seq),
                     timeframe_label=settings.search_timeline_timeframe,
                     rows=_to_db_rows(points),
                 )
@@ -222,7 +222,7 @@ def run_search_timeline(*, trend_run_seq: int) -> Dict[str, Any]:
                     trend_rank=int(keyword_row.trend_rank),
                     points_fetched=len(points),
                     points_written=written,
-                    skipped_today=False,
+                    skipped_same_run=False,
                     status=fetch_result.status,
                     attempts=fetch_result.attempts,
                 )
@@ -236,7 +236,7 @@ def run_search_timeline(*, trend_run_seq: int) -> Dict[str, Any]:
                     trend_rank=int(keyword_row.trend_rank),
                     points_fetched=0,
                     points_written=0,
-                    skipped_today=False,
+                    skipped_same_run=False,
                     status="error",
                     error=str(exc),
                 )
@@ -252,7 +252,7 @@ def run_search_timeline(*, trend_run_seq: int) -> Dict[str, Any]:
         "pending_keyword_count": len(pending_keyword_rows),
         "batch_target_count": batch_target_count,
         "total_points_written": total_points_written,
-        "skipped_today_count": skipped_today_count,
+        "skipped_same_run_count": skipped_same_run_count,
         "deferred_batch_count": deferred_batch_count,
         "success_count": success_count,
         "rate_limited_count": rate_limited_count,

@@ -1,16 +1,15 @@
 from __future__ import annotations
 
-from datetime import date
 from typing import Iterable, Set
 
 NAVER_DATALAB_SOURCE = "NAVER_DATALAB"
 
 
-def fetch_keyword_seqs_collected_for_observed_date(
+def fetch_keyword_seqs_collected_for_trend_run(
     *,
     conn,
+    trend_run_seq: int,
     keyword_seqs: Iterable[int],
-    observed_date: date,
     timeframe_label: str,
 ) -> Set[int]:
     seqs = sorted({int(seq) for seq in keyword_seqs if int(seq) > 0})
@@ -23,14 +22,14 @@ def fetch_keyword_seqs_collected_for_observed_date(
             f"""
             SELECT DISTINCT KEYWORD_SEQ AS keyword_seq
             FROM T_ANALYZE_SEARCH_TIMELINE
-            WHERE OBSERVED_DATE = %s
+            WHERE TREND_RUN_SEQ = %s
               AND DATA_SOURCE = %s
               AND GEO_CODE = 'KR'
               AND SEARCH_PROPERTY = ''
               AND TIMEFRAME_LABEL = %s
               AND KEYWORD_SEQ IN ({placeholders})
             """,
-            (observed_date, NAVER_DATALAB_SOURCE, str(timeframe_label).strip(), *seqs),
+            (int(trend_run_seq), NAVER_DATALAB_SOURCE, str(timeframe_label).strip(), *seqs),
         )
         rows = cur.fetchall() or []
 

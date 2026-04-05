@@ -146,6 +146,7 @@ class Settings:
     search_timeline_trend_run_seq: int = _get_int("SEARCH_TIMELINE_TREND_RUN_SEQ", 0)
     search_timeline_keyword_top_n: int = _get_int("SEARCH_TIMELINE_KEYWORD_TOP_N", 10)
     search_timeline_batch_size: int = _get_int("SEARCH_TIMELINE_BATCH_SIZE", 0)
+    search_timeline_refresh: bool = _get_bool01("SEARCH_TIMELINE_REFRESH", True)
     search_timeline_timeframe: str = _get_str("SEARCH_TIMELINE_TIMEFRAME", "today 3-m")
     search_timeline_sleep_min_seconds: float = _get_float("SEARCH_TIMELINE_SLEEP_MIN_SECONDS", 0.8)
     search_timeline_sleep_max_seconds: float = _get_float("SEARCH_TIMELINE_SLEEP_MAX_SECONDS", 1.2)
@@ -376,7 +377,7 @@ class Settings:
     # (추가) run_all 실행 옵션을 .env로 제어
     run_all_steps: str = _get_str(
         "RUN_ALL_STEPS",
-        "trend,search_timeline,news,preprocess,aggregate,final_rank,summary,title_sentiment,content_sentiment,title_bias,content_bias,wordcloud,cooc_network",
+        "trend,news,preprocess,aggregate,final_rank,search_timeline,summary,title_sentiment,content_sentiment,title_bias,content_bias,wordcloud,cooc_network",
     )
     run_all_fail_fast: bool = _get_bool01("RUN_ALL_FAIL_FAST", True)
 

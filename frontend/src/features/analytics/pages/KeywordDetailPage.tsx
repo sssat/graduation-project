@@ -1469,7 +1469,7 @@ export default function KeywordDetailPage() {
                 {trendTimelineRangeLabel} 기준 최근 3개월 동안 {displayKeyword} 키워드의 검색 관심도 변화를 보여줍니다.
               </div>
             </div>
-            <span className={styles.badgeSoft}>외부 관심도 신호</span>
+            <span className={styles.badgeSoft}>관심도 변화</span>
           </div>
 
           {trendTimeline.items.length ? (
@@ -1496,7 +1496,7 @@ export default function KeywordDetailPage() {
               </div>
 
               <div className={styles.timelineCaption}>
-                이 지수는 절대 검색량이 아니라 해당 기간 내 상대 관심도(0~100)입니다.
+                이 지수는 절대 검색량이 아니라 해당 기간 내 상대 점수(0~100)입니다.
                 {trendTimeline.has_partial ? " 마지막 데이터는 집계 중인 값일 수 있습니다." : ""}
               </div>
             </>

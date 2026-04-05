@@ -8,5 +8,5 @@ import org.springframework.stereotype.Repository;
 @Repository
 public interface SpringDataAnalyzeSearchTimelineRepository extends JpaRepository<AnalyzeSearchTimeline, Long> {
 
-    List<AnalyzeSearchTimeline> findByKeywordSeqAndDataSourceOrderByObservedDateAsc(Long keywordSeq, String dataSource);
+    List<AnalyzeSearchTimeline> findByKeywordSeqAndDataSourceOrderByTrendRunSeqDescObservedDateAsc(Long keywordSeq, String dataSource);
 }

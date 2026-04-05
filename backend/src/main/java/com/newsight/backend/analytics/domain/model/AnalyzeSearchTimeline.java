@@ -12,8 +12,8 @@ import lombok.*;
         name = "T_ANALYZE_SEARCH_TIMELINE",
         uniqueConstraints = {
                 @UniqueConstraint(
-                        name = "UK_T_ASTT__KEYWORD_DATE_GSP",
-                        columnNames = {"KEYWORD_SEQ", "OBSERVED_DATE", "GEO_CODE", "SEARCH_PROPERTY"}
+                        name = "UK_T_ASTT__RUN_KEYWORD_DATE_GSP",
+                        columnNames = {"TREND_RUN_SEQ", "KEYWORD_SEQ", "OBSERVED_DATE", "GEO_CODE", "SEARCH_PROPERTY"}
                 )
         }
 )
@@ -34,8 +34,8 @@ public class AnalyzeSearchTimeline {
     @Column(name = "KEYWORD_SEQ", nullable = false)
     private Long keywordSeq;
 
-    @Column(name = "LAST_TREND_RUN_SEQ")
-    private Long lastTrendRunSeq;
+    @Column(name = "TREND_RUN_SEQ", nullable = false)
+    private Long trendRunSeq;
 
     @Column(name = "OBSERVED_DATE", nullable = false)
     private LocalDate observedDate;
@@ -66,6 +66,6 @@ public class AnalyzeSearchTimeline {
     private TrendKeywordMasterRef keyword;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "LAST_TREND_RUN_SEQ", insertable = false, updatable = false)
-    private TrendRunRef lastTrendRun;
+    @JoinColumn(name = "TREND_RUN_SEQ", insertable = false, updatable = false)
+    private TrendRunRef trendRun;
 }

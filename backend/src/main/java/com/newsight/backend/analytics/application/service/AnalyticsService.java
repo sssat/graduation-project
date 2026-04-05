@@ -256,13 +256,24 @@ public class AnalyticsService {
         getKeywordOrThrow(keywordSeq);
 
         List<AnalyzeSearchTimeline> rows = analyzeSearchTimelineRepository
-                .findByKeywordSeqAndDataSourceOrderByObservedDateAsc(keywordSeq, SEARCH_TIMELINE_DATA_SOURCE);
+                .findByKeywordSeqAndDataSourceOrderByTrendRunSeqDescObservedDateAsc(keywordSeq, SEARCH_TIMELINE_DATA_SOURCE);
 
         if (rows.isEmpty()) {
             return new SearchTimelineResult(null, null, null, null, null, false, List.of());
         }
 
+        Long latestTrendRunSeq = rows.stream()
+                .map(AnalyzeSearchTimeline::getTrendRunSeq)
+                .filter(Objects::nonNull)
+                .max(Long::compareTo)
+                .orElse(null);
+
+        if (latestTrendRunSeq == null) {
+            return new SearchTimelineResult(null, null, null, null, null, false, List.of());
+        }
+
         LocalDate latestObservedDate = rows.stream()
+                .filter(r -> Objects.equals(r.getTrendRunSeq(), latestTrendRunSeq))
                 .map(AnalyzeSearchTimeline::getObservedDate)
                 .filter(Objects::nonNull)
                 .max(LocalDate::compareTo)
@@ -275,6 +286,7 @@ public class AnalyticsService {
         LocalDate requestedStartDate = latestObservedDate.minusMonths(SEARCH_TIMELINE_LOOKBACK_MONTHS);
 
         List<SearchTimelinePoint> items = rows.stream()
+                .filter(r -> Objects.equals(r.getTrendRunSeq(), latestTrendRunSeq))
                 .filter(r -> r.getObservedDate() != null)
                 .filter(r -> !r.getObservedDate().isBefore(requestedStartDate) && !r.getObservedDate().isAfter(latestObservedDate))
                 .map(r -> new SearchTimelinePoint(

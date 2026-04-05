@@ -180,12 +180,18 @@ python -m src.jobs.run_all
 cd data-pipeline
 
 python -m src.crawler.trend.jobs.run_trend
-python -m src.analyzer.search_timeline.jobs.run_search_timeline
 python -m src.crawler.news.jobs.run_news
 python -m src.preprocess.jobs.run_preprocess
 python -m src.analyzer.aggregate.jobs.run_aggregate
 python -m src.analyzer.final_rank.jobs.run_final_rank
+python -m src.analyzer.search_timeline.jobs.run_search_timeline
 python -m src.analyzer.summary.jobs.run_summary
+python -m src.analyzer.sentiment.title.jobs.run_title_sentiment
+python -m src.analyzer.sentiment.content.jobs.run_content_sentiment
+python -m src.analyzer.bias.title.jobs.run_title_bias
+python -m src.analyzer.bias.content.jobs.run_content_bias
+python -m src.analyzer.wordcloud.jobs.run_wordcloud
+python -m src.analyzer.cooc_network.jobs.run_cooc_network
 ```
 
 특정 트렌드 회차를 직접 지정하고 싶다면:
@@ -244,12 +250,13 @@ DB_PASSWORD=newspass
 OPENAI_API_KEY=your-openai-api-key
 AI_SUMMARY_MODEL=gpt-4o-mini
 
-RUN_ALL_STEPS=trend,search_timeline,news,preprocess,aggregate,final_rank,summary,title_sentiment,content_sentiment,title_bias,content_bias,wordcloud,cooc_network
+RUN_ALL_STEPS=trend,news,preprocess,aggregate,final_rank,search_timeline,summary,title_sentiment,content_sentiment,title_bias,content_bias,wordcloud,cooc_network
 RUN_ALL_FAIL_FAST=1
 HEADLESS=1
 
 SEARCH_TIMELINE_KEYWORD_TOP_N=0
 SEARCH_TIMELINE_BATCH_SIZE=0
+SEARCH_TIMELINE_REFRESH=1
 SEARCH_TIMELINE_TIMEFRAME=today 3-m
 SEARCH_TIMELINE_SLEEP_MIN_SECONDS=0.8
 SEARCH_TIMELINE_SLEEP_MAX_SECONDS=1.2

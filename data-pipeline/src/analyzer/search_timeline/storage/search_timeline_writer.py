@@ -18,7 +18,7 @@ def upsert_search_timeline_rows(
     *,
     conn,
     keyword_seq: int,
-    last_trend_run_seq: int,
+    trend_run_seq: int,
     timeframe_label: str,
     rows: Sequence[SearchTimelineRow],
 ) -> int:
@@ -30,7 +30,7 @@ def upsert_search_timeline_rows(
         payload.append(
             (
                 int(keyword_seq),
-                int(last_trend_run_seq),
+                int(trend_run_seq),
                 row.observed_date,
                 "KR",
                 "",
@@ -46,7 +46,7 @@ def upsert_search_timeline_rows(
             """
             INSERT INTO T_ANALYZE_SEARCH_TIMELINE (
               KEYWORD_SEQ,
-              LAST_TREND_RUN_SEQ,
+              TREND_RUN_SEQ,
               OBSERVED_DATE,
               GEO_CODE,
               SEARCH_PROPERTY,
@@ -57,7 +57,6 @@ def upsert_search_timeline_rows(
             )
             VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
             ON DUPLICATE KEY UPDATE
-              LAST_TREND_RUN_SEQ = VALUES(LAST_TREND_RUN_SEQ),
               TIMEFRAME_LABEL = VALUES(TIMEFRAME_LABEL),
               DATA_SOURCE = VALUES(DATA_SOURCE),
               INTEREST_SCORE = VALUES(INTEREST_SCORE),
