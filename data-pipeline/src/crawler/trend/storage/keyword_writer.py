@@ -12,10 +12,15 @@ from src.config.settings import settings
 
 
 # save_trend_snapshot_with_run(): 구글 트렌드에서 크롤링한 실시간 검색어 데이터를 DB에 저장(적재)하는 함수
-def save_trend_snapshot_with_run(keywords: Iterable[str], *, base_date: date | None = None) -> tuple[int, int]:
+def save_trend_snapshot_with_run(
+    keywords: Iterable[str],
+    *,
+    base_date: date | None = None,
+    run_at: datetime | None = None,
+) -> tuple[int, int]:
     tz = ZoneInfo(settings.tz)
     now_local = datetime.now(tz)
-    run_at = now_local.replace(tzinfo=None)
+    run_at = (run_at or now_local).replace(tzinfo=None)
     base_date = base_date or now_local.date()
 
     cleaned: list[tuple[str, int]] = []

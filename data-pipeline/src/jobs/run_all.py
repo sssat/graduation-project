@@ -1,6 +1,7 @@
 # data-pipeline/src/jobs/run_all.py
 from __future__ import annotations
 
+import os
 import subprocess
 import sys
 from datetime import datetime
@@ -40,10 +41,15 @@ def main() -> None:
     fail_fast = bool(getattr(settings, "run_all_fail_fast", True))
 
     started_at = _now()
+    batch_started_at = started_at.isoformat()
+    child_env = os.environ.copy()
+    child_env["NEWSIGHT_BATCH_STARTED_AT"] = batch_started_at
+
     print(
         "[run_all] "
         f"env={settings.app_env} tz={settings.tz} "
-        f"fail_fast={int(fail_fast)} steps={steps}"
+        f"fail_fast={int(fail_fast)} steps={steps} "
+        f"started_at={batch_started_at}"
     )
 
     for idx, step in enumerate(steps, start=1):
@@ -61,7 +67,7 @@ def main() -> None:
         # - run_all은 추가 로그 파일 생성 X
         # - job별 logs 폴더에 기존대로 로그 생성
         try:
-            subprocess.run([sys.executable, "-m", module], check=True)
+            subprocess.run([sys.executable, "-m", module], check=True, env=child_env)
             print(f"[run_all] ({idx}/{len(steps)}) done: {step}")
         except subprocess.CalledProcessError as e:
             print(f"[run_all] ({idx}/{len(steps)}) FAIL: {step} (exit={e.returncode})")

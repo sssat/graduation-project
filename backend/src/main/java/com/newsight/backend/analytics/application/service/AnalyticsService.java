@@ -54,6 +54,7 @@ import java.util.Optional;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.security.authentication.AuthenticationCredentialsNotFoundException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -99,7 +100,8 @@ public class AnalyticsService {
      * - top_keywords: ALL + D7 기준 TOP10
      */
     public OverviewResult getOverview() {
-        Long latestRunSeq = getLatestTrendRunSeq();
+        TrendRunRef latestRun = getLatestOverviewTrendRunOrThrow();
+        Long latestRunSeq = latestRun.getTrendRunSeq();
 
         long collectedArticleCount = sumAllKeywordArticleCount(latestRunSeq, PeriodFilter.D14);
 
@@ -117,13 +119,19 @@ public class AnalyticsService {
         List<TopKeywordItem> topKeywords = top10.stream()
                 .map(r -> new TopKeywordItem(
                         r.getFinalRank(),
+                        r.getKeywordSeq(),
                         keywordNameMap.getOrDefault(r.getKeywordSeq(), "(unknown)"),
                         r.getArticleCount(),
                         r.getArticleCount() >= ANALYZABLE_MIN_ARTICLE_COUNT
                 ))
                 .toList();
 
-        return new OverviewResult(collectedArticleCount, topKeywords);
+        return new OverviewResult(
+                collectedArticleCount,
+                latestRun.getBaseDate() == null ? null : latestRun.getBaseDate().toString(),
+                latestRun.getRunAt() == null ? null : latestRun.getRunAt().toString(),
+                topKeywords
+        );
     }
 
     /**
@@ -663,6 +671,24 @@ public class AnalyticsService {
                 .orElseThrow(() -> new NotFoundException("최신 트렌드 run이 없습니다."));
     }
 
+    private TrendRunRef getLatestOverviewTrendRunOrThrow() {
+        List<TrendRunRef> candidates = trendRunRefRepository.findAll(Sort.by(Sort.Direction.DESC, "trendRunSeq"));
+
+        for (TrendRunRef candidate : candidates) {
+            Long trendRunSeq = candidate.getTrendRunSeq();
+            if (trendRunSeq == null) {
+                continue;
+            }
+
+            long d7Count = sumAllKeywordArticleCount(trendRunSeq, PeriodFilter.D7);
+            if (d7Count > 0L) {
+                return candidate;
+            }
+        }
+
+        return getLatestTrendRunOrThrow();
+    }
+
     private TrendRunRef findComparableTrendRunWithData(LocalDate baseDate, PeriodFilter pf) {
         List<TrendRunRef> candidates = em.createQuery(
                         "select tr from TrendRunRef tr where tr.baseDate = :baseDate order by tr.trendRunSeq desc",
@@ -998,11 +1024,14 @@ public class AnalyticsService {
 
     public record OverviewResult(
             long collectedArticleCount,
+            String dataBaseDate,
+            String dataStartedAt,
             List<TopKeywordItem> topKeywords
     ) {}
 
     public record TopKeywordItem(
             int rankNo,
+            Long keywordSeq,
             String keyword,
             int articleCount,
             boolean isAnalyzable

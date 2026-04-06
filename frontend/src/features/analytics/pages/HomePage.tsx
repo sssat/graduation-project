@@ -5,7 +5,6 @@ import { Link } from "react-router-dom";
 import styles from "./HomePage.module.css";
 import {
   getAnalyticsOverview,
-  getMediaCompareTopKeywords,
   type AnalyticsOverviewTopKeywordItem,
 } from "../../../api/analytics";
 import { getErrorMessage } from "../../../api/types";
@@ -21,29 +20,39 @@ type HomeTopKeywordItem = {
 const TOP_KEYWORD_LIMIT = 10;
 const TOP_KEYWORD_LEFT_COLUMN_COUNT = 5;
 
-function formatTodayKoreanDate(now: Date): string {
-  const parts = new Intl.DateTimeFormat("ko-KR", {
-    year: "numeric",
-    month: "long",
-    day: "numeric",
-    weekday: "short",
-  }).formatToParts(now);
+function parseDateOnly(value: string | null | undefined): { year: number; month: number; day: number } | null {
+  if (!value) return null;
 
-  const year = parts.find((p) => p.type === "year")?.value ?? "";
-  const month = parts.find((p) => p.type === "month")?.value ?? "";
-  const day = parts.find((p) => p.type === "day")?.value ?? "";
-  const weekday = parts.find((p) => p.type === "weekday")?.value ?? "";
+  const match = value.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (!match) return null;
 
-  return `${year}년 ${month} ${day}일 (${weekday})`;
+  const [, yearText, monthText, dayText] = match;
+  return {
+    year: Number(yearText),
+    month: Number(monthText),
+    day: Number(dayText),
+  };
 }
 
-function formatKstUpdatedBase(now: Date): string {
-  return new Intl.DateTimeFormat("en-CA", {
-    timeZone: "Asia/Seoul",
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  }).format(now);
+function formatStoredBaseDate(value: string | null | undefined): string | null {
+  const parsed = parseDateOnly(value);
+  if (!parsed) return null;
+
+  const weekday = new Intl.DateTimeFormat("ko-KR", {
+    weekday: "short",
+  }).format(new Date(parsed.year, parsed.month - 1, parsed.day));
+
+  return `${parsed.year}년 ${parsed.month}월 ${parsed.day}일 (${weekday})`;
+}
+
+function formatStoredStartedAt(value: string | null | undefined): string | null {
+  if (!value) return null;
+
+  const match = value.match(/^(\d{4}-\d{2}-\d{2})[T ](\d{2}):(\d{2})/);
+  if (!match) return null;
+
+  const [, baseDate, hour, minute] = match;
+  return `${baseDate} ${hour}:${minute}`;
 }
 
 function toPositiveIntOrNull(value: unknown): number | null {
@@ -53,21 +62,19 @@ function toPositiveIntOrNull(value: unknown): number | null {
 }
 
 function readKeywordSeqFromOverviewItem(item: AnalyticsOverviewTopKeywordItem): number | null {
-  // 명세서상 overview TopKeywordItem에는 keyword_seq가 없을 수 있으므로 안전하게 optional 처리
+  // 구버전 응답과의 호환을 위해 optional로 읽는다.
   const candidate = (item as AnalyticsOverviewTopKeywordItem & { keyword_seq?: unknown }).keyword_seq;
   return toPositiveIntOrNull(candidate);
 }
 
 function mapTopKeywordItem(
   item: AnalyticsOverviewTopKeywordItem,
-  keywordSeqByName: Map<string, number>,
 ): HomeTopKeywordItem {
   const seqFromOverview = readKeywordSeqFromOverviewItem(item);
-  const seqFromFallback = keywordSeqByName.get(item.keyword) ?? null;
 
   return {
     rank: item.rank_no,
-    keywordSeq: seqFromOverview ?? seqFromFallback,
+    keywordSeq: seqFromOverview,
     label: item.keyword,
     count: item.article_count,
     isAnalyzable: item.is_analyzable,
@@ -92,6 +99,8 @@ function showMissingKeywordSeqAlert(keyword: string): void {
 export default function HomePage() {
   const [collectedNewsCount, setCollectedNewsCount] = useState<number>(0);
   const [topKeywords, setTopKeywords] = useState<HomeTopKeywordItem[]>([]);
+  const [dataBaseDate, setDataBaseDate] = useState<string | null>(null);
+  const [dataStartedAt, setDataStartedAt] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
@@ -103,32 +112,17 @@ export default function HomePage() {
       setErrorMessage(null);
 
       try {
-        const [overviewData, mediaCompareTopKeywordData] = await Promise.all([
-          getAnalyticsOverview(),
-          // overview 명세에는 keyword_seq가 없어서 상세 페이지 이동용 seq를 보완 매핑으로 가져온다.
-          // 이 호출이 실패해도 홈 화면 자체는 계속 보여주기 위해 개별적으로 무시 가능하게 처리한다.
-          getMediaCompareTopKeywords({ period: "D7", limit: TOP_KEYWORD_LIMIT }).catch(() => null),
-        ]);
+        const overviewData = await getAnalyticsOverview();
 
         if (cancelled) return;
 
-        const keywordSeqByName = new Map<string, number>();
-        for (const item of mediaCompareTopKeywordData?.items ?? []) {
-          if (
-            typeof item.keyword === "string" &&
-            typeof item.keyword_seq === "number" &&
-            Number.isInteger(item.keyword_seq) &&
-            item.keyword_seq > 0
-          ) {
-            keywordSeqByName.set(item.keyword, item.keyword_seq);
-          }
-        }
-
         const mapped = overviewData.top_keywords
           .slice(0, TOP_KEYWORD_LIMIT)
-          .map((item) => mapTopKeywordItem(item, keywordSeqByName));
+          .map(mapTopKeywordItem);
 
         setCollectedNewsCount(overviewData.collected_article_count);
+        setDataBaseDate(overviewData.data_base_date ?? null);
+        setDataStartedAt(overviewData.data_started_at ?? null);
         setTopKeywords(mapped);
       } catch (error: unknown) {
         if (cancelled) return;
@@ -157,10 +151,8 @@ export default function HomePage() {
     [topKeywords],
   );
 
-  const now = new Date();
-  const dateText = formatTodayKoreanDate(now);
-  const kstDateYmd = formatKstUpdatedBase(now);
-  const updatedAtText = `${kstDateYmd} 07:00`;
+  const dateText = formatStoredBaseDate(dataBaseDate) ?? "데이터 준비 중";
+  const updatedAtText = formatStoredStartedAt(dataStartedAt) ?? "-";
 
   const renderItem = (item: HomeTopKeywordItem) => {
     if (!item.isAnalyzable) {
@@ -169,8 +161,7 @@ export default function HomePage() {
           key={item.rank}
           type="button"
           className={styles.statItem}
-          onClick={() => showNotAnalyzableAlert(item
-            .count)}
+          onClick={() => showNotAnalyzableAlert(item.count)}
           aria-label={`${item.label} 키워드: 데이터 부족으로 분석 제공 불가 안내 보기`}
           style={{
             background: "transparent",
@@ -262,7 +253,7 @@ export default function HomePage() {
 
           <div className={styles.heroCards}>
             <article className={styles.heroCard}>
-              <div className={styles.heroCardLabel}>오늘 수집된 뉴스</div>
+              <div className={styles.heroCardLabel}>최신 수집 뉴스</div>
               <div className={styles.heroCardCount}>
                 {collectedNewsCount.toLocaleString("ko-KR")}
                 <span className={styles.unit}>건</span>
@@ -279,7 +270,7 @@ export default function HomePage() {
                 <span className={styles.unit}>개</span>
               </div>
               <div className={styles.heroCardCaption}>
-                오늘의 상위 키워드 10개 기준으로 수집된 뉴스 데이터를 바탕으로 다양한 지표
+                최신 상위 키워드 10개 기준으로 수집된 뉴스 데이터를 바탕으로 다양한 지표
                 분석과 인사이트를 제공합니다.
               </div>
             </article>
@@ -287,14 +278,14 @@ export default function HomePage() {
         </div>
       </section>
 
-      <section className={styles.statsSection} aria-label="오늘의 키워드 통계">
+      <section className={styles.statsSection} aria-label="최신 키워드 통계">
         <div className={styles.statsInner}>
           <div className={styles.statsDate}>{dateText}</div>
 
           <div className={styles.statsBoard}>
             <div className={styles.statsHeaderRow}>
               <div className={styles.statsTitle}>
-                오늘의 상위 키워드 <span className={styles.statsTitleEm}>Top 10</span>
+                최신 상위 키워드 <span className={styles.statsTitleEm}>Top 10</span>
               </div>
               <div className={styles.statsPill}>단위: 기사 건수</div>
             </div>

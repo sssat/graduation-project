@@ -15,6 +15,12 @@ public final class AnalyticsOverviewDto {
             @JsonProperty("collected_article_count")
             Long collectedArticleCount,
 
+            @JsonProperty("data_base_date")
+            String dataBaseDate,
+
+            @JsonProperty("data_started_at")
+            String dataStartedAt,
+
             @JsonProperty("top_keywords")
             List<TopKeywordItemDto> topKeywords
     ) {}
@@ -22,6 +28,9 @@ public final class AnalyticsOverviewDto {
     public record TopKeywordItemDto(
             @JsonProperty("rank_no")
             Integer rankNo,
+
+            @JsonProperty("keyword_seq")
+            Long keywordSeq,
 
             String keyword,
 

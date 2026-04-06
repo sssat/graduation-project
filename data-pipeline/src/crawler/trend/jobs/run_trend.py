@@ -25,6 +25,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 from datetime import date, datetime
 from pathlib import Path
 from typing import Any
@@ -36,8 +37,26 @@ from src.crawler.trend.storage.keyword_writer import save_trend_snapshot_with_ru
 from src.crawler.trend.storage.retention import prune_old_trend_runs
 
 
+def _now_in_tz() -> datetime:
+    return datetime.now(tz=ZoneInfo(settings.tz))
+
+
 def _today_in_tz() -> date:
-    return datetime.now(tz=ZoneInfo(settings.tz)).date()
+    return _now_in_tz().date()
+
+
+def _resolve_run_started_at() -> datetime:
+    raw = os.getenv("NEWSIGHT_BATCH_STARTED_AT", "").strip()
+    if raw:
+        try:
+            parsed = datetime.fromisoformat(raw)
+            if parsed.tzinfo is None:
+                return parsed.replace(tzinfo=ZoneInfo(settings.tz))
+            return parsed.astimezone(ZoneInfo(settings.tz))
+        except ValueError:
+            pass
+
+    return _now_in_tz()
 
 
 def _settings_summary_one_line() -> str:
@@ -61,16 +80,22 @@ def run_trend(*, base_date: date | None = None) -> dict[str, Any]:
     - headless: settings.headless
     - retention: settings.retention_keep_last_n (prune_old_trend_runs 내부에서 사용)
     """
-    base_date = base_date or _today_in_tz()
+    started_at = _resolve_run_started_at()
+    base_date = base_date or started_at.date()
 
     keywords = crawl_trends(top_n=int(settings.trend_top_n), headless=bool(settings.headless))
-    trend_run_seq, saved = save_trend_snapshot_with_run(keywords, base_date=base_date)
+    trend_run_seq, saved = save_trend_snapshot_with_run(
+        keywords,
+        base_date=base_date,
+        run_at=started_at,
+    )
 
     # retention도 settings 기반으로만 동작
     deleted = prune_old_trend_runs()
 
     return {
         "base_date": str(base_date),
+        "run_started_at": started_at.isoformat(),
         "trend_run_seq": int(trend_run_seq),
         "trend_keywords_saved": int(saved),
         "top_n": int(settings.trend_top_n),

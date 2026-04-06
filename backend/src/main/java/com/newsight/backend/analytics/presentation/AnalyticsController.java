@@ -44,6 +44,7 @@ public class AnalyticsController {
         List<AnalyticsOverviewDto.TopKeywordItemDto> items = result.topKeywords().stream()
                 .map(i -> new AnalyticsOverviewDto.TopKeywordItemDto(
                         i.rankNo(),
+                        i.keywordSeq(),
                         i.keyword(),
                         i.articleCount(),
                         i.isAnalyzable()
@@ -52,6 +53,8 @@ public class AnalyticsController {
 
         return ResponseEntity.ok(new AnalyticsOverviewDto.AnalyticsOverviewResponseDto(
                 result.collectedArticleCount(),
+                result.dataBaseDate(),
+                result.dataStartedAt(),
                 items
         ));
     }

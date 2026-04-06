@@ -35,6 +35,7 @@ function publicConfig<D = undefined>(
 
 export interface AnalyticsOverviewTopKeywordItem {
   rank_no: number;
+  keyword_seq?: number | null;
   keyword: string;
   article_count: number;
   is_analyzable: boolean;
@@ -42,6 +43,8 @@ export interface AnalyticsOverviewTopKeywordItem {
 
 export interface AnalyticsOverviewResponse {
   collected_article_count: number;
+  data_base_date: IsoDateString | null;
+  data_started_at: string | null;
   top_keywords: AnalyticsOverviewTopKeywordItem[];
 }
 
