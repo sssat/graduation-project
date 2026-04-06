@@ -48,11 +48,31 @@ function formatStoredBaseDate(value: string | null | undefined): string | null {
 function formatStoredStartedAt(value: string | null | undefined): string | null {
   if (!value) return null;
 
-  const match = value.match(/^(\d{4}-\d{2}-\d{2})[T ](\d{2}):(\d{2})/);
-  if (!match) return null;
+  const normalized = /([zZ]|[+-]\d{2}:\d{2})$/.test(value)
+    ? value
+    : `${value.replace(" ", "T")}+09:00`;
+  const parsed = new Date(normalized);
+  if (Number.isNaN(parsed.getTime())) return null;
 
-  const [, baseDate, hour, minute] = match;
-  return `${baseDate} ${hour}:${minute}`;
+  const parts = new Intl.DateTimeFormat("sv-SE", {
+    timeZone: "Asia/Seoul",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  }).formatToParts(parsed);
+
+  const year = parts.find((part) => part.type === "year")?.value ?? "";
+  const month = parts.find((part) => part.type === "month")?.value ?? "";
+  const day = parts.find((part) => part.type === "day")?.value ?? "";
+  const hour = parts.find((part) => part.type === "hour")?.value ?? "";
+  const minute = parts.find((part) => part.type === "minute")?.value ?? "";
+
+  if (!year || !month || !day || !hour || !minute) return null;
+
+  return `${year}-${month}-${day} ${hour}:${minute}`;
 }
 
 function toPositiveIntOrNull(value: unknown): number | null {

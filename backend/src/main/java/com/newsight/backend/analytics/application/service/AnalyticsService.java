@@ -42,6 +42,7 @@ import java.time.Clock;
 import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.EnumSet;
@@ -70,6 +71,7 @@ public class AnalyticsService {
     private static final int ALL_MEDIA_CODE = 0;
     private static final long SEARCH_TIMELINE_LOOKBACK_MONTHS = 3L;
     private static final String SEARCH_TIMELINE_DATA_SOURCE = "NAVER_DATALAB";
+    private static final DateTimeFormatter OFFSET_DATE_TIME_FORMATTER = DateTimeFormatter.ISO_OFFSET_DATE_TIME;
 
     private final SpringDataTrendRunRefRepository trendRunRefRepository;
     private final SpringDataTrendKeywordMasterRefRepository trendKeywordMasterRefRepository;
@@ -129,7 +131,7 @@ public class AnalyticsService {
         return new OverviewResult(
                 collectedArticleCount,
                 latestRun.getBaseDate() == null ? null : latestRun.getBaseDate().toString(),
-                latestRun.getRunAt() == null ? null : latestRun.getRunAt().toString(),
+                formatStartedAt(latestRun.getRunAt()),
                 topKeywords
         );
     }
@@ -669,6 +671,14 @@ public class AnalyticsService {
     private TrendRunRef getLatestTrendRunOrThrow() {
         return trendRunRefRepository.findFirstByOrderByTrendRunSeqDesc()
                 .orElseThrow(() -> new NotFoundException("최신 트렌드 run이 없습니다."));
+    }
+
+    private String formatStartedAt(LocalDateTime runAt) {
+        if (runAt == null) {
+            return null;
+        }
+
+        return runAt.atZone(clock.getZone()).format(OFFSET_DATE_TIME_FORMATTER);
     }
 
     private TrendRunRef getLatestOverviewTrendRunOrThrow() {
