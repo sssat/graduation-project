@@ -530,6 +530,11 @@ export default function MediaComparePage() {
       options: {
         responsive: true,
         maintainAspectRatio: false,
+        interaction: {
+          mode: "index",
+          axis: "x",
+          intersect: false,
+        },
         scales: {
           x: { grid: { display: false }, ticks: { color: "#64748b", font: { size: 11 } } },
           y: {
@@ -542,10 +547,15 @@ export default function MediaComparePage() {
         plugins: {
           legend: { display: false },
           tooltip: {
+            mode: "index",
+            intersect: false,
             callbacks: {
+              title(context) {
+                return context[0]?.label ?? "";
+              },
               label(context) {
                 const value = Number(context.parsed.y ?? 0);
-                return `편향도 ${value.toFixed(1)}`;
+                return `편향도 점수: ${value.toFixed(1)}`;
               },
             },
           },

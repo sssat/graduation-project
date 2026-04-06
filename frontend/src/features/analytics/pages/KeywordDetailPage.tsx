@@ -1122,6 +1122,11 @@ export default function KeywordDetailPage() {
       options: {
         responsive: true,
         maintainAspectRatio: false,
+        interaction: {
+          mode: "index",
+          axis: "x",
+          intersect: false,
+        },
         scales: {
           x: {
             grid: { display: false },
@@ -1137,9 +1142,15 @@ export default function KeywordDetailPage() {
         plugins: {
           legend: { display: false },
           tooltip: {
+            mode: "index",
+            intersect: false,
             callbacks: {
+              title(context) {
+                return context[0]?.label ?? "";
+              },
               label(context) {
-                return `편향도 ${context.parsed.y}`;
+                const value = Number(context.parsed.y ?? 0);
+                return `편향도 점수: ${value.toFixed(1)}`;
               },
             },
           },
