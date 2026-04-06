@@ -45,15 +45,13 @@ function formatStoredBaseDate(value: string | null | undefined): string | null {
   return `${parsed.year}년 ${parsed.month}월 ${parsed.day}일 (${weekday})`;
 }
 
-function formatStoredStartedAt(value: string | null | undefined): string | null {
-  if (!value) return null;
-
-  const normalized = /([zZ]|[+-]\d{2}:\d{2})$/.test(value)
-    ? value
-    : `${value.replace(" ", "T")}+09:00`;
-  const parsed = new Date(normalized);
-  if (Number.isNaN(parsed.getTime())) return null;
-
+function formatDateTimePartsInKst(value: Date): {
+  year: string;
+  month: string;
+  day: string;
+  hour: string;
+  minute: string;
+} | null {
   const parts = new Intl.DateTimeFormat("sv-SE", {
     timeZone: "Asia/Seoul",
     year: "numeric",
@@ -62,7 +60,7 @@ function formatStoredStartedAt(value: string | null | undefined): string | null 
     hour: "2-digit",
     minute: "2-digit",
     hour12: false,
-  }).formatToParts(parsed);
+  }).formatToParts(value);
 
   const year = parts.find((part) => part.type === "year")?.value ?? "";
   const month = parts.find((part) => part.type === "month")?.value ?? "";
@@ -72,7 +70,46 @@ function formatStoredStartedAt(value: string | null | undefined): string | null 
 
   if (!year || !month || !day || !hour || !minute) return null;
 
-  return `${year}-${month}-${day} ${hour}:${minute}`;
+  return { year, month, day, hour, minute };
+}
+
+function normalizeLegacyUtcStartedAt(
+  parsed: Date,
+  baseDate: string | null | undefined,
+): Date {
+  if (!baseDate) return parsed;
+
+  const currentParts = formatDateTimePartsInKst(parsed);
+  if (!currentParts) return parsed;
+
+  const currentDate = `${currentParts.year}-${currentParts.month}-${currentParts.day}`;
+  if (currentDate >= baseDate) return parsed;
+
+  const corrected = new Date(parsed.getTime() + 9 * 60 * 60 * 1000);
+  const correctedParts = formatDateTimePartsInKst(corrected);
+  if (!correctedParts) return parsed;
+
+  const correctedDate = `${correctedParts.year}-${correctedParts.month}-${correctedParts.day}`;
+  return correctedDate === baseDate ? corrected : parsed;
+}
+
+function formatStoredStartedAt(
+  value: string | null | undefined,
+  baseDate: string | null | undefined,
+): string | null {
+  if (!value) return null;
+
+  const normalized = /([zZ]|[+-]\d{2}:\d{2})$/.test(value)
+    ? value
+    : `${value.replace(" ", "T")}+09:00`;
+  const parsed = new Date(normalized);
+  if (Number.isNaN(parsed.getTime())) return null;
+
+  const corrected = normalizeLegacyUtcStartedAt(parsed, baseDate);
+  const parts = formatDateTimePartsInKst(corrected);
+  if (!parts) return null;
+
+  return `${parts.year}-${parts.month}-${parts.day} ${parts.hour}:${parts.minute}`;
 }
 
 function toPositiveIntOrNull(value: unknown): number | null {
@@ -172,7 +209,7 @@ export default function HomePage() {
   );
 
   const dateText = formatStoredBaseDate(dataBaseDate) ?? "데이터 준비 중";
-  const updatedAtText = formatStoredStartedAt(dataStartedAt) ?? "-";
+  const updatedAtText = formatStoredStartedAt(dataStartedAt, dataBaseDate) ?? "-";
 
   const renderItem = (item: HomeTopKeywordItem) => {
     if (!item.isAnalyzable) {

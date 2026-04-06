@@ -42,6 +42,7 @@ import java.time.Clock;
 import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -131,7 +132,7 @@ public class AnalyticsService {
         return new OverviewResult(
                 collectedArticleCount,
                 latestRun.getBaseDate() == null ? null : latestRun.getBaseDate().toString(),
-                formatStartedAt(latestRun.getRunAt()),
+                formatStartedAt(latestRun.getRunAt(), latestRun.getBaseDate()),
                 topKeywords
         );
     }
@@ -673,9 +674,15 @@ public class AnalyticsService {
                 .orElseThrow(() -> new NotFoundException("최신 트렌드 run이 없습니다."));
     }
 
-    private String formatStartedAt(LocalDateTime runAt) {
+    private String formatStartedAt(LocalDateTime runAt, LocalDate baseDate) {
         if (runAt == null) {
             return null;
+        }
+
+        if (baseDate != null && runAt.toLocalDate().isBefore(baseDate)) {
+            return runAt.atOffset(ZoneOffset.UTC)
+                    .atZoneSameInstant(clock.getZone())
+                    .format(OFFSET_DATE_TIME_FORMATTER);
         }
 
         return runAt.atZone(clock.getZone()).format(OFFSET_DATE_TIME_FORMATTER);
