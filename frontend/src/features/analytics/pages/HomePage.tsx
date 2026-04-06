@@ -160,7 +160,7 @@ export default function HomePage() {
   const now = new Date();
   const dateText = formatTodayKoreanDate(now);
   const kstDateYmd = formatKstUpdatedBase(now);
-  const updatedAtText = `${kstDateYmd} 06:00`;
+  const updatedAtText = `${kstDateYmd} 07:00`;
 
   const renderItem = (item: HomeTopKeywordItem) => {
     if (!item.isAnalyzable) {
