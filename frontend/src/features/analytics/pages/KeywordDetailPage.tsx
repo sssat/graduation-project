@@ -27,6 +27,7 @@ import {
   type CoocNetworkEdge,
   type CoocNetworkNode,
   type ContentSentimentResponse,
+  type SearchTimelinePoint,
   type SearchTimelineResponse,
   type KeywordMetaResponse,
   type TitleBiasByMediaItem,
@@ -107,6 +108,102 @@ function formatCompactDateLabel(isoDate: string): string {
   if (!year || !month || !day) return isoDate;
 
   return `${Number(month)}.${Number(day)}`;
+}
+
+function parseIsoDateOnly(value: string | null | undefined): Date | null {
+  if (!value) return null;
+
+  const match = value.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (!match) return null;
+
+  const [, yearText, monthText, dayText] = match;
+  return new Date(Date.UTC(Number(yearText), Number(monthText) - 1, Number(dayText)));
+}
+
+function formatIsoDateOnly(value: Date): string {
+  const year = value.getUTCFullYear();
+  const month = `${value.getUTCMonth() + 1}`.padStart(2, "0");
+  const day = `${value.getUTCDate()}`.padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+function addUtcDays(value: Date, days: number): Date {
+  const next = new Date(value.getTime());
+  next.setUTCDate(next.getUTCDate() + days);
+  return next;
+}
+
+function addUtcMonths(value: Date, months: number): Date {
+  const next = new Date(value.getTime());
+  next.setUTCMonth(next.getUTCMonth() + months);
+  return next;
+}
+
+function buildDailyTrendTimeline(
+  timeline: SearchTimelineResponse,
+): {
+  periodStart: string | null;
+  periodEnd: string | null;
+  items: SearchTimelinePoint[];
+} {
+  const rawItems = [...(timeline.items ?? [])]
+    .filter((item) => item?.observed_date)
+    .sort((a, b) => a.observed_date.localeCompare(b.observed_date));
+
+  if (!rawItems.length) {
+    return {
+      periodStart: timeline.period_start ?? null,
+      periodEnd: timeline.period_end ?? null,
+      items: [],
+    };
+  }
+
+  const firstItemDate = parseIsoDateOnly(rawItems[0]?.observed_date);
+  const lastItemDate = parseIsoDateOnly(rawItems[rawItems.length - 1]?.observed_date);
+  const explicitStartDate = parseIsoDateOnly(timeline.period_start) ?? firstItemDate;
+  const explicitEndDate = parseIsoDateOnly(timeline.period_end) ?? lastItemDate;
+  const resolvedEndDate = explicitEndDate ?? lastItemDate;
+
+  if (!resolvedEndDate) {
+    return {
+      periodStart: timeline.period_start ?? rawItems[0]?.observed_date ?? null,
+      periodEnd: timeline.period_end ?? rawItems[rawItems.length - 1]?.observed_date ?? null,
+      items: rawItems,
+    };
+  }
+
+  const requestedStartDate = addUtcMonths(resolvedEndDate, -3);
+  const resolvedStartDate =
+    explicitStartDate && explicitStartDate.getTime() < requestedStartDate.getTime()
+      ? explicitStartDate
+      : requestedStartDate;
+
+  const itemMap = new Map<string, SearchTimelinePoint>();
+  rawItems.forEach((item) => {
+    itemMap.set(item.observed_date, item);
+  });
+
+  const filledItems: SearchTimelinePoint[] = [];
+  for (
+    let cursor = new Date(resolvedStartDate.getTime());
+    cursor.getTime() <= resolvedEndDate.getTime();
+    cursor = addUtcDays(cursor, 1)
+  ) {
+    const observedDate = formatIsoDateOnly(cursor);
+    filledItems.push(
+      itemMap.get(observedDate) ?? {
+        observed_date: observedDate,
+        interest_score: 0,
+        is_partial: false,
+      },
+    );
+  }
+
+  return {
+    periodStart: filledItems[0]?.observed_date ?? null,
+    periodEnd: filledItems[filledItems.length - 1]?.observed_date ?? null,
+    items: filledItems,
+  };
 }
 
 function createEmptyTrendTimeline(): SearchTimelineResponse {
@@ -1178,7 +1275,8 @@ export default function KeywordDetailPage() {
       trendTimelineChartRef.current = null;
     }
 
-    const items = viewData.trendTimeline.items ?? [];
+    const dailyTrendTimeline = buildDailyTrendTimeline(viewData.trendTimeline);
+    const items = dailyTrendTimeline.items;
     if (!items.length) {
       return;
     }
@@ -1436,9 +1534,10 @@ export default function KeywordDetailPage() {
 
   const sentiment = viewData.sentiment;
   const trendTimeline = viewData.trendTimeline;
+  const dailyTrendTimeline = buildDailyTrendTimeline(trendTimeline);
   const trendTimelineRangeLabel =
-    trendTimeline.period_start && trendTimeline.period_end
-      ? formatKoreanRange(trendTimeline.period_start, trendTimeline.period_end)
+    dailyTrendTimeline.periodStart && dailyTrendTimeline.periodEnd
+      ? formatKoreanRange(dailyTrendTimeline.periodStart, dailyTrendTimeline.periodEnd)
       : rangeLabel;
 
   return (
