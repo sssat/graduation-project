@@ -76,7 +76,8 @@ def _settings_one_line(*, trend_run_seq: int, periods: List[str], refresh: bool)
         f"bias_title_log_dir={settings.log_dir_bias_title} "
         f"trend_run_seq={trend_run_seq} "
         f"periods={','.join(periods)} "
-        f"refresh={1 if refresh else 0}"
+        f"refresh={1 if refresh else 0} "
+        f"delta_scale={float(settings.bias_title_delta_scale)}"
     )
 
 

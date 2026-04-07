@@ -5,7 +5,7 @@
 # - 분포 P(media) = (pos, neu, neg), Q(overall) = (pos, neu, neg) 를 확률(합=1)로 만든다.
 # - 각 분포의 "순감성(net sentiment)" 을 (pos - neg) 로 정의한다.
 # - overall 대비 차이(delta_net) = (p_pos - p_neg) - (q_pos - q_neg)
-# - 점수는 score = clamp(delta_net * 5, -10, +10) 로 계산한다.
+# - 점수는 score = clamp(delta_net * delta_scale, -10, +10) 로 계산한다.
 #   - overall과 완전히 같으면 0점
 #   - overall보다 더 긍정 쪽이면 +점
 #   - overall보다 더 부정 쪽이면 -점
@@ -28,6 +28,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from typing import Any, Dict, Iterable, List, Optional, Tuple
+
+from src.config.settings import settings
 
 PERIOD_TODAY = "TODAY"
 PERIOD_D7 = "D7"
@@ -141,6 +143,7 @@ def _bias_score_title_continuous(
     base_pos: float,
     base_neu: float,
     base_neg: float,
+    delta_scale: float,
 ) -> float:
     """
     단일 값( -10 .. +10 ) 연속형 제목 편향 점수.
@@ -149,7 +152,7 @@ def _bias_score_title_continuous(
       - media 순감성  = (pos - neg)
       - overall 순감성 = (pos - neg)
       - delta_net = media_net - overall_net
-      - score = clamp(delta_net * 5, -10, +10)
+      - score = clamp(delta_net * delta_scale, -10, +10)
 
     해석:
       - 0 : overall과 동일한 감성 분포
@@ -164,7 +167,7 @@ def _bias_score_title_continuous(
     base_net = q[0] - q[2]
     delta_net = media_net - base_net
 
-    score = delta_net * 13.0
+    score = delta_net * max(0.0, float(delta_scale))
     return float(_clamp(score, -10.0, 10.0))
 
 
@@ -175,6 +178,7 @@ def calc_title_bias_items(
     overall_map: Dict[int, Tuple[float, float, float]],
     counts_map: Dict[Tuple[int, int], int],
     keyword_name_map: Optional[Dict[int, str]] = None,
+    delta_scale: float = 13.0,
 ) -> List[TitleBiasItem]:
     """
     제목 편향도 핵심 계산(순수 로직).
@@ -235,6 +239,7 @@ def calc_title_bias_items(
             base_pos=float(base_pos),
             base_neu=float(base_neu),
             base_neg=float(base_neg),
+            delta_scale=float(delta_scale),
         )
 
         kw_name = kn_map.get(kseq) or f"keyword_seq={kseq}"
@@ -257,6 +262,7 @@ def run_title_bias_for_run(
     trend_run_seq: int,
     period_filter: str,
     refresh_same_run: bool,
+    delta_scale: Optional[float] = None,
 ) -> Dict[str, Any]:
     """
     제목 편향도 실행(DB 조회 -> 계산 -> DB 저장) 오케스트레이션.
@@ -270,6 +276,7 @@ def run_title_bias_for_run(
       5) T_ANALYZE_MEDIA_BIAS에 UPSERT
     """
     pf = _normalize_period_filter(period_filter)
+    resolved_delta_scale = max(0.0, float(settings.bias_title_delta_scale if delta_scale is None else delta_scale))
 
     # 레이어 간 결합을 최소화하려고 내부 import 사용
     from src.common.db import get_conn
@@ -303,6 +310,7 @@ def run_title_bias_for_run(
             overall_map=overall_map,
             counts_map=counts_map,
             keyword_name_map=keyword_name_map,
+            delta_scale=resolved_delta_scale,
         )
 
         reset_cnt = 0
@@ -316,6 +324,7 @@ def run_title_bias_for_run(
             "trend_run_seq": int(trend_run_seq),
             "period_filter": pf,
             "refresh": bool(refresh_same_run),
+            "delta_scale": float(resolved_delta_scale),
             "media_rows": int(len(media_rows)),
             "overall_rows": int(len(overall_map)),
             "reset_rows": int(reset_cnt),

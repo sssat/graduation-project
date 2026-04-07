@@ -104,7 +104,8 @@ def _settings_summary_one_line(*, trend_run_seq: int, periods: Sequence[str], re
         f"bias_content_log_dir={settings.log_dir_bias_content} "
         f"trend_run_seq={int(trend_run_seq)} "
         f"periods={','.join(periods)} "
-        f"refresh={1 if refresh else 0}"
+        f"refresh={1 if refresh else 0} "
+        f"delta_scale={float(settings.bias_content_delta_scale)}"
     )
 
 
@@ -201,6 +202,7 @@ def _run_one_period(
         overall_map=overall_map,
         article_count_map=article_count_map,
         keyword_name_map=keyword_name_map,
+        delta_scale=float(settings.bias_content_delta_scale),
     )
 
     # 4) 적재 (refresh 시 본문 점수만 reset)
