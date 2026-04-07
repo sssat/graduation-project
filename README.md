@@ -237,19 +237,16 @@ VITE_API_BASE_URL=http://localhost:8080/api
 
 ### Data Pipeline
 
+`data-pipeline`은 설정을 두 파일로 나눠 관리합니다.
+
+- `data-pipeline/config/pipeline.env`: 공용 튜닝값 / 기본 실행값
+- `data-pipeline/.env`: 민감값 / 로컬·서버별 override 값
+
+`settings.py`는 `config/pipeline.env`를 먼저 읽고, 이후 `.env`를 읽어 같은 키를 덮어씁니다.
+
+공용 튜닝값 예시(`data-pipeline/config/pipeline.env`):
+
 ```env
-APP_ENV=local
-TZ=Asia/Seoul
-
-DB_HOST=127.0.0.1
-DB_PORT=3307
-DB_NAME=newsight
-DB_USER=newsight
-DB_PASSWORD=newspass
-
-OPENAI_API_KEY=your-openai-api-key
-AI_SUMMARY_MODEL=gpt-4o-mini
-
 RUN_ALL_STEPS=trend,news,preprocess,aggregate,final_rank,search_timeline,summary,title_sentiment,content_sentiment,title_bias,content_bias,wordcloud,cooc_network
 RUN_ALL_FAIL_FAST=1
 HEADLESS=1
@@ -269,7 +266,29 @@ NAVER_DATALAB_AGES=
 NAVER_DATALAB_REQUEST_TIMEOUT_SECONDS=20
 ```
 
+민감값 / 환경별 override 예시(`data-pipeline/.env`):
+
+```env
+APP_ENV=local
+TZ=Asia/Seoul
+
+DB_HOST=127.0.0.1
+DB_PORT=3307
+DB_NAME=newsight
+DB_USER=newsight
+DB_PASSWORD=newspass
+
+OPENAI_API_KEY=your-openai-api-key
+NAVER_DATALAB_CLIENT_ID=
+NAVER_DATALAB_CLIENT_SECRET=
+```
+
 `NAVER_DATALAB_DEVICE`, `NAVER_DATALAB_GENDER`, `NAVER_DATALAB_AGES`를 비워두면 전체 조건으로 조회합니다.
+
+권장 운영 방식:
+
+- `config/pipeline.env`는 git으로 공유
+- `.env`는 git에 올리지 않고 로컬/서버마다 별도로 관리
 
 ## 검색 관심도 타임라인
 
