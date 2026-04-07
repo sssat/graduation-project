@@ -1,4 +1,4 @@
-"""`.env`를 읽어 공통 설정을 관리하고, 필요한 최소한의 정규화를 적용한다."""
+"""`config/pipeline.env`와 `.env`를 읽어 공통 설정을 관리하고, 필요한 최소한의 정규화를 적용한다."""
 
 from __future__ import annotations
 
@@ -11,6 +11,7 @@ from dotenv import load_dotenv
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
+load_dotenv(PROJECT_ROOT / "config" / "pipeline.env", override=True)
 load_dotenv(PROJECT_ROOT / ".env", override=True)
 
 
