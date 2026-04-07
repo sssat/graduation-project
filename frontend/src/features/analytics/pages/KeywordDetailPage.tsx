@@ -133,12 +133,6 @@ function addUtcDays(value: Date, days: number): Date {
   return next;
 }
 
-function addUtcMonths(value: Date, months: number): Date {
-  const next = new Date(value.getTime());
-  next.setUTCMonth(next.getUTCMonth() + months);
-  return next;
-}
-
 function buildDailyTrendTimeline(
   timeline: SearchTimelineResponse,
 ): {
@@ -162,21 +156,16 @@ function buildDailyTrendTimeline(
   const lastItemDate = parseIsoDateOnly(rawItems[rawItems.length - 1]?.observed_date);
   const explicitStartDate = parseIsoDateOnly(timeline.period_start) ?? firstItemDate;
   const explicitEndDate = parseIsoDateOnly(timeline.period_end) ?? lastItemDate;
+  const resolvedStartDate = explicitStartDate ?? firstItemDate;
   const resolvedEndDate = explicitEndDate ?? lastItemDate;
 
-  if (!resolvedEndDate) {
+  if (!resolvedStartDate || !resolvedEndDate) {
     return {
       periodStart: timeline.period_start ?? rawItems[0]?.observed_date ?? null,
       periodEnd: timeline.period_end ?? rawItems[rawItems.length - 1]?.observed_date ?? null,
       items: rawItems,
     };
   }
-
-  const requestedStartDate = addUtcMonths(resolvedEndDate, -3);
-  const resolvedStartDate =
-    explicitStartDate && explicitStartDate.getTime() < requestedStartDate.getTime()
-      ? explicitStartDate
-      : requestedStartDate;
 
   const itemMap = new Map<string, SearchTimelinePoint>();
   rawItems.forEach((item) => {
