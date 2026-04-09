@@ -107,7 +107,6 @@ class Settings:
     log_dir_preprocess: str = _get_str("LOG_DIR_PREPROCESS", "")
     log_dir_aggregate: str = _get_str("LOG_DIR_AGGREGATE", "")
     log_dir_final_rank: str = _get_str("LOG_DIR_FINAL_RANK", "")
-    log_dir_search_timeline: str = _get_str("LOG_DIR_SEARCH_TIMELINE", "")
     log_dir_summary: str = _get_str("LOG_DIR_SUMMARY", "")
     log_dir_sentiment_title: str = _get_str("LOG_DIR_SENTIMENT_TITLE", "")
     log_dir_sentiment_content: str = _get_str("LOG_DIR_SENTIMENT_CONTENT", "")
@@ -115,6 +114,7 @@ class Settings:
     log_dir_bias_content: str = _get_str("LOG_DIR_BIAS_CONTENT", "")
     log_dir_wordcloud: str = _get_str("LOG_DIR_WORDCLOUD", "")
     log_dir_cooc_network: str = _get_str("LOG_DIR_COOC_NETWORK", "")
+    log_dir_search_timeline: str = _get_str("LOG_DIR_SEARCH_TIMELINE", "")
 
     # 크롤러 및 공통 런타임 설정
     headless: bool = _get_bool01("HEADLESS", True)
@@ -171,21 +171,6 @@ class Settings:
     final_rank_periods: str = _get_str("FINAL_RANK_PERIODS", "TODAY,D7,D14,D30")
     final_rank_refresh: bool = _get_bool01("FINAL_RANK_REFRESH", True)
     keyword_english_whitelist: str = _get_str("KEYWORD_ENGLISH_WHITELIST", "chat gpt,chatgpt,gpt")
-
-    # search_timeline 단계
-    search_timeline_trend_run_seq: int = _get_int("SEARCH_TIMELINE_TREND_RUN_SEQ", 0)
-    search_timeline_keyword_top_n: int = _get_int("SEARCH_TIMELINE_KEYWORD_TOP_N", 0)
-    search_timeline_batch_size: int = _get_int("SEARCH_TIMELINE_BATCH_SIZE", 0)
-    search_timeline_refresh: bool = _get_bool01("SEARCH_TIMELINE_REFRESH", True)
-    search_timeline_timeframe: str = _get_str("SEARCH_TIMELINE_TIMEFRAME", "today 3-m")
-    search_timeline_sleep_min_seconds: float = _get_float("SEARCH_TIMELINE_SLEEP_MIN_SECONDS", 0.8)
-    search_timeline_sleep_max_seconds: float = _get_float("SEARCH_TIMELINE_SLEEP_MAX_SECONDS", 1.2)
-    naver_datalab_client_id: str = _get_str("NAVER_DATALAB_CLIENT_ID", "")
-    naver_datalab_client_secret: str = _get_str("NAVER_DATALAB_CLIENT_SECRET", "")
-    naver_datalab_device: str = _get_str("NAVER_DATALAB_DEVICE", "")
-    naver_datalab_gender: str = _get_str("NAVER_DATALAB_GENDER", "")
-    naver_datalab_ages: str = _get_str("NAVER_DATALAB_AGES", "")
-    naver_datalab_request_timeout_seconds: float = _get_float("NAVER_DATALAB_REQUEST_TIMEOUT_SECONDS", 20.0)
 
     # summary 단계
     openai_api_key: str = _get_str("OPENAI_API_KEY", "")
@@ -312,10 +297,25 @@ class Settings:
     cooc_min_edge_weight: int = _get_int("COOC_MIN_EDGE_WEIGHT", 2)
     cooc_min_docs_used: int = _get_int("COOC_MIN_DOCS_USED", 5)
 
+    # search_timeline 단계
+    search_timeline_trend_run_seq: int = _get_int("SEARCH_TIMELINE_TREND_RUN_SEQ", 0)
+    search_timeline_keyword_top_n: int = _get_int("SEARCH_TIMELINE_KEYWORD_TOP_N", 0)
+    search_timeline_batch_size: int = _get_int("SEARCH_TIMELINE_BATCH_SIZE", 0)
+    search_timeline_refresh: bool = _get_bool01("SEARCH_TIMELINE_REFRESH", True)
+    search_timeline_timeframe: str = _get_str("SEARCH_TIMELINE_TIMEFRAME", "today 3-m")
+    search_timeline_sleep_min_seconds: float = _get_float("SEARCH_TIMELINE_SLEEP_MIN_SECONDS", 0.8)
+    search_timeline_sleep_max_seconds: float = _get_float("SEARCH_TIMELINE_SLEEP_MAX_SECONDS", 1.2)
+    naver_datalab_client_id: str = _get_str("NAVER_DATALAB_CLIENT_ID", "")
+    naver_datalab_client_secret: str = _get_str("NAVER_DATALAB_CLIENT_SECRET", "")
+    naver_datalab_device: str = _get_str("NAVER_DATALAB_DEVICE", "")
+    naver_datalab_gender: str = _get_str("NAVER_DATALAB_GENDER", "")
+    naver_datalab_ages: str = _get_str("NAVER_DATALAB_AGES", "")
+    naver_datalab_request_timeout_seconds: float = _get_float("NAVER_DATALAB_REQUEST_TIMEOUT_SECONDS", 20.0)
+
     # 전체 파이프라인 실행 설정
     run_all_steps: str = _get_str(
         "RUN_ALL_STEPS",
-        "trend,news,preprocess,aggregate,final_rank,search_timeline,summary,title_sentiment,content_sentiment,title_bias,content_bias,wordcloud,cooc_network",
+        "trend,news,preprocess,aggregate,final_rank,summary,title_sentiment,content_sentiment,title_bias,content_bias,wordcloud,cooc_network,search_timeline",
     )
     run_all_fail_fast: bool = _get_bool01("RUN_ALL_FAIL_FAST", True)
 
@@ -398,57 +398,6 @@ class Settings:
             final_rank_periods = "TODAY,D7,D14,D30"
         object.__setattr__(self, "final_rank_periods", final_rank_periods)
         object.__setattr__(self, "final_rank_refresh", bool(self.final_rank_refresh))
-
-        # search_timeline 단계 보정
-        object.__setattr__(self, "search_timeline_trend_run_seq", max(0, int(self.search_timeline_trend_run_seq)))
-        object.__setattr__(self, "search_timeline_keyword_top_n", max(0, int(self.search_timeline_keyword_top_n)))
-        object.__setattr__(self, "search_timeline_batch_size", max(0, int(self.search_timeline_batch_size)))
-        object.__setattr__(
-            self,
-            "search_timeline_timeframe",
-            (self.search_timeline_timeframe or "today 3-m").strip() or "today 3-m",
-        )
-        object.__setattr__(
-            self,
-            "search_timeline_sleep_min_seconds",
-            max(0.0, float(self.search_timeline_sleep_min_seconds)),
-        )
-        object.__setattr__(
-            self,
-            "search_timeline_sleep_max_seconds",
-            max(0.0, float(self.search_timeline_sleep_max_seconds)),
-        )
-        if self.search_timeline_sleep_max_seconds < self.search_timeline_sleep_min_seconds:
-            object.__setattr__(
-                self,
-                "search_timeline_sleep_max_seconds",
-                float(self.search_timeline_sleep_min_seconds),
-            )
-
-        object.__setattr__(self, "naver_datalab_client_id", (self.naver_datalab_client_id or "").strip())
-        object.__setattr__(self, "naver_datalab_client_secret", (self.naver_datalab_client_secret or "").strip())
-
-        device = (self.naver_datalab_device or "").strip().lower()
-        if device not in {"", "pc", "mo"}:
-            device = ""
-        object.__setattr__(self, "naver_datalab_device", device)
-
-        gender = (self.naver_datalab_gender or "").strip().lower()
-        if gender not in {"", "m", "f"}:
-            gender = ""
-        object.__setattr__(self, "naver_datalab_gender", gender)
-
-        ages = ",".join(
-            part
-            for part in ((self.naver_datalab_ages or "").replace(" ", "").split(","))
-            if part in {"1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11"}
-        )
-        object.__setattr__(self, "naver_datalab_ages", ages)
-        object.__setattr__(
-            self,
-            "naver_datalab_request_timeout_seconds",
-            max(1.0, float(self.naver_datalab_request_timeout_seconds)),
-        )
 
         # summary 단계 보정
         object.__setattr__(self, "ai_summary_max_output_tokens", max(64, int(self.ai_summary_max_output_tokens)))
@@ -731,7 +680,7 @@ class Settings:
 
         raw_steps = (self.run_all_steps or "").strip()
         if not raw_steps:
-            raw_steps = "trend,news,preprocess,aggregate,final_rank,search_timeline,summary,title_sentiment,content_sentiment,title_bias,content_bias,wordcloud,cooc_network"
+            raw_steps = "trend,news,preprocess,aggregate,final_rank,summary,title_sentiment,content_sentiment,title_bias,content_bias,wordcloud,cooc_network,search_timeline"
 
         normalized_steps: list[str] = []
         seen_steps: set[str] = set()
@@ -749,7 +698,6 @@ class Settings:
                 "preprocess",
                 "aggregate",
                 "final_rank",
-                "search_timeline",
                 "summary",
                 "title_sentiment",
                 "content_sentiment",
@@ -757,7 +705,12 @@ class Settings:
                 "content_bias",
                 "wordcloud",
                 "cooc_network",
+                "search_timeline",
             ]
+
+        if "search_timeline" in normalized_steps:
+            normalized_steps = [step for step in normalized_steps if step != "search_timeline"]
+            normalized_steps.append("search_timeline")
 
         object.__setattr__(self, "run_all_steps", ",".join(normalized_steps))
         object.__setattr__(self, "run_all_fail_fast", bool(self.run_all_fail_fast))
@@ -787,11 +740,6 @@ class Settings:
         if not final_rank_dir:
             final_rank_dir = "src/analyzer/final_rank/logs"
         object.__setattr__(self, "log_dir_final_rank", _resolve_dir(final_rank_dir))
-
-        search_timeline_dir = (self.log_dir_search_timeline or "").strip()
-        if not search_timeline_dir:
-            search_timeline_dir = "src/analyzer/search_timeline/logs"
-        object.__setattr__(self, "log_dir_search_timeline", _resolve_dir(search_timeline_dir))
 
         summary_dir = (self.log_dir_summary or "").strip()
         if not summary_dir:
@@ -827,6 +775,62 @@ class Settings:
         if not cooc_dir:
             cooc_dir = "src/analyzer/cooc_network/logs"
         object.__setattr__(self, "log_dir_cooc_network", _resolve_dir(cooc_dir))
+
+        # search_timeline 단계 보정
+        object.__setattr__(self, "search_timeline_trend_run_seq", max(0, int(self.search_timeline_trend_run_seq)))
+        object.__setattr__(self, "search_timeline_keyword_top_n", max(0, int(self.search_timeline_keyword_top_n)))
+        object.__setattr__(self, "search_timeline_batch_size", max(0, int(self.search_timeline_batch_size)))
+        object.__setattr__(
+            self,
+            "search_timeline_timeframe",
+            (self.search_timeline_timeframe or "today 3-m").strip() or "today 3-m",
+        )
+        object.__setattr__(
+            self,
+            "search_timeline_sleep_min_seconds",
+            max(0.0, float(self.search_timeline_sleep_min_seconds)),
+        )
+        object.__setattr__(
+            self,
+            "search_timeline_sleep_max_seconds",
+            max(0.0, float(self.search_timeline_sleep_max_seconds)),
+        )
+        if self.search_timeline_sleep_max_seconds < self.search_timeline_sleep_min_seconds:
+            object.__setattr__(
+                self,
+                "search_timeline_sleep_max_seconds",
+                float(self.search_timeline_sleep_min_seconds),
+            )
+
+        object.__setattr__(self, "naver_datalab_client_id", (self.naver_datalab_client_id or "").strip())
+        object.__setattr__(self, "naver_datalab_client_secret", (self.naver_datalab_client_secret or "").strip())
+
+        device = (self.naver_datalab_device or "").strip().lower()
+        if device not in {"", "pc", "mo"}:
+            device = ""
+        object.__setattr__(self, "naver_datalab_device", device)
+
+        gender = (self.naver_datalab_gender or "").strip().lower()
+        if gender not in {"", "m", "f"}:
+            gender = ""
+        object.__setattr__(self, "naver_datalab_gender", gender)
+
+        ages = ",".join(
+            part
+            for part in ((self.naver_datalab_ages or "").replace(" ", "").split(","))
+            if part in {"1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11"}
+        )
+        object.__setattr__(self, "naver_datalab_ages", ages)
+        object.__setattr__(
+            self,
+            "naver_datalab_request_timeout_seconds",
+            max(1.0, float(self.naver_datalab_request_timeout_seconds)),
+        )
+
+        search_timeline_dir = (self.log_dir_search_timeline or "").strip()
+        if not search_timeline_dir:
+            search_timeline_dir = "src/analyzer/search_timeline/logs"
+        object.__setattr__(self, "log_dir_search_timeline", _resolve_dir(search_timeline_dir))
 
 
 settings = Settings()

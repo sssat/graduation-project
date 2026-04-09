@@ -23,7 +23,6 @@ def main() -> None:
     # 스텝 키 -> 실제 실행할 모듈 경로 매핑
     step_to_module: Dict[str, str] = {
         "trend": "src.crawler.trend.jobs.run_trend",
-        "search_timeline": "src.analyzer.search_timeline.jobs.run_search_timeline",
         "news": "src.crawler.news.jobs.run_news",
         "preprocess": "src.preprocess.jobs.run_preprocess",
         "aggregate": "src.analyzer.aggregate.jobs.run_aggregate",
@@ -35,6 +34,7 @@ def main() -> None:
         "content_bias": "src.analyzer.bias.content.jobs.run_content_bias",
         "wordcloud": "src.analyzer.wordcloud.jobs.run_wordcloud",
         "cooc_network": "src.analyzer.cooc_network.jobs.run_cooc_network",
+        "search_timeline": "src.analyzer.search_timeline.jobs.run_search_timeline",
     }
 
     steps = _parse_steps(getattr(settings, "run_all_steps", ""))
