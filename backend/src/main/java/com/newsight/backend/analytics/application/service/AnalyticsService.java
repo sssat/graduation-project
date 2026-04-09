@@ -456,14 +456,36 @@ public class AnalyticsService {
                         LinkedHashMap::new
                 ));
 
-        List<TrendKeywordFinalRank> ranks =
+        List<TrendKeywordFinalRank> periodRanks =
                 trendKeywordFinalRankRepository.findByTrendRunSeqAndPeriodFilterOrderByFinalRankAsc(
                         latestRun.getTrendRunSeq(), pf
                 );
 
-        List<TrendKeywordFinalRank> top = ranks.stream()
+        Map<Long, Integer> periodArticleCountMap = periodRanks.stream()
+                .collect(Collectors.toMap(
+                        TrendKeywordFinalRank::getKeywordSeq,
+                        r -> r.getArticleCount() == null ? 0 : r.getArticleCount(),
+                        (left, right) -> left,
+                        LinkedHashMap::new
+                ));
+
+        List<TrendKeywordFinalRank> d7VisibleTop = d7Ranks.stream()
                 .filter(r -> d7ArticleCountMap.getOrDefault(r.getKeywordSeq(), 0) >= ANALYZABLE_MIN_ARTICLE_COUNT)
                 .limit(resolvedLimit)
+                .toList();
+
+        List<TrendKeywordFinalRank> top = pf == PeriodFilter.D7
+                ? d7VisibleTop
+                : d7VisibleTop.stream()
+                .sorted(
+                        Comparator
+                                .comparingInt(
+                                        (TrendKeywordFinalRank r) ->
+                                                periodArticleCountMap.getOrDefault(r.getKeywordSeq(), 0)
+                                )
+                                .reversed()
+                                .thenComparingInt(TrendKeywordFinalRank::getFinalRank)
+                )
                 .toList();
 
         Map<Long, String> keywordNameMap = loadKeywordNameMap(
@@ -479,7 +501,9 @@ public class AnalyticsService {
 
         Long selectedKeywordSeq = top.isEmpty() ? null : top.get(0).getKeywordSeq();
         String selectedKeyword = selectedKeywordSeq == null ? null : keywordNameMap.getOrDefault(selectedKeywordSeq, "(unknown)");
-        Integer selectedArticleCount = top.isEmpty() ? null : top.get(0).getArticleCount();
+        Integer selectedArticleCount = top.isEmpty()
+                ? null
+                : periodArticleCountMap.getOrDefault(selectedKeywordSeq, 0);
 
         Integer selectedMediaCount = null;
         if (selectedKeywordSeq != null) {
