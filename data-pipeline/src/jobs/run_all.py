@@ -8,6 +8,8 @@ from datetime import datetime
 from typing import Dict, List
 from zoneinfo import ZoneInfo
 
+from src.common.db import get_conn
+from src.common.trend_run_publish import get_latest_trend_run_seq, publish_trend_run
 from src.config.settings import settings
 
 
@@ -52,12 +54,16 @@ def main() -> None:
         f"started_at={batch_started_at}"
     )
 
+    active_trend_run_seq: int | None = None
+    has_failures = False
+
     for idx, step in enumerate(steps, start=1):
         module = step_to_module.get(step)
         if not module:
             msg = f"[run_all] ({idx}/{len(steps)}) unknown step: {step}"
             if fail_fast:
                 raise RuntimeError(msg)
+            has_failures = True
             print(msg)
             continue
 
@@ -69,12 +75,52 @@ def main() -> None:
         try:
             subprocess.run([sys.executable, "-m", module], check=True, env=child_env)
             print(f"[run_all] ({idx}/{len(steps)}) done: {step}")
+
+            if step == "trend":
+                conn = get_conn(autocommit=True)
+                try:
+                    active_trend_run_seq = get_latest_trend_run_seq(conn=conn)
+                finally:
+                    conn.close()
+
+                if active_trend_run_seq is None:
+                    raise RuntimeError("[run_all] trend completed but no TREND_RUN_SEQ could be resolved.")
+
+                print(f"[run_all] active trend_run_seq={active_trend_run_seq}")
         except subprocess.CalledProcessError as e:
             print(f"[run_all] ({idx}/{len(steps)}) FAIL: {step} (exit={e.returncode})")
+            has_failures = True
             if fail_fast:
                 raise
 
     ended_at = _now()
+
+    if active_trend_run_seq is not None and not has_failures:
+        conn = get_conn(autocommit=False)
+        try:
+            publish_trend_run(
+                conn=conn,
+                trend_run_seq=active_trend_run_seq,
+                published_at=ended_at,
+            )
+            conn.commit()
+        except Exception:
+            try:
+                conn.rollback()
+            except Exception:
+                pass
+            raise
+        finally:
+            conn.close()
+
+        print(
+            "[run_all] "
+            f"published trend_run_seq={active_trend_run_seq} "
+            f"published_at={ended_at.isoformat()}"
+        )
+    elif active_trend_run_seq is not None:
+        print(f"[run_all] trend_run_seq={active_trend_run_seq} left unpublished because at least one step failed")
+
     print(f"[run_all] knows: started_at={started_at.isoformat()} ended_at={ended_at.isoformat()}")
 
 

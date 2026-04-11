@@ -26,4 +26,10 @@ public interface SpringDataTrendKeywordFinalRankRepository extends JpaRepository
             Long trendRunSeq,
             PeriodFilter periodFilter
     );
+
+    Optional<TrendKeywordFinalRank> findByTrendRunSeqAndKeywordSeqAndPeriodFilter(
+            Long trendRunSeq,
+            Long keywordSeq,
+            PeriodFilter periodFilter
+    );
 }
