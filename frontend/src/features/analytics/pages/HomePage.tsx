@@ -73,8 +73,23 @@ function formatDateTimePartsInKst(value: Date): {
   return { year, month, day, hour, minute };
 }
 
+function parseDateTimePrefix(value: string | null | undefined): {
+  date: string;
+  hour: string;
+  minute: string;
+} | null {
+  if (!value) return null;
+
+  const match = value.match(/^(\d{4}-\d{2}-\d{2})[T ](\d{2}):(\d{2})/);
+  if (!match) return null;
+
+  const [, date, hour, minute] = match;
+  return { date, hour, minute };
+}
+
 function normalizeLegacyUtcStartedAt(
   parsed: Date,
+  rawValue: string | null | undefined,
   baseDate: string | null | undefined,
 ): Date {
   if (!baseDate) return parsed;
@@ -83,14 +98,51 @@ function normalizeLegacyUtcStartedAt(
   if (!currentParts) return parsed;
 
   const currentDate = `${currentParts.year}-${currentParts.month}-${currentParts.day}`;
-  if (currentDate >= baseDate) return parsed;
-
   const corrected = new Date(parsed.getTime() + 9 * 60 * 60 * 1000);
   const correctedParts = formatDateTimePartsInKst(corrected);
   if (!correctedParts) return parsed;
 
   const correctedDate = `${correctedParts.year}-${correctedParts.month}-${correctedParts.day}`;
-  return correctedDate === baseDate ? corrected : parsed;
+  if (currentDate < baseDate) {
+    return correctedDate === baseDate ? corrected : parsed;
+  }
+
+  if (currentDate > baseDate) {
+    return parsed;
+  }
+
+  const rawParts = parseDateTimePrefix(rawValue);
+  if (!rawParts || rawParts.date !== baseDate || currentDate !== baseDate) {
+    return parsed;
+  }
+
+  const currentHour = Number(currentParts.hour);
+  const correctedHour = Number(correctedParts.hour);
+  const rawHour = Number(rawParts.hour);
+  const currentMinute = Number(currentParts.minute);
+  const correctedMinute = Number(correctedParts.minute);
+  const rawMinute = Number(rawParts.minute);
+
+  // Some legacy rows were serialized with the same-day UTC wall clock,
+  // which shows up as an early-morning KST time like 07:10 instead of 16:10.
+  if (
+    Number.isFinite(currentHour) &&
+    Number.isFinite(correctedHour) &&
+    Number.isFinite(rawHour) &&
+    Number.isFinite(currentMinute) &&
+    Number.isFinite(correctedMinute) &&
+    Number.isFinite(rawMinute) &&
+    rawHour === currentHour &&
+    rawMinute === currentMinute &&
+    rawHour < 9 &&
+    correctedDate === baseDate &&
+    correctedHour === rawHour + 9 &&
+    correctedMinute === rawMinute
+  ) {
+    return corrected;
+  }
+
+  return parsed;
 }
 
 function formatStoredStartedAt(
@@ -105,7 +157,7 @@ function formatStoredStartedAt(
   const parsed = new Date(normalized);
   if (Number.isNaN(parsed.getTime())) return null;
 
-  const corrected = normalizeLegacyUtcStartedAt(parsed, baseDate);
+  const corrected = normalizeLegacyUtcStartedAt(parsed, value, baseDate);
   const parts = formatDateTimePartsInKst(corrected);
   if (!parts) return null;
 
