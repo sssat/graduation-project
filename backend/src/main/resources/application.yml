@@ -75,6 +75,9 @@ app:
     refresh-minutes: ${JWT_REFRESH_MINUTES:60}
     user-id-claim: ${JWT_USER_ID_CLAIM:user_seq}
 
+  analytics:
+    trend-run-offset: ${ANALYTICS_TREND_RUN_OFFSET:0}
+
 management:
   health:
     mail:

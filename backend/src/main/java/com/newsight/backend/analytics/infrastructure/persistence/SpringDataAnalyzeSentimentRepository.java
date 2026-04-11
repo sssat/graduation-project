@@ -31,4 +31,11 @@ public interface SpringDataAnalyzeSentimentRepository extends JpaRepository<Anal
             PeriodFilter periodFilter,
             Integer excludeMediaCode
     );
+
+    Optional<AnalyzeSentiment> findByTrendRunSeqAndKeywordSeqAndMediaCodeAndPeriodFilter(
+            Long trendRunSeq,
+            Long keywordSeq,
+            Integer mediaCode,
+            PeriodFilter periodFilter
+    );
 }

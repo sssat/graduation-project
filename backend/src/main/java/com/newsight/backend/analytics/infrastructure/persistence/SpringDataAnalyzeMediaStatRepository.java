@@ -34,6 +34,13 @@ public interface SpringDataAnalyzeMediaStatRepository extends JpaRepository<Anal
             Integer excludeMediaCode
     );
 
+    Optional<AnalyzeMediaStat> findByTrendRunSeqAndKeywordSeqAndMediaCodeAndPeriodFilter(
+            Long trendRunSeq,
+            Long keywordSeq,
+            Integer mediaCode,
+            PeriodFilter periodFilter
+    );
+
     /**
      * 특정 run에서 키워드+기간 기준 "참여 언론사 수" (article_count > 0인 media만)
      * - 보통 mediaCode=0(전체)은 제외하고 계산

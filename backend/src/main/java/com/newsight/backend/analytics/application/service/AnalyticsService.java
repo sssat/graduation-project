@@ -55,6 +55,7 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.security.authentication.AuthenticationCredentialsNotFoundException;
@@ -94,6 +95,9 @@ public class AnalyticsService {
     private final SpringDataUserRepository userRepository;
     private final Clock clock;
 
+    @Value("${app.analytics.trend-run-offset:0}")
+    private int analyticsTrendRunOffset;
+
     @PersistenceContext
     private EntityManager em;
 
@@ -103,13 +107,13 @@ public class AnalyticsService {
      * - top_keywords: ALL + D7 기준 TOP10
      */
     public OverviewResult getOverview() {
-        TrendRunRef latestRun = getLatestOverviewTrendRunOrThrow();
-        Long latestRunSeq = latestRun.getTrendRunSeq();
+        TrendRunRef selectedRun = getConfiguredTrendRunOrThrow();
+        Long selectedRunSeq = selectedRun.getTrendRunSeq();
 
-        long collectedArticleCount = sumAllKeywordArticleCount(latestRunSeq, PeriodFilter.D14);
+        long collectedArticleCount = sumAllKeywordArticleCount(selectedRunSeq, PeriodFilter.D14);
 
         List<TrendKeywordFinalRank> topRanks =
-                trendKeywordFinalRankRepository.findByTrendRunSeqAndPeriodFilterOrderByFinalRankAsc(latestRunSeq, PeriodFilter.D7);
+                trendKeywordFinalRankRepository.findByTrendRunSeqAndPeriodFilterOrderByFinalRankAsc(selectedRunSeq, PeriodFilter.D7);
 
         List<TrendKeywordFinalRank> top10 = topRanks.stream()
                 .limit(DEFAULT_LIMIT)
@@ -131,8 +135,8 @@ public class AnalyticsService {
 
         return new OverviewResult(
                 collectedArticleCount,
-                latestRun.getBaseDate() == null ? null : latestRun.getBaseDate().toString(),
-                formatStartedAt(latestRun.getRunAt(), latestRun.getBaseDate()),
+                selectedRun.getBaseDate() == null ? null : selectedRun.getBaseDate().toString(),
+                formatStartedAt(selectedRun.getRunAt(), selectedRun.getBaseDate()),
                 topKeywords
         );
     }
@@ -162,11 +166,11 @@ public class AnalyticsService {
         Double todayJoinedDeltaRate = calcDeltaRateVsAvg(todayJoinedCount, past7JoinedTotal, 7);
 
         // 2) 오늘 수집 기사 수(최신 run, ALL + D14 합산) + 지난주 동일 요일 대비 증감률
-        TrendRunRef latestRun = getLatestTrendRunOrThrow();
-        long todayCollectedArticleCount = sumAllKeywordArticleCount(latestRun.getTrendRunSeq(), PeriodFilter.D14);
+        TrendRunRef selectedRun = getConfiguredTrendRunOrThrow();
+        long todayCollectedArticleCount = sumAllKeywordArticleCount(selectedRun.getTrendRunSeq(), PeriodFilter.D14);
 
         TrendRunRef lastWeekRun = findComparableTrendRunWithData(
-                latestRun.getBaseDate().minusDays(7),
+                selectedRun.getBaseDate().minusDays(7),
                 PeriodFilter.D14
         );
 
@@ -198,23 +202,24 @@ public class AnalyticsService {
 
         TrendKeywordMasterRef keyword = getKeywordOrThrow(keywordSeq);
 
-        TrendRunRef latestRun = getLatestTrendRunOrThrow();
+        TrendRunRef latestRun = getConfiguredTrendRunOrThrow();
+        Long latestRunSeq = latestRun.getTrendRunSeq();
         PeriodRange range = resolveActualPublishedRangeOrFallback(
-                latestRun.getTrendRunSeq(),
+                latestRunSeq,
                 keywordSeq,
                 pf,
                 latestRun.getBaseDate()
         );
 
-        int articleCount = getFinalRankArticleCountLatest(keywordSeq, pf).orElse(0);
+        int articleCount = getFinalRankArticleCountForRun(latestRunSeq, keywordSeq, pf).orElse(0);
         long mediaCount = analyzeMediaStatRepository.countDistinctMediaCode(
-                latestRun.getTrendRunSeq(),
+                latestRunSeq,
                 keywordSeq,
                 pf,
                 ALL_MEDIA_CODE
         );
 
-        boolean analyzable = isAnalyzable(keywordSeq);
+        boolean analyzable = isAnalyzable(latestRunSeq, keywordSeq);
 
         return new KeywordMetaResult(
                 keywordSeq,
@@ -233,14 +238,13 @@ public class AnalyticsService {
     public SummaryResult getAiSummary(Long keywordSeq, String period) {
         parsePeriodFilter(period);
 
-        requireAnalyzable(keywordSeq);
+        Long selectedRunSeq = getConfiguredTrendRunSeq();
+
+        requireAnalyzable(selectedRunSeq, keywordSeq);
         getKeywordOrThrow(keywordSeq);
 
-        Long latestRunSeq = getLatestTrendRunSeq();
-
-        AnalyzeAiSummary summary = analyzeAiSummaryRepository.findByTrendRunSeqAndKeywordSeq(latestRunSeq, keywordSeq)
-                .orElseGet(() -> analyzeAiSummaryRepository.findFirstByKeywordSeqOrderByTrendRunSeqDesc(keywordSeq)
-                        .orElseThrow(() -> new NotFoundException("AI 요약 데이터가 없습니다.")));
+        AnalyzeAiSummary summary = analyzeAiSummaryRepository.findByTrendRunSeqAndKeywordSeq(selectedRunSeq, keywordSeq)
+                .orElseThrow(() -> new NotFoundException("AI 요약 데이터가 없습니다."));
 
         return new SummaryResult(summary.getSummaryText());
     }
@@ -266,25 +270,19 @@ public class AnalyticsService {
     public SearchTimelineResult getSearchTimeline(Long keywordSeq, String ignoredPeriod) {
         getKeywordOrThrow(keywordSeq);
 
+        Long selectedRunSeq = getConfiguredTrendRunSeq();
         List<AnalyzeSearchTimeline> rows = analyzeSearchTimelineRepository
-                .findByKeywordSeqAndDataSourceOrderByTrendRunSeqDescObservedDateAsc(keywordSeq, SEARCH_TIMELINE_DATA_SOURCE);
+                .findByTrendRunSeqAndKeywordSeqAndDataSourceOrderByObservedDateAsc(
+                        selectedRunSeq,
+                        keywordSeq,
+                        SEARCH_TIMELINE_DATA_SOURCE
+                );
 
         if (rows.isEmpty()) {
             return new SearchTimelineResult(null, null, null, null, null, false, List.of());
         }
 
-        Long latestTrendRunSeq = rows.stream()
-                .map(AnalyzeSearchTimeline::getTrendRunSeq)
-                .filter(Objects::nonNull)
-                .max(Long::compareTo)
-                .orElse(null);
-
-        if (latestTrendRunSeq == null) {
-            return new SearchTimelineResult(null, null, null, null, null, false, List.of());
-        }
-
         LocalDate latestObservedDate = rows.stream()
-                .filter(r -> Objects.equals(r.getTrendRunSeq(), latestTrendRunSeq))
                 .map(AnalyzeSearchTimeline::getObservedDate)
                 .filter(Objects::nonNull)
                 .max(LocalDate::compareTo)
@@ -297,7 +295,6 @@ public class AnalyticsService {
         LocalDate requestedStartDate = latestObservedDate.minusMonths(SEARCH_TIMELINE_LOOKBACK_MONTHS);
 
         List<SearchTimelinePoint> items = rows.stream()
-                .filter(r -> Objects.equals(r.getTrendRunSeq(), latestTrendRunSeq))
                 .filter(r -> r.getObservedDate() != null)
                 .filter(r -> !r.getObservedDate().isBefore(requestedStartDate) && !r.getObservedDate().isAfter(latestObservedDate))
                 .map(r -> new SearchTimelinePoint(
@@ -341,11 +338,13 @@ public class AnalyticsService {
     public SentimentResult getContentSentiment(Long keywordSeq, String period) {
         PeriodFilter pf = parsePeriodFilter(period);
 
-        requireAnalyzable(keywordSeq);
+        Long selectedRunSeq = getConfiguredTrendRunSeq();
+
+        requireAnalyzable(selectedRunSeq, keywordSeq);
         getKeywordOrThrow(keywordSeq);
 
         AnalyzeSentiment sentiment = analyzeSentimentRepository
-                .findFirstByKeywordSeqAndMediaCodeAndPeriodFilterOrderByTrendRunSeqDesc(keywordSeq, ALL_MEDIA_CODE, pf)
+                .findByTrendRunSeqAndKeywordSeqAndMediaCodeAndPeriodFilter(selectedRunSeq, keywordSeq, ALL_MEDIA_CODE, pf)
                 .orElseThrow(() -> new NotFoundException("감성 분석 데이터가 없습니다."));
 
         return new SentimentResult(
@@ -361,14 +360,14 @@ public class AnalyticsService {
     public BiasByMediaResult getTitleBiasByMedia(Long keywordSeq, String period) {
         PeriodFilter pf = parsePeriodFilter(period);
 
-        requireAnalyzable(keywordSeq);
-        getKeywordOrThrow(keywordSeq);
+        Long selectedRunSeq = getConfiguredTrendRunSeq();
 
-        Long latestRunSeq = getLatestTrendRunSeq();
+        requireAnalyzable(selectedRunSeq, keywordSeq);
+        getKeywordOrThrow(keywordSeq);
 
         List<AnalyzeMediaBias> rows = analyzeMediaBiasRepository
                 .findByTrendRunSeqAndKeywordSeqAndPeriodFilterAndMediaCodeNotOrderByMediaCodeAsc(
-                        latestRunSeq,
+                        selectedRunSeq,
                         keywordSeq,
                         pf,
                         ALL_MEDIA_CODE
@@ -394,11 +393,13 @@ public class AnalyticsService {
     public CoocNetworkResult getCoocNetwork(Long keywordSeq, String period) {
         PeriodFilter pf = parsePeriodFilter(period);
 
-        requireAnalyzable(keywordSeq);
+        Long selectedRunSeq = getConfiguredTrendRunSeq();
+
+        requireAnalyzable(selectedRunSeq, keywordSeq);
         getKeywordOrThrow(keywordSeq);
 
         AnalyzeCoMentionGraph graph = analyzeCoMentionGraphRepository
-                .findFirstByKeywordSeqAndMediaCodeAndPeriodFilterOrderByTrendRunSeqDesc(keywordSeq, ALL_MEDIA_CODE, pf)
+                .findByTrendRunSeqAndKeywordSeqAndMediaCodeAndPeriodFilter(selectedRunSeq, keywordSeq, ALL_MEDIA_CODE, pf)
                 .orElse(null);
 
         if (graph == null) {
@@ -437,7 +438,7 @@ public class AnalyticsService {
         PeriodFilter pf = parsePeriodFilter(period);
         int resolvedLimit = normalizePositive(limit, DEFAULT_LIMIT, 1, 50);
 
-        TrendRunRef latestRun = getLatestTrendRunOrThrow();
+        TrendRunRef latestRun = getConfiguredTrendRunOrThrow();
         PeriodRange fallbackRange = toPeriodRange(latestRun.getBaseDate(), pf);
 
         // 상단 pill 노출 기준은 항상 D7 분석 가능 여부로 고정한다.
@@ -542,18 +543,18 @@ public class AnalyticsService {
     public MediaArticleCountsResult getMediaArticleCounts(Long keywordSeq, String period) {
         PeriodFilter pf = parsePeriodFilter(period);
 
-        requireAnalyzable(keywordSeq);
+        Long selectedRunSeq = getConfiguredTrendRunSeq();
+
+        requireAnalyzable(selectedRunSeq, keywordSeq);
         getKeywordOrThrow(keywordSeq);
 
         AnalyzeMediaStat all = analyzeMediaStatRepository
-                .findFirstByKeywordSeqAndMediaCodeAndPeriodFilterOrderByTrendRunSeqDesc(keywordSeq, ALL_MEDIA_CODE, pf)
+                .findByTrendRunSeqAndKeywordSeqAndMediaCodeAndPeriodFilter(selectedRunSeq, keywordSeq, ALL_MEDIA_CODE, pf)
                 .orElseThrow(() -> new NotFoundException("언론사별 기사 수 데이터가 없습니다."));
-
-        Long latestRunSeq = all.getTrendRunSeq();
 
         List<AnalyzeMediaStat> rows = analyzeMediaStatRepository
                 .findByTrendRunSeqAndKeywordSeqAndPeriodFilterAndMediaCodeNotOrderByMediaCodeAsc(
-                        latestRunSeq,
+                        all.getTrendRunSeq(),
                         keywordSeq,
                         pf,
                         ALL_MEDIA_CODE
@@ -579,18 +580,18 @@ public class AnalyticsService {
     public MediaSentimentCompareResult getMediaCompareContentSentiment(Long keywordSeq, String period) {
         PeriodFilter pf = parsePeriodFilter(period);
 
-        requireAnalyzable(keywordSeq);
+        Long selectedRunSeq = getConfiguredTrendRunSeq();
+
+        requireAnalyzable(selectedRunSeq, keywordSeq);
         getKeywordOrThrow(keywordSeq);
 
         AnalyzeSentiment all = analyzeSentimentRepository
-                .findFirstByKeywordSeqAndMediaCodeAndPeriodFilterOrderByTrendRunSeqDesc(keywordSeq, ALL_MEDIA_CODE, pf)
+                .findByTrendRunSeqAndKeywordSeqAndMediaCodeAndPeriodFilter(selectedRunSeq, keywordSeq, ALL_MEDIA_CODE, pf)
                 .orElseThrow(() -> new NotFoundException("감성 분석 데이터가 없습니다."));
-
-        Long latestRunSeq = all.getTrendRunSeq();
 
         List<AnalyzeSentiment> rows = analyzeSentimentRepository
                 .findByTrendRunSeqAndKeywordSeqAndPeriodFilterAndMediaCodeNotOrderByMediaCodeAsc(
-                        latestRunSeq,
+                        all.getTrendRunSeq(),
                         keywordSeq,
                         pf,
                         ALL_MEDIA_CODE
@@ -619,14 +620,14 @@ public class AnalyticsService {
         PeriodFilter pf = parsePeriodFilter(period);
         int resolvedTopN = normalizePositive(topN, DEFAULT_TOP_N, 1, 30);
 
-        requireAnalyzable(keywordSeq);
-        getKeywordOrThrow(keywordSeq);
+        Long selectedRunSeq = getConfiguredTrendRunSeq();
 
-        Long latestRunSeq = getLatestTrendRunSeq();
+        requireAnalyzable(selectedRunSeq, keywordSeq);
+        getKeywordOrThrow(keywordSeq);
 
         List<AnalyzeWordcloud> headers = analyzeWordcloudRepository
                 .findByTrendRunSeqAndKeywordSeqAndPeriodFilterAndWcTypeAndMediaCodeNotOrderByMediaCodeAsc(
-                        latestRunSeq,
+                        selectedRunSeq,
                         keywordSeq,
                         pf,
                         WordcloudType.TITLE,
@@ -664,11 +665,14 @@ public class AnalyticsService {
     private WordcloudResult getWordcloud(Long keywordSeq, String period, WordcloudType wcType) {
         PeriodFilter pf = parsePeriodFilter(period);
 
-        requireAnalyzable(keywordSeq);
+        Long selectedRunSeq = getConfiguredTrendRunSeq();
+
+        requireAnalyzable(selectedRunSeq, keywordSeq);
         getKeywordOrThrow(keywordSeq);
 
         AnalyzeWordcloud wc = analyzeWordcloudRepository
-                .findFirstByKeywordSeqAndMediaCodeAndPeriodFilterAndWcTypeOrderByTrendRunSeqDesc(
+                .findByTrendRunSeqAndKeywordSeqAndMediaCodeAndPeriodFilterAndWcType(
+                        selectedRunSeq,
                         keywordSeq,
                         ALL_MEDIA_CODE,
                         pf,
@@ -689,13 +693,20 @@ public class AnalyticsService {
         return new WordcloudResult(wordItems);
     }
 
-    private Long getLatestTrendRunSeq() {
-        return getLatestTrendRunOrThrow().getTrendRunSeq();
+    private Long getConfiguredTrendRunSeq() {
+        return getConfiguredTrendRunOrThrow().getTrendRunSeq();
     }
 
-    private TrendRunRef getLatestTrendRunOrThrow() {
-        return trendRunRefRepository.findFirstByOrderByTrendRunSeqDesc()
-                .orElseThrow(() -> new NotFoundException("최신 트렌드 run이 없습니다."));
+    private TrendRunRef getConfiguredTrendRunOrThrow() {
+        List<TrendRunRef> candidates = trendRunRefRepository.findAll(Sort.by(Sort.Direction.DESC, "trendRunSeq"));
+        if (candidates.isEmpty()) {
+            throw new NotFoundException("최신 트렌드 run이 없습니다.");
+        }
+
+        // If the configured offset is larger than the retained history, keep showing the oldest available run.
+        int offset = Math.max(0, analyticsTrendRunOffset);
+        int targetIndex = Math.min(offset, candidates.size() - 1);
+        return candidates.get(targetIndex);
     }
 
     private String formatStartedAt(LocalDateTime runAt, LocalDate baseDate) {
@@ -710,24 +721,6 @@ public class AnalyticsService {
         }
 
         return runAt.atZone(clock.getZone()).format(OFFSET_DATE_TIME_FORMATTER);
-    }
-
-    private TrendRunRef getLatestOverviewTrendRunOrThrow() {
-        List<TrendRunRef> candidates = trendRunRefRepository.findAll(Sort.by(Sort.Direction.DESC, "trendRunSeq"));
-
-        for (TrendRunRef candidate : candidates) {
-            Long trendRunSeq = candidate.getTrendRunSeq();
-            if (trendRunSeq == null) {
-                continue;
-            }
-
-            long d7Count = sumAllKeywordArticleCount(trendRunSeq, PeriodFilter.D7);
-            if (d7Count > 0L) {
-                return candidate;
-            }
-        }
-
-        return getLatestTrendRunOrThrow();
     }
 
     private TrendRunRef findComparableTrendRunWithData(LocalDate baseDate, PeriodFilter pf) {
@@ -760,18 +753,18 @@ public class AnalyticsService {
                 .orElseThrow(() -> new NotFoundException("키워드를 찾을 수 없습니다."));
     }
 
-    private Optional<Integer> getFinalRankArticleCountLatest(Long keywordSeq, PeriodFilter pf) {
-        return trendKeywordFinalRankRepository.findFirstByKeywordSeqAndPeriodFilterOrderByTrendRunSeqDesc(keywordSeq, pf)
+    private Optional<Integer> getFinalRankArticleCountForRun(Long trendRunSeq, Long keywordSeq, PeriodFilter pf) {
+        return trendKeywordFinalRankRepository.findByTrendRunSeqAndKeywordSeqAndPeriodFilter(trendRunSeq, keywordSeq, pf)
                 .map(TrendKeywordFinalRank::getArticleCount);
     }
 
-    private boolean isAnalyzable(Long keywordSeq) {
-        int count = getFinalRankArticleCountLatest(keywordSeq, PeriodFilter.D7).orElse(0);
+    private boolean isAnalyzable(Long trendRunSeq, Long keywordSeq) {
+        int count = getFinalRankArticleCountForRun(trendRunSeq, keywordSeq, PeriodFilter.D7).orElse(0);
         return count >= ANALYZABLE_MIN_ARTICLE_COUNT;
     }
 
-    private void requireAnalyzable(Long keywordSeq) {
-        if (!isAnalyzable(keywordSeq)) {
+    private void requireAnalyzable(Long trendRunSeq, Long keywordSeq) {
+        if (!isAnalyzable(trendRunSeq, keywordSeq)) {
             throw new ConflictException("분석 가능한 기사 수가 부족합니다.");
         }
     }
