@@ -19,11 +19,4 @@ public interface SpringDataAnalyzeCoMentionGraphRepository extends JpaRepository
             Integer mediaCode,
             PeriodFilter periodFilter
     );
-
-    Optional<AnalyzeCoMentionGraph> findByTrendRunSeqAndKeywordSeqAndMediaCodeAndPeriodFilter(
-            Long trendRunSeq,
-            Long keywordSeq,
-            Integer mediaCode,
-            PeriodFilter periodFilter
-    );
 }

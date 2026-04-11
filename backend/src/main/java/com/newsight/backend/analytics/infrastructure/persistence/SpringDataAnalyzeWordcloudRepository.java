@@ -34,12 +34,4 @@ public interface SpringDataAnalyzeWordcloudRepository extends JpaRepository<Anal
             WordcloudType wcType,
             Integer excludeMediaCode
     );
-
-    Optional<AnalyzeWordcloud> findByTrendRunSeqAndKeywordSeqAndMediaCodeAndPeriodFilterAndWcType(
-            Long trendRunSeq,
-            Long keywordSeq,
-            Integer mediaCode,
-            PeriodFilter periodFilter,
-            WordcloudType wcType
-    );
 }

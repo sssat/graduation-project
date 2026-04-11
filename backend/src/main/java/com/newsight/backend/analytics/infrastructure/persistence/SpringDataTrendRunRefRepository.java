@@ -15,12 +15,8 @@ public interface SpringDataTrendRunRefRepository extends JpaRepository<TrendRunR
      */
     Optional<TrendRunRef> findFirstByOrderByTrendRunSeqDesc();
 
-    Optional<TrendRunRef> findFirstByPublishedTrueOrderByTrendRunSeqDesc();
-
     /**
      * 특정 baseDate의 최신 run 1건
      */
     Optional<TrendRunRef> findFirstByBaseDateOrderByTrendRunSeqDesc(LocalDate baseDate);
-
-    Optional<TrendRunRef> findFirstByPublishedTrueAndBaseDateOrderByTrendRunSeqDesc(LocalDate baseDate);
 }

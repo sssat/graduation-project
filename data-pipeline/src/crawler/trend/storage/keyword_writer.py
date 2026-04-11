@@ -39,10 +39,10 @@ def save_trend_snapshot_with_run(
             top_n = len(cleaned)
             cur.execute(
                 """
-                INSERT INTO T_TREND_RUN (BASE_DATE, RUN_AT, TOP_N, IS_PUBLISHED, PUBLISHED_AT)
-                VALUES (%s, %s, %s, %s, %s)
+                INSERT INTO T_TREND_RUN (BASE_DATE, RUN_AT, TOP_N)
+                VALUES (%s, %s, %s)
                 """,
-                (base_date, run_at, top_n, 0, None),
+                (base_date, run_at, top_n),
             )
             run_seq = int(cur.lastrowid)
 
