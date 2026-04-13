@@ -94,6 +94,13 @@ function normalizeLegacyUtcStartedAt(
 ): Date {
   if (!baseDate) return parsed;
 
+  // Only attempt the legacy correction for naive timestamps.
+  // Values that already include an explicit offset (for example +09:00)
+  // have already been interpreted correctly by the Date constructor.
+  if (rawValue && /([zZ]|[+-]\d{2}:\d{2})$/.test(rawValue)) {
+    return parsed;
+  }
+
   const currentParts = formatDateTimePartsInKst(parsed);
   if (!currentParts) return parsed;
 
