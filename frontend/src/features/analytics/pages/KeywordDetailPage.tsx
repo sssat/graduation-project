@@ -1596,7 +1596,7 @@ export default function KeywordDetailPage() {
             <div>
               <div className={styles.cardTitle}>검색 관심도 흐름</div>
               <div className={styles.cardSub}>
-                {trendTimelineRangeLabel} 기준 최근 3개월 동안 {displayKeyword} 키워드의 검색 관심도 변화를 보여줍니다.
+                {trendTimelineRangeLabel} 기준 {displayKeyword} 키워드의 검색 관심도 변화를 보여줍니다.
               </div>
             </div>
             <span className={styles.badgeSoft}>관심도 변화</span>
