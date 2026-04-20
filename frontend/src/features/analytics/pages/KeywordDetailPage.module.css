@@ -2,9 +2,9 @@
 
 .pageRoot {
   /* 차트 색상은 CSS 모듈에서만 정의 */
-  --ns-sent-pos: #22c55e;
-  --ns-sent-neu: #cbd5e1;
-  --ns-sent-neg: #ef4444;
+  --ns-sent-pos: #38bdf8;
+  --ns-sent-neu: #2563eb;
+  --ns-sent-neg: #1e3a8a;
   --ns-bias-pos: #38bdf8;
   --ns-bias-neg: #f97316;
 
@@ -286,7 +286,7 @@
 }
 
 .wordcloudClassic {
-  height: 300px;
+  height: 430px;
   width: calc(100% + (var(--card-pad-x) * 2));
   margin: 16px calc(var(--card-pad-x) * -1) 0;
 
@@ -301,10 +301,41 @@
   overflow: visible;
 }
 
+.wordcloudStageHost {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: stretch;
+  justify-content: center;
+}
+
+.wordcloudStage {
+  width: calc(100% - (var(--card-pad-x) * 2));
+  height: 100%;
+  padding: 14px 18px;
+  box-sizing: border-box;
+  border-radius: 22px;
+  border: 1px solid rgba(226, 232, 240, 0.92);
+  background:
+    radial-gradient(circle at top left, rgba(219, 234, 254, 0.34), transparent 26%),
+    linear-gradient(160deg, rgba(255, 255, 255, 0.98), rgba(248, 250, 252, 0.96));
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.92),
+    0 12px 28px rgba(148, 163, 184, 0.12);
+  overflow: hidden;
+}
+
 .wordcloudSvg {
   width: 100%;
   height: 100%;
   display: block;
+}
+
+.wordcloudEmptyBox {
+  width: 100%;
+  min-height: 100%;
+  height: 100%;
+  border-style: dashed;
 }
 
 .emptyBox {
@@ -386,24 +417,24 @@
 }
 
 .sentimentMetricPositive {
-  --metric-accent: #22c55e;
-  --metric-glow: rgba(34, 197, 94, 0.12);
+  --metric-accent: #38bdf8;
+  --metric-glow: rgba(56, 189, 248, 0.14);
   background:
-    linear-gradient(135deg, rgba(240, 253, 244, 0.98), rgba(255, 255, 255, 0.96) 68%);
+    linear-gradient(135deg, rgba(240, 249, 255, 0.98), rgba(255, 255, 255, 0.96) 68%);
 }
 
 .sentimentMetricNeutral {
-  --metric-accent: #94a3b8;
-  --metric-glow: rgba(148, 163, 184, 0.14);
+  --metric-accent: #2563eb;
+  --metric-glow: rgba(37, 99, 235, 0.14);
   background:
-    linear-gradient(135deg, rgba(248, 250, 252, 0.98), rgba(255, 255, 255, 0.96) 68%);
+    linear-gradient(135deg, rgba(239, 246, 255, 0.98), rgba(255, 255, 255, 0.96) 68%);
 }
 
 .sentimentMetricNegative {
-  --metric-accent: #ef4444;
-  --metric-glow: rgba(239, 68, 68, 0.12);
+  --metric-accent: #1e3a8a;
+  --metric-glow: rgba(30, 58, 138, 0.18);
   background:
-    linear-gradient(135deg, rgba(254, 242, 242, 0.98), rgba(255, 255, 255, 0.96) 68%);
+    linear-gradient(135deg, rgba(224, 231, 255, 0.98), rgba(255, 255, 255, 0.96) 68%);
 }
 
 .sentimentMetricHeader {
@@ -454,9 +485,9 @@
 
 .sentimentChartWrapper {
   min-width: 0;
-  height: 288px;
-  min-height: 288px;
-  padding: 10px 12px;
+  height: 340px;
+  min-height: 340px;
+  padding: 12px 14px 16px;
   border-radius: 28px;
   border: 1px solid rgba(226, 232, 240, 0.92);
   background:
@@ -515,10 +546,34 @@
   color: #0f172a;
 }
 
+.timelineAxisMeta {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 8px;
+  padding: 2px 4px 0;
+}
+
+.timelineAxisHint {
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+}
+
+.timelineAxisDot {
+  width: 4px;
+  height: 4px;
+  border-radius: 999px;
+  background: rgba(148, 163, 184, 0.9);
+}
+
 .timelineChartWrapper {
   height: 300px;
   min-height: 300px;
-  padding: 8px 4px 2px;
+  padding: 2px 2px 0;
 }
 
 .timelineCaption {
@@ -585,12 +640,37 @@
   padding: 0;
 }
 
+.networkStageHost {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+}
+
+.networkStage {
+  width: calc(100% - (var(--card-pad-x) * 2));
+  padding: 18px;
+  border-radius: 24px;
+  border: 1px solid rgba(226, 232, 240, 0.92);
+  background:
+    radial-gradient(circle at top left, rgba(219, 234, 254, 0.32), transparent 28%),
+    linear-gradient(160deg, rgba(255, 255, 255, 0.98), rgba(248, 250, 252, 0.96));
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.92),
+    0 14px 28px rgba(148, 163, 184, 0.12);
+  box-sizing: border-box;
+  overflow: hidden;
+}
+
 .networkSvg {
   width: 100%;
   height: auto;
   display: block;
   touch-action: none;
   user-select: none;
+}
+
+.networkEmptyBox {
+  width: 100%;
 }
 
 .networkLinks {
@@ -642,7 +722,17 @@
   }
 
   .wordcloudClassic {
-    height: 260px !important;
+    height: 380px !important;
+  }
+
+  .wordcloudStage {
+    padding: 12px 14px;
+    border-radius: 18px;
+  }
+
+  .networkStage {
+    padding: 14px;
+    border-radius: 20px;
   }
 
   .sentimentLayout {
@@ -678,9 +768,9 @@
   }
 
   .sentimentChartWrapper {
-    height: 236px;
-    min-height: 236px;
-    padding: 10px;
+    height: 282px;
+    min-height: 282px;
+    padding: 10px 10px 14px;
     border-radius: 24px;
   }
 
@@ -714,6 +804,22 @@
 }
 
 @media (max-width: 640px) {
+  .wordcloudClassic {
+    height: 340px !important;
+  }
+
+  .wordcloudStage {
+    width: calc(100% - 24px);
+    padding: 10px 12px;
+    border-radius: 16px;
+  }
+
+  .networkStage {
+    width: calc(100% - 24px);
+    padding: 10px;
+    border-radius: 18px;
+  }
+
   .sentimentSummary {
     grid-template-columns: minmax(0, 1fr);
   }
@@ -728,5 +834,9 @@
 
   .sentimentMetricUnit {
     transform: translateY(-4px);
+  }
+
+  .timelineAxisMeta {
+    gap: 6px 10px;
   }
 }

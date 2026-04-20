@@ -82,6 +82,27 @@ function clamp(n: number, min: number, max: number) {
   return Math.max(min, Math.min(max, n));
 }
 
+function resolveBiasAxis(maxAbsValue: number): { axisMax: number; stepSize: number } {
+  const safeMax = Number.isFinite(maxAbsValue) ? Math.max(0, Math.abs(maxAbsValue)) : 0;
+  const niceAxisCandidates = [
+    1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 12, 15, 20, 25, 30, 40, 50, 60, 80, 100,
+  ];
+
+  let axisMax =
+    niceAxisCandidates.find((candidate) => safeMax <= candidate) ??
+    Math.ceil(safeMax / 20) * 20;
+  if (!Number.isFinite(axisMax) || axisMax <= 0) axisMax = 1;
+
+  let stepSize = 1;
+  if (axisMax <= 2) stepSize = 0.5;
+  else if (axisMax <= 5) stepSize = 1;
+  else if (axisMax <= 10) stepSize = 2;
+  else if (axisMax <= 30) stepSize = 5;
+  else stepSize = 10;
+
+  return { axisMax, stepSize };
+}
+
 function toPeriodParam(raw: string | null | undefined): KeywordPeriod {
   if (!raw) return "D7";
   const normalized = raw.toUpperCase();
@@ -264,9 +285,9 @@ function getChartColors(el: HTMLElement | null): ChartColors {
   const base = el ?? document.documentElement;
   const style = window.getComputedStyle(base);
 
-  const sentPos = readCssVar(style, "--ns-sent-pos") || "#22c55e";
-  const sentNeu = readCssVar(style, "--ns-sent-neu") || "#cbd5e1";
-  const sentNeg = readCssVar(style, "--ns-sent-neg") || "#ef4444";
+  const sentPos = readCssVar(style, "--ns-sent-pos") || "#38bdf8";
+  const sentNeu = readCssVar(style, "--ns-sent-neu") || "#2563eb";
+  const sentNeg = readCssVar(style, "--ns-sent-neg") || "#1e3a8a";
   const biasPos = readCssVar(style, "--ns-bias-pos") || "#38bdf8";
   const biasNeg = readCssVar(style, "--ns-bias-neg") || "#f97316";
 
@@ -346,11 +367,11 @@ function WordCloudD3({
     const minWeight = Math.min(...items.map((w) => w.weight));
 
     const toPx = (weight: number) => {
-      if (!Number.isFinite(weight)) return 26;
-      if (maxWeight <= 0 && minWeight <= 0) return 30;
-      if (maxWeight === minWeight) return 38;
+      if (!Number.isFinite(weight)) return 30;
+      if (maxWeight <= 0 && minWeight <= 0) return 34;
+      if (maxWeight === minWeight) return 42;
       const ratio = (weight - minWeight) / (maxWeight - minWeight);
-      return clamp(24 + ratio * 46, 20, 72);
+      return clamp(30 + ratio * 54, 24, 86);
     };
 
     const seedValue = hashInt(`${seed}-${width}-${height}`);
@@ -377,7 +398,7 @@ function WordCloudD3({
         const normalized = (out as CloudWord[]).map((w) => ({
           ...w,
           rotate: 0,
-          size: clamp(w.size, 18, 76),
+          size: clamp(w.size, 22, 90),
         }));
         setWords(normalized);
       });
@@ -392,46 +413,54 @@ function WordCloudD3({
   if (!items.length) {
     return (
       <div ref={wrapRef} className={styles.wordcloudClassic}>
-        <div className={styles.emptyBox}>표시할 워드클라우드 데이터가 없습니다.</div>
+        <div className={styles.wordcloudStageHost}>
+          <div className={styles.wordcloudStage}>
+            <div className={`${styles.emptyBox} ${styles.wordcloudEmptyBox}`}>워드 클라우드 데이터가 없습니다.</div>
+          </div>
+        </div>
       </div>
     );
   }
 
   return (
-    <div ref={wrapRef} className={styles.wordcloudClassic} aria-label="워드 클라우드">
-      <svg
-        className={styles.wordcloudSvg}
-        width={width}
-        height={height}
-        viewBox={`0 0 ${width} ${height}`}
-        role="img"
-        aria-label="워드 클라우드"
-      >
-        <g transform={`translate(${width / 2}, ${height / 2})`}>
-          {words.map((w, i) => {
-            const cSeed = hashInt(`${seed}-${w.text}-${i}`);
-            const color = palette[cSeed % palette.length];
+    <div ref={wrapRef} className={styles.wordcloudClassic} style={{ height }} aria-label="워드 클라우드">
+      <div className={styles.wordcloudStageHost}>
+        <div className={styles.wordcloudStage}>
+          <svg
+            className={styles.wordcloudSvg}
+            width={width}
+            height={height}
+            viewBox={`0 0 ${width} ${height}`}
+            role="img"
+            aria-label="워드 클라우드"
+          >
+            <g transform={`translate(${width / 2}, ${height / 2})`}>
+              {words.map((w, i) => {
+                const cSeed = hashInt(`${seed}-${w.text}-${i}`);
+                const color = palette[cSeed % palette.length];
 
-            return (
-              <text
-                key={`${w.text}-${i}`}
-                textAnchor="middle"
-                dominantBaseline="central"
-                transform={`translate(${w.x}, ${w.y})`}
-                style={{
-                  fill: color,
-                  fontSize: w.size,
-                  fontFamily: "system-ui, -apple-system, Segoe UI, Roboto, Noto Sans KR, sans-serif",
-                  fontWeight: 800,
-                  letterSpacing: "-0.02em",
-                }}
-              >
-                {w.text}
-              </text>
-            );
-          })}
-        </g>
-      </svg>
+                return (
+                  <text
+                    key={`${w.text}-${i}`}
+                    textAnchor="middle"
+                    dominantBaseline="central"
+                    transform={`translate(${w.x}, ${w.y})`}
+                    style={{
+                      fill: color,
+                      fontSize: w.size,
+                      fontFamily: "system-ui, -apple-system, Segoe UI, Roboto, Noto Sans KR, sans-serif",
+                      fontWeight: 800,
+                      letterSpacing: "-0.02em",
+                    }}
+                  >
+                    {w.text}
+                  </text>
+                );
+              })}
+            </g>
+          </svg>
+        </div>
+      </div>
     </div>
   );
 }
@@ -807,18 +836,18 @@ function NetworkGraph({
           .id((d: GraphNode) => d.id)
           .distance((l: GraphLink) => {
             const v = l.value ?? 1;
-            return clamp(228 - v * 28, 138, 268);
+            return clamp(296 - v * 20, 196, 356);
           })
           .strength((l: GraphLink) => {
             const v = l.value ?? 1;
-            return clamp(0.2 + v * 0.05, 0.16, 0.4);
+            return clamp(0.18 + v * 0.04, 0.14, 0.32);
           })
       )
-      .force("charge", forceManyBody().strength(-460))
+      .force("charge", forceManyBody().strength(-620))
       .force("center", forceCenter(width / 2, height / 2))
       .force(
         "collide",
-        forceCollide<GraphNode>().radius((d: GraphNode) => getGraphNodeRadius(d) + 20)
+        forceCollide<GraphNode>().radius((d: GraphNode) => getGraphNodeRadius(d) + 30)
       );
 
     let raf = 0;
@@ -847,14 +876,20 @@ function NetworkGraph({
   if (!simData.nodes.length) {
     return (
       <div ref={wrapRef} className={styles.networkWrap}>
-        <div className={styles.emptyBox}>표시할 공동 언급 네트워크 데이터가 없습니다.</div>
+        <div className={styles.networkStageHost}>
+          <div className={styles.networkStage}>
+            <div className={`${styles.emptyBox} ${styles.networkEmptyBox}`}>표시할 공동 언급 네트워크 데이터가 없습니다.</div>
+          </div>
+        </div>
       </div>
     );
   }
 
   return (
     <div ref={wrapRef} className={styles.networkWrap} aria-label="관계도 네트워크">
-      <svg
+      <div className={styles.networkStageHost}>
+        <div className={styles.networkStage}>
+          <svg
         ref={svgRef}
         className={styles.networkSvg}
         width={width}
@@ -869,8 +904,8 @@ function NetworkGraph({
             setHoveredNodeId(null);
           }
         }}
-      >
-        <g className={styles.networkLinks}>
+          >
+            <g className={styles.networkLinks}>
           {simData.links.map((l, idx) => {
             const s = resolveNode(l.source);
             const t = resolveNode(l.target);
@@ -905,9 +940,9 @@ function NetworkGraph({
               />
             );
           })}
-        </g>
+            </g>
 
-        <g className={styles.networkNodes}>
+            <g className={styles.networkNodes}>
           {simData.nodes.map((n) => {
             if (!renderedNodeIds.has(n.id)) return null;
 
@@ -961,8 +996,10 @@ function NetworkGraph({
               </g>
             );
           })}
-        </g>
-      </svg>
+            </g>
+          </svg>
+        </div>
+      </div>
 
       <div className={styles.networkHint}>
         상위 핵심 노드의 연결만 표시합니다. 노드에 마우스를 올리면 연결된 관계를 강조해 볼 수 있고, 드래그 후 놓으면 고정되며 다시 누르면 고정이 해제됩니다.
@@ -1128,8 +1165,98 @@ export default function KeywordDetailPage() {
       sentimentChartRef.current = null;
     }
 
+    const sentimentPieCalloutPlugin = {
+      id: "sentimentPieCallout",
+      afterDatasetsDraw(chartInstance: Chart<"doughnut">) {
+        const dataset = chartInstance.data.datasets[0];
+        if (!dataset) return;
+
+        const labels = (chartInstance.data.labels ?? []).map((label) => String(label ?? ""));
+        const values = (dataset.data as Array<number | string | null | undefined>).map((value) => {
+          const n = Number(value);
+          return Number.isFinite(n) ? n : 0;
+        });
+        const total = values.reduce((sum, value) => sum + value, 0);
+        if (total <= 0) return;
+
+        const colors = Array.isArray(dataset.backgroundColor)
+          ? dataset.backgroundColor
+          : [dataset.backgroundColor];
+        const arcs = chartInstance.getDatasetMeta(0).data;
+        const {
+          ctx: chartCtx,
+          chartArea: { top, right, bottom, left },
+        } = chartInstance;
+
+        chartCtx.save();
+        chartCtx.font = '700 14px "Segoe UI", sans-serif';
+        chartCtx.textBaseline = "middle";
+
+        const calloutRadialOffset = 38;
+        const calloutHorizontalOffset = 78;
+
+        arcs.forEach((arc, idx) => {
+          const value = values[idx] ?? 0;
+          if (value <= 0) return;
+
+          const arcElement = arc as unknown as {
+            x: number;
+            y: number;
+            startAngle: number;
+            endAngle: number;
+            outerRadius: number;
+          };
+
+          const midAngle = (arcElement.startAngle + arcElement.endAngle) / 2;
+          const cos = Math.cos(midAngle);
+          const sin = Math.sin(midAngle);
+          const isRight = cos >= 0;
+
+          const startX = arcElement.x + cos * (arcElement.outerRadius * 0.98);
+          const startY = arcElement.y + sin * (arcElement.outerRadius * 0.98);
+          const bendX = arcElement.x + cos * (arcElement.outerRadius + calloutRadialOffset);
+          const bendY = arcElement.y + sin * (arcElement.outerRadius + calloutRadialOffset);
+
+          const endX = clamp(
+            bendX + (isRight ? calloutHorizontalOffset : -calloutHorizontalOffset),
+            left + 12,
+            right - 12
+          );
+          const endY = clamp(
+            bendY + sin * 6,
+            top + 14,
+            bottom - 14
+          );
+
+          const color = String(colors[idx] ?? colors[0] ?? "#334155");
+          chartCtx.beginPath();
+          chartCtx.moveTo(startX, startY);
+          chartCtx.quadraticCurveTo(bendX, bendY, endX, endY);
+          chartCtx.lineWidth = 2;
+          chartCtx.strokeStyle = color;
+          chartCtx.globalAlpha = 0.65;
+          chartCtx.stroke();
+
+          chartCtx.globalAlpha = 1;
+          chartCtx.beginPath();
+          chartCtx.arc(endX, endY, 5.5, 0, Math.PI * 2);
+          chartCtx.fillStyle = color;
+          chartCtx.fill();
+
+          const percent = Math.round((value / total) * 100);
+          const text = `${labels[idx] ?? ""} ${percent}%`;
+          chartCtx.textAlign = isRight ? "left" : "right";
+          chartCtx.fillStyle = "#334155";
+          chartCtx.fillText(text, endX + (isRight ? 10 : -10), endY);
+        });
+
+        chartCtx.restore();
+      },
+    };
+
     const chart = new Chart(ctx, {
       type: "doughnut",
+      plugins: [sentimentPieCalloutPlugin],
       data: {
         labels: ["긍정", "중립", "부정"],
         datasets: [
@@ -1147,6 +1274,16 @@ export default function KeywordDetailPage() {
       options: {
         responsive: true,
         maintainAspectRatio: false,
+        radius: "86%",
+        cutout: "43%",
+        layout: {
+          padding: {
+            top: 18,
+            right: 58,
+            bottom: 18,
+            left: 58,
+          },
+        },
         plugins: {
           legend: { display: false },
           tooltip: {
@@ -1159,7 +1296,6 @@ export default function KeywordDetailPage() {
             },
           },
         },
-        cutout: "70%",
       },
     });
 
@@ -1187,6 +1323,12 @@ export default function KeywordDetailPage() {
 
     const labels = viewData.biasItems.map((b) => b.media_name);
     const data = viewData.biasItems.map((b) => b.bias_score);
+    const maxAbsBias = data.reduce((maxValue, value) => {
+      const numeric = Number(value);
+      if (!Number.isFinite(numeric)) return maxValue;
+      return Math.max(maxValue, Math.abs(numeric));
+    }, 0);
+    const { axisMax: yAxisAbsMax, stepSize: yAxisStepSize } = resolveBiasAxis(maxAbsBias);
 
     const chart = new Chart(ctx, {
       type: "bar",
@@ -1219,10 +1361,10 @@ export default function KeywordDetailPage() {
             ticks: { color: "#64748b", font: { size: 11 } },
           },
           y: {
-            min: -10,
-            max: 10,
+            min: -yAxisAbsMax,
+            max: yAxisAbsMax,
             grid: { color: "rgba(148,163,184,0.32)" },
-            ticks: { color: "#64748b", font: { size: 11 } },
+            ticks: { color: "#64748b", font: { size: 11 }, stepSize: yAxisStepSize },
           },
         },
         plugins: {
@@ -1341,6 +1483,18 @@ export default function KeywordDetailPage() {
               autoSkip: true,
               maxTicksLimit: items.length > 60 ? 10 : 7,
             },
+            title: {
+              display: false,
+              text: "날짜",
+              color: "#475569",
+              font: {
+                size: 12,
+                weight: 600,
+              },
+              padding: {
+                top: 10,
+              },
+            },
           },
           y: {
             min: 0,
@@ -1350,6 +1504,18 @@ export default function KeywordDetailPage() {
               color: "#64748b",
               font: { size: 11 },
               stepSize: 20,
+            },
+            title: {
+              display: false,
+              text: "검색 관심도 지수",
+              color: "#475569",
+              font: {
+                size: 12,
+                weight: 600,
+              },
+              padding: {
+                bottom: 10,
+              },
             },
           },
         },
@@ -1562,8 +1728,8 @@ export default function KeywordDetailPage() {
                 최근 7일
               </button>
               <button
-                type="button"
                 className={`${styles.filterChip} ${period === "D14" ? styles.active : ""}`}
+                type="button"
                 onClick={() => setPeriod("D14")}
                 role="tab"
                 aria-selected={period === "D14"}
@@ -1646,7 +1812,7 @@ export default function KeywordDetailPage() {
             <span className={styles.badgeSoft}>제목 기반</span>
           </div>
 
-          <WordCloudD3 items={viewData.titleWordcloud} height={320} seed={`${displayKeyword}-${period}-title`} />
+          <WordCloudD3 items={viewData.titleWordcloud} height={460} seed={`${displayKeyword}-${period}-title`} />
         </article>
 
         <article className={styles.card}>
@@ -1743,7 +1909,7 @@ export default function KeywordDetailPage() {
             keyword={displayKeyword}
             apiNodes={viewData.coocNodes}
             apiEdges={viewData.coocEdges}
-            height={440}
+            height={500}
             seed={`${displayKeyword}-${period}-cooc`}
           />
         </article>
@@ -1759,7 +1925,7 @@ export default function KeywordDetailPage() {
             <span className={styles.badgeSoft}>댓글 기반</span>
           </div>
 
-          <WordCloudD3 items={viewData.commentWordcloud} height={320} seed={`${displayKeyword}-${period}-comment`} />
+          <WordCloudD3 items={viewData.commentWordcloud} height={460} seed={`${displayKeyword}-${period}-comment`} />
         </article>
       </section>
     </main>

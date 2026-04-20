@@ -38,6 +38,27 @@ function clamp(n: number, min: number, max: number) {
   return Math.max(min, Math.min(max, n));
 }
 
+function resolveBiasAxis(maxAbsValue: number): { axisMax: number; stepSize: number } {
+  const safeMax = Number.isFinite(maxAbsValue) ? Math.max(0, Math.abs(maxAbsValue)) : 0;
+  const niceAxisCandidates = [
+    1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 12, 15, 20, 25, 30, 40, 50, 60, 80, 100,
+  ];
+
+  let axisMax =
+    niceAxisCandidates.find((candidate) => safeMax <= candidate) ??
+    Math.ceil(safeMax / 20) * 20;
+  if (!Number.isFinite(axisMax) || axisMax <= 0) axisMax = 1;
+
+  let stepSize = 1;
+  if (axisMax <= 2) stepSize = 0.5;
+  else if (axisMax <= 5) stepSize = 1;
+  else if (axisMax <= 10) stepSize = 2;
+  else if (axisMax <= 30) stepSize = 5;
+  else stepSize = 10;
+
+  return { axisMax, stepSize };
+}
+
 function formatDateYYYYMMDD(d: Date) {
   const yyyy = d.getFullYear();
   const mm = String(d.getMonth() + 1).padStart(2, "0");
@@ -506,6 +527,12 @@ export default function MediaComparePage() {
 
     const labels = biasRows.map((r) => r.label);
     const data = biasRows.map((r) => r.bias);
+    const maxAbsBias = data.reduce((maxValue, value) => {
+      const numeric = Number(value);
+      if (!Number.isFinite(numeric)) return maxValue;
+      return Math.max(maxValue, Math.abs(numeric));
+    }, 0);
+    const { axisMax: yAxisAbsMax, stepSize: yAxisStepSize } = resolveBiasAxis(maxAbsBias);
 
     const posColor = readCssVar("--ns-bias-pos", "#38bdf8");
     const negColor = readCssVar("--ns-bias-neg", "#f97316");
@@ -538,10 +565,10 @@ export default function MediaComparePage() {
         scales: {
           x: { grid: { display: false }, ticks: { color: "#64748b", font: { size: 11 } } },
           y: {
-            suggestedMin: -10,
-            suggestedMax: 10,
+            min: -yAxisAbsMax,
+            max: yAxisAbsMax,
             grid: { color: "rgba(148,163,184,0.32)" },
-            ticks: { color: "#64748b", font: { size: 11 } },
+            ticks: { color: "#64748b", font: { size: 11 }, stepSize: yAxisStepSize },
           },
         },
         plugins: {
