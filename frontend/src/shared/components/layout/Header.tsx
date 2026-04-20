@@ -293,14 +293,23 @@ export default function Header() {
   return (
     <header ref={headerRef} className={styles.siteHeader} data-scroll-state="top">
       <div className={styles.headerInner}>
-        <Link
-          to="/"
-          className={styles.logoArea}
-          aria-label="Newsight 홈으로"
-          onClick={closeAllMenus}
-        >
-          <img src={logo} alt="Newsight 로고" className={styles.logoImage} />
-        </Link>
+        <div className={styles.logoArea}>
+          <Link
+            to="/"
+            className={styles.logoLink}
+            aria-label="Newsight 홈으로"
+            onClick={closeAllMenus}
+          >
+            <div className={styles.logoBadge}>
+              <img src={logo} alt="Newsight 로고" className={styles.logoImage} />
+            </div>
+          </Link>
+
+          <div className={styles.brandCopy}>
+            <span className={styles.brandEyebrow}>NEWS DASHBOARD</span>
+            <span className={styles.brandTagline}>데이터로 읽는 오늘의 뉴스 흐름</span>
+          </div>
+        </div>
 
         <nav className={styles.mainNav} aria-label="메인 메뉴">
           <NavLink to="/" end className={linkClass} onClick={closeAllMenus}>
