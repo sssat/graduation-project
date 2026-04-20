@@ -1,0 +1,47 @@
+.card {
+  composes: card from "../shared/AnalysisCard.module.css";
+}
+
+.cardFill {
+  composes: cardFill from "../shared/AnalysisCard.module.css";
+}
+
+.cardHeader {
+  composes: cardHeader from "../shared/AnalysisCard.module.css";
+}
+
+.cardTitle {
+  composes: cardTitle from "../shared/AnalysisCard.module.css";
+}
+
+.cardSub {
+  composes: cardSub from "../shared/AnalysisCard.module.css";
+}
+
+.badgeSoft {
+  composes: badgeSoft from "../shared/AnalysisCard.module.css";
+}
+
+.chartWrapper {
+  composes: chartWrapper from "../shared/AnalysisCard.module.css";
+}
+
+.biasChartWrapper {
+  height: 320px;
+  min-height: 320px;
+}
+
+.biasCaption {
+  composes: biasCaption from "../shared/AnalysisCard.module.css";
+}
+
+.emptyBox {
+  composes: emptyBox from "../shared/AnalysisCard.module.css";
+}
+
+@media (max-width: 900px) {
+  .biasChartWrapper {
+    height: 280px;
+    min-height: 280px;
+  }
+}

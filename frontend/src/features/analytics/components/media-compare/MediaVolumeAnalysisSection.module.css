@@ -1,0 +1,36 @@
+.card {
+  composes: card from "../shared/AnalysisCard.module.css";
+}
+
+.cardHeader {
+  composes: cardHeader from "../shared/AnalysisCard.module.css";
+}
+
+.cardTitle {
+  composes: cardTitle from "../shared/AnalysisCard.module.css";
+}
+
+.cardSub {
+  composes: cardSub from "../shared/AnalysisCard.module.css";
+}
+
+.badgeSoft {
+  composes: badgeSoft from "../shared/AnalysisCard.module.css";
+}
+
+.chartWrapper {
+  composes: chartWrapper from "../shared/AnalysisCard.module.css";
+  height: 340px;
+}
+
+.biasCaption {
+  composes: biasCaption from "../shared/AnalysisCard.module.css";
+}
+
+.statusText {
+  composes: statusText from "../shared/AnalysisCard.module.css";
+}
+
+.statusError {
+  composes: statusError from "../shared/AnalysisCard.module.css";
+}

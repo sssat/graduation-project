@@ -1,0 +1,70 @@
+.card {
+  composes: card from "../shared/AnalysisCard.module.css";
+}
+
+.cardHeader {
+  composes: cardHeader from "../shared/AnalysisCard.module.css";
+}
+
+.cardTitle {
+  composes: cardTitle from "../shared/AnalysisCard.module.css";
+}
+
+.cardSub {
+  composes: cardSub from "../shared/AnalysisCard.module.css";
+}
+
+.badgeSoft {
+  composes: badgeSoft from "../shared/AnalysisCard.module.css";
+}
+
+.statusText {
+  composes: statusText from "../shared/AnalysisCard.module.css";
+}
+
+.statusError {
+  composes: statusError from "../shared/AnalysisCard.module.css";
+}
+
+.framingList {
+  margin-top: 12px;
+  font-size: 14px;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 14px;
+}
+
+.framingItem {
+  min-height: 120px;
+  padding: 16px 18px;
+  border-radius: 18px;
+  background: #f8fbff;
+  border: 1px solid rgba(226, 232, 240, 0.95);
+}
+
+.framingMedia {
+  font-size: 14px;
+  font-weight: 700;
+  color: #0f172a;
+  margin-bottom: 8px;
+}
+
+.framingKeywords {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.keywordTagNeutral {
+  font-size: 12px;
+  padding: 5px 10px;
+  border-radius: 999px;
+  background: #eef4ff;
+  color: #475569;
+}
+
+@media (max-width: 900px) {
+  .framingList {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

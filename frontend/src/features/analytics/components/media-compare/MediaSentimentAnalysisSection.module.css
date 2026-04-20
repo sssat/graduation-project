@@ -1,0 +1,76 @@
+.card {
+  composes: card from "../shared/AnalysisCard.module.css";
+}
+
+.cardHeader {
+  composes: cardHeader from "../shared/AnalysisCard.module.css";
+}
+
+.cardTitle {
+  composes: cardTitle from "../shared/AnalysisCard.module.css";
+}
+
+.cardSub {
+  composes: cardSub from "../shared/AnalysisCard.module.css";
+}
+
+.badgeSoft {
+  composes: badgeSoft from "../shared/AnalysisCard.module.css";
+}
+
+.chartWrapperTall {
+  position: relative;
+  height: 400px;
+}
+
+.chartWrapperTall canvas {
+  width: 100% !important;
+  height: 100% !important;
+}
+
+.chartLegend {
+  margin-top: 16px;
+  font-size: 13px;
+  color: var(--ns-text-muted, #64748b);
+  display: flex;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+
+.legendItem {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.legendSwatch {
+  width: 12px;
+  height: 12px;
+  border-radius: 999px;
+}
+
+.swatchPositive {
+  background: var(--ns-sent-pos);
+}
+
+.swatchNeutral {
+  background: var(--ns-sent-neu);
+}
+
+.swatchNegative {
+  background: var(--ns-sent-neg);
+}
+
+.statusText {
+  composes: statusText from "../shared/AnalysisCard.module.css";
+}
+
+.statusError {
+  composes: statusError from "../shared/AnalysisCard.module.css";
+}
+
+@media (max-width: 900px) {
+  .chartWrapperTall {
+    height: 320px;
+  }
+}
