@@ -685,6 +685,131 @@ def run_comment_phase(
     return comments_by_press
 
 
+def _group_article_urls_by_press(
+    *,
+    articles: List[CrawledArticle],
+    press_codes: Dict[str, int],
+) -> Dict[str, Dict[str, List[str]]]:
+    code_to_press = {int(code): name for name, code in press_codes.items()}
+    grouped: Dict[str, Dict[str, List[str]]] = {}
+    seen: Dict[Tuple[str, str], set[str]] = {}
+
+    for article in articles:
+        press_name = code_to_press.get(int(article.media_code))
+        if not press_name:
+            continue
+
+        url = _normalize_article_url(article.source_url)
+        if not url:
+            continue
+
+        kw = str(article.keyword_name).strip()
+        if not kw:
+            continue
+
+        grouped.setdefault(press_name, {}).setdefault(kw, [])
+        seen_key = (press_name, kw)
+        seen.setdefault(seen_key, set())
+        if url in seen[seen_key]:
+            continue
+
+        seen[seen_key].add(url)
+        grouped[press_name][kw].append(url)
+
+    return grouped
+
+
+def crawl_comment_bundles_from_articles(
+    *,
+    articles: List[CrawledArticle],
+    comment_processes: int | None = None,
+    headless: bool | None = None,
+    press_codes: Dict[str, int] = PRESS_CODES,
+) -> tuple[List[CrawledCommentBundle], Dict[str, Any]]:
+    if headless is None:
+        headless = bool(settings.headless)
+
+    if comment_processes is None:
+        comment_processes = int(settings.news_comment_processes)
+
+    links_by_press = _group_article_urls_by_press(articles=articles, press_codes=press_codes)
+
+    sampled_links_by_press: Dict[str, Dict[str, List[str]]] = {}
+    comment_target_count = 0
+    comment_total_candidates = 0
+
+    for press_name, kw_dict in links_by_press.items():
+        sampled_links_by_press[press_name] = {}
+        for kw, urls in kw_dict.items():
+            candidates = [_normalize_article_url(u) for u in urls if _normalize_article_url(u)]
+            comment_total_candidates += len(candidates)
+
+            sampled = _sample_urls_for_comments(
+                candidates,
+                rate=COMMENT_SAMPLE_RATE,
+                min_count=COMMENT_SAMPLE_MIN,
+            )
+            sampled_links_by_press[press_name][kw] = sampled
+            comment_target_count += len(sampled)
+
+    t0 = time.time()
+    comments_by_press = run_comment_phase(
+        sampled_links_by_press,
+        processes=int(comment_processes),
+        headless=bool(headless),
+    )
+    t1 = time.time()
+
+    comment_bundles: List[CrawledCommentBundle] = []
+    for press_name, kw_dict in sampled_links_by_press.items():
+        media_code = press_codes.get(press_name)
+        if media_code is None:
+            continue
+
+        for kw, urls in kw_dict.items():
+            url_to_comments = comments_by_press.get(press_name, {}).get(kw, {})
+            for url in urls:
+                src_url = _normalize_article_url(url)
+                if not src_url:
+                    continue
+
+                comments = url_to_comments.get(src_url)
+                if comments is None:
+                    continue
+
+                comment_bundles.append(
+                    CrawledCommentBundle(
+                        keyword_name=kw,
+                        trend_run_seq=int(articles[0].trend_run_seq) if articles else 0,
+                        media_code=media_code,
+                        source_url=src_url,
+                        comments=comments,
+                    )
+                )
+
+    crawl_stats: Dict[str, Any] = {
+        "timing_seconds": {
+            "fetch_comments": round(t1 - t0, 2),
+            "total": round(t1 - t0, 2),
+        },
+        "runtime_config": {
+            "max_comments_per_article": MAX_COMMENTS_PER_ARTICLE,
+            "comment_processes": int(comment_processes),
+            "comment_sample_rate": COMMENT_SAMPLE_RATE,
+            "comment_sample_min": COMMENT_SAMPLE_MIN,
+            "comment_candidates": comment_total_candidates,
+            "comment_targets": comment_target_count,
+            "comment_sample_mode": "stable_hash_topk",
+        },
+        "crawled_counts": {
+            "articles": len(articles),
+            "comment_bundles": len(comment_bundles),
+        },
+    }
+
+    return comment_bundles, crawl_stats
+
+
 def crawl_news_core(
     *,
     trend_run_seq: int,

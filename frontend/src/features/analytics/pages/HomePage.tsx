@@ -272,11 +272,14 @@ export default function HomePage() {
 
   const renderItem = (item: HomeTopKeywordItem) => {
     if (!item.isAnalyzable) {
+      const itemClassName =
+        item.count < 10 ? `${styles.statItem} ${styles.statItemLowVolume}` : styles.statItem;
+
       return (
         <button
           key={item.rank}
           type="button"
-          className={styles.statItem}
+          className={itemClassName}
           onClick={() => showNotAnalyzableAlert(item.count)}
           aria-label={`${item.label} 키워드: 데이터 부족으로 분석 제공 불가 안내 보기`}
           style={{

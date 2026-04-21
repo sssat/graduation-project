@@ -298,6 +298,120 @@ def _insert_comments_for_article(
     return inserted
 
 
+def _resolve_article_seq_map(
+    *,
+    conn,
+    bundles: Sequence[CrawledCommentBundle],
+    keyword_seq_map: Dict[str, int],
+) -> Dict[Tuple[int, int, str], int]:
+    _article_batch, _comment_batch, keyword_in_query_batch_size = _batch_sizes()
+
+    grouped_hashes: Dict[Tuple[int, int], List[str]] = {}
+    for bundle in bundles:
+        keyword_seq = keyword_seq_map.get(bundle.keyword_name)
+        if keyword_seq is None:
+            continue
+
+        url = _normalize_url(bundle.source_url)
+        if not url:
+            continue
+
+        key = (int(bundle.trend_run_seq), int(keyword_seq))
+        grouped_hashes.setdefault(key, []).append(_sha256_hex(url))
+
+    out: Dict[Tuple[int, int, str], int] = {}
+    with conn.cursor() as cur:
+        for (trend_run_seq, keyword_seq), url_hashes in grouped_hashes.items():
+            deduped_hashes = list(dict.fromkeys(url_hashes))
+            for chunk in _chunked(deduped_hashes, keyword_in_query_batch_size):
+                placeholders = ",".join(["%s"] * len(chunk))
+                cur.execute(
+                    f"""
+                    SELECT ARTICLE_SEQ, TREND_RUN_SEQ, KEYWORD_SEQ, URL_HASH
+                    FROM T_NEWS_ARTICLE
+                    WHERE TREND_RUN_SEQ = %s
+                      AND KEYWORD_SEQ = %s
+                      AND URL_HASH IN ({placeholders})
+                    """,
+                    [trend_run_seq, keyword_seq, *list(chunk)],
+                )
+                rows = cur.fetchall() or []
+                for row in rows:
+                    out[
+                        (
+                            int(row["TREND_RUN_SEQ"]),
+                            int(row["KEYWORD_SEQ"]),
+                            str(row["URL_HASH"]),
+                        )
+                    ] = int(row["ARTICLE_SEQ"])
+
+    return out
+
+
+def persist_comments_for_existing_articles(
+    *,
+    comment_bundles: List[CrawledCommentBundle],
+) -> Dict[str, Any]:
+    conn = get_conn()
+    try:
+        keyword_names = list({bundle.keyword_name for bundle in comment_bundles})
+        keyword_seq_map = _resolve_keyword_seq_map(conn, keyword_names)
+        article_seq_map = _resolve_article_seq_map(
+            conn=conn,
+            bundles=comment_bundles,
+            keyword_seq_map=keyword_seq_map,
+        )
+
+        total_comments = 0
+        matched_articles = 0
+        missing_articles = 0
+
+        for bundle in comment_bundles:
+            keyword_seq = keyword_seq_map.get(bundle.keyword_name)
+            if keyword_seq is None:
+                missing_articles += 1
+                continue
+
+            url = _normalize_url(bundle.source_url)
+            if not url:
+                missing_articles += 1
+                continue
+
+            article_seq = article_seq_map.get(
+                (
+                    int(bundle.trend_run_seq),
+                    int(keyword_seq),
+                    _sha256_hex(url),
+                )
+            )
+            if not article_seq:
+                missing_articles += 1
+                continue
+
+            matched_articles += 1
+            total_comments += _insert_comments_for_article(
+                conn=conn,
+                article_seq=article_seq,
+                comments=bundle.comments,
+            )
+
+        conn.commit()
+        return {
+            "articles_matched": matched_articles,
+            "article_refs_missing": missing_articles,
+            "comments_written": total_comments,
+            "mode": "comments_only_existing_articles",
+        }
+    except Exception:
+        try:
+            conn.rollback()
+        except Exception:
+            pass
+        raise
+    finally:
+        conn.close()
+
+
 def persist_articles(
     *,
     articles: List[CrawledArticle],

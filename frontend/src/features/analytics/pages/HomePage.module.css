@@ -343,6 +343,28 @@
     inset 0 1px 0 rgba(255, 255, 255, 0.92);
 }
 
+.statItemLowVolume {
+  background: transparent;
+  border-color: transparent;
+  box-shadow: none;
+}
+
+.statItemLowVolume::after {
+  display: none;
+}
+
+.statItemLowVolume:hover {
+  transform: none;
+  background: transparent;
+  border-color: transparent;
+  box-shadow: none;
+}
+
+.statItemLowVolume .statIndex,
+.statItemLowVolume .statCount {
+  color: #64748b;
+}
+
 .statItem:focus-visible {
   outline: 2px solid rgba(56, 189, 248, 0.55);
   outline-offset: 2px;
