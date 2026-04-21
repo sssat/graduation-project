@@ -49,6 +49,15 @@ MAX_COMMENTS_PER_ARTICLE: int = int(settings.news_max_comments_per_article)
 COMMENT_SAMPLE_RATE: float = float(settings.news_comment_sample_rate)
 COMMENT_SAMPLE_MIN: int = int(settings.news_comment_sample_min)
 
+SEARCH_PAGE_LOAD_TIMEOUT_SECONDS = 18
+SEARCH_WAIT_TIMEOUT_SECONDS = 5
+COMMENT_PAGE_LOAD_TIMEOUT_SECONDS = 24
+SELENIUM_SCRIPT_TIMEOUT_SECONDS = 10
+
+
+def _log_news_progress(message: str) -> None:
+    print(f"[news] {message}", flush=True)
+
 # 네이버 언론사 코드(= T_MEDIA seed와 동일해야 함)
 PRESS_CODES: Dict[str, int] = {
     "조선일보": 1023,
@@ -112,6 +121,7 @@ def make_search_urls_for_press(
 
 def _build_chrome_options(*, headless: bool = True) -> webdriver.ChromeOptions:
     options = webdriver.ChromeOptions()
+    options.page_load_strategy = "eager"
 
     if headless:
         options.add_argument("--headless=new")
@@ -120,6 +130,8 @@ def _build_chrome_options(*, headless: bool = True) -> webdriver.ChromeOptions:
     options.add_argument("--no-sandbox")
     options.add_argument("--disable-dev-shm-usage")
     options.add_argument("--disable-gpu")
+    options.add_argument("--disable-extensions")
+    options.add_argument("--disable-background-networking")
     options.add_argument("--window-size=1280,720")
     options.add_argument("--lang=ko-KR")
 
@@ -197,11 +209,17 @@ def crawl_article_links_for_press(
     press_name, _press_id, search_urls_by_keyword, headless = task
 
     options = _build_chrome_options(headless=headless)
+    _log_news_progress(f"search chrome_start press={press_name}")
     driver = webdriver.Chrome(options=options)
-    driver.set_page_load_timeout(40)
-    driver.implicitly_wait(6)
+    driver.set_page_load_timeout(SEARCH_PAGE_LOAD_TIMEOUT_SECONDS)
+    driver.set_script_timeout(SELENIUM_SCRIPT_TIMEOUT_SECONDS)
+    driver.implicitly_wait(3)
 
     results: Dict[str, List[str]] = {}
+    total_pages = sum(len(urls) for urls in search_urls_by_keyword.values())
+    _log_news_progress(
+        f"search press_start press={press_name} keywords={len(search_urls_by_keyword)} pages={total_pages}"
+    )
 
     try:
         for kw, urls in search_urls_by_keyword.items():
@@ -211,11 +229,16 @@ def crawl_article_links_for_press(
             for url in urls:
                 try:
                     driver.get(url)
+                except TimeoutException:
+                    try:
+                        driver.execute_script("window.stop();")
+                    except Exception:
+                        pass
                 except Exception:
                     continue
 
                 try:
-                    WebDriverWait(driver, 10).until(
+                    WebDriverWait(driver, SEARCH_WAIT_TIMEOUT_SECONDS).until(
                         EC.presence_of_element_located(
                             (
                                 By.CSS_SELECTOR,
@@ -251,10 +274,14 @@ def crawl_article_links_for_press(
                             news_links.append(link)
 
             results[kw] = news_links
+            _log_news_progress(
+                f"search keyword_done press={press_name} keyword={kw!r} links={len(news_links)}"
+            )
 
     finally:
         driver.quit()
 
+    _log_news_progress(f"search press_done press={press_name}")
     return press_name, results
 
 
@@ -434,6 +461,10 @@ async def crawl_article_contents_async(
                 queue.put_nowait((press, kw, idx, url))
                 total_jobs += 1
 
+    _log_news_progress(
+        f"articles fetch_start urls={total_jobs} concurrency={max(1, ARTICLE_CONCURRENCY)}"
+    )
+
     connector = aiohttp.TCPConnector(
         limit=HTTP_CONN_LIMIT,
         limit_per_host=HTTP_CONN_LIMIT_PER_HOST,
@@ -503,6 +534,7 @@ async def crawl_article_contents_async(
                 queue.task_done()
 
     if total_jobs == 0:
+        _log_news_progress("articles fetch_done urls=0")
         return parsed_by_press
 
     async with aiohttp.ClientSession(headers=HEADERS, timeout=TIMEOUT, connector=connector) as session:
@@ -514,6 +546,8 @@ async def crawl_article_contents_async(
         for w in workers:
             w.cancel()
         await asyncio.gather(*workers, return_exceptions=True)
+
+    _log_news_progress(f"articles fetch_done urls={total_jobs} unique_urls={len(cache)}")
 
     return parsed_by_press
 
@@ -565,11 +599,15 @@ def crawl_comments_for_press(
     press, kw_dict, headless = task
 
     options = _build_chrome_options(headless=headless)
+    _log_news_progress(f"comments chrome_start press={press}")
     driver = webdriver.Chrome(options=options)
-    driver.set_page_load_timeout(40)
-    driver.implicitly_wait(8)
+    driver.set_page_load_timeout(COMMENT_PAGE_LOAD_TIMEOUT_SECONDS)
+    driver.set_script_timeout(SELENIUM_SCRIPT_TIMEOUT_SECONDS)
+    driver.implicitly_wait(4)
 
     out: Dict[str, Dict[str, List[str]]] = {}
+    target_count = sum(len(urls) for urls in kw_dict.values())
+    _log_news_progress(f"comments press_start press={press} keywords={len(kw_dict)} targets={target_count}")
 
     try:
         for kw, urls in kw_dict.items():
@@ -583,6 +621,11 @@ def crawl_comments_for_press(
                 comment_url = _to_comment_url(src_url)
                 try:
                     driver.get(comment_url)
+                except TimeoutException:
+                    try:
+                        driver.execute_script("window.stop();")
+                    except Exception:
+                        pass
                 except Exception:
                     url_to_comments[src_url] = []
                     continue
@@ -597,10 +640,14 @@ def crawl_comments_for_press(
                 url_to_comments[src_url] = collected_texts
 
             out[kw] = url_to_comments
+            _log_news_progress(
+                f"comments keyword_done press={press} keyword={kw!r} urls={len(url_to_comments)}"
+            )
 
     finally:
         driver.quit()
 
+    _log_news_progress(f"comments press_done press={press}")
     return press, out
 
 
@@ -635,10 +682,16 @@ def run_search_phase(
     processes: int,
     headless: bool,
 ) -> Dict[str, Dict[str, List[str]]]:
+    task_count = len(all_search_urls)
+    _log_news_progress(f"search phase_start presses={task_count} processes={processes}")
+
     if processes <= 1:
         results = []
         for press_name, (press_id, kw_to_urls) in all_search_urls.items():
-            results.append(crawl_article_links_for_press((press_name, press_id, kw_to_urls, headless)))
+            result = crawl_article_links_for_press((press_name, press_id, kw_to_urls, headless))
+            results.append(result)
+            link_count = sum(len(urls) for urls in result[1].values())
+            _log_news_progress(f"search press_result press={result[0]} links={link_count}")
     else:
         from multiprocessing import get_context
 
@@ -647,12 +700,24 @@ def run_search_phase(
         for press_name, (press_id, kw_to_urls) in all_search_urls.items():
             tasks.append((press_name, press_id, kw_to_urls, headless))
 
-        with ctx.Pool(processes=processes) as pool:
-            results = pool.map(crawl_article_links_for_press, tasks)
+        results = []
+        with ctx.Pool(processes=processes, maxtasksperchild=1) as pool:
+            for done, result in enumerate(
+                pool.imap_unordered(crawl_article_links_for_press, tasks, chunksize=1),
+                start=1,
+            ):
+                results.append(result)
+                link_count = sum(len(urls) for urls in result[1].values())
+                _log_news_progress(
+                    f"search press_result {done}/{task_count} press={result[0]} links={link_count}"
+                )
 
     links_by_press: Dict[str, Dict[str, List[str]]] = {}
     for press_name, kw_to_links in results:
         links_by_press[press_name] = kw_to_links
+
+    total_links = sum(len(urls) for kw_dict in links_by_press.values() for urls in kw_dict.values())
+    _log_news_progress(f"search phase_done presses={len(links_by_press)} links={total_links}")
 
     return links_by_press
 
@@ -663,10 +728,19 @@ def run_comment_phase(
     processes: int,
     headless: bool,
 ) -> Dict[str, Dict[str, Dict[str, List[str]]]]:
+    task_count = len(links_by_press)
+    target_count = sum(len(urls) for kw_dict in links_by_press.values() for urls in kw_dict.values())
+    _log_news_progress(
+        f"comments phase_start presses={task_count} targets={target_count} processes={processes}"
+    )
+
     if processes <= 1:
         results = []
         for press, kw_dict in links_by_press.items():
-            results.append(crawl_comments_for_press((press, kw_dict, headless)))
+            result = crawl_comments_for_press((press, kw_dict, headless))
+            results.append(result)
+            bundle_count = sum(len(urls) for urls in result[1].values())
+            _log_news_progress(f"comments press_result press={result[0]} urls={bundle_count}")
     else:
         from multiprocessing import get_context
 
@@ -675,12 +749,23 @@ def run_comment_phase(
         for press, kw_dict in links_by_press.items():
             tasks.append((press, kw_dict, headless))
 
-        with ctx.Pool(processes=processes) as pool:
-            results = pool.map(crawl_comments_for_press, tasks)
+        results = []
+        with ctx.Pool(processes=processes, maxtasksperchild=1) as pool:
+            for done, result in enumerate(
+                pool.imap_unordered(crawl_comments_for_press, tasks, chunksize=1),
+                start=1,
+            ):
+                results.append(result)
+                bundle_count = sum(len(urls) for urls in result[1].values())
+                _log_news_progress(
+                    f"comments press_result {done}/{task_count} press={result[0]} urls={bundle_count}"
+                )
 
     comments_by_press: Dict[str, Dict[str, Dict[str, List[str]]]] = {}
     for press, kw_to_url_comments in results:
         comments_by_press[press] = kw_to_url_comments
+
+    _log_news_progress(f"comments phase_done presses={len(comments_by_press)}")
 
     return comments_by_press
 
@@ -752,6 +837,10 @@ def crawl_comment_bundles_from_articles(
             sampled_links_by_press[press_name][kw] = sampled
             comment_target_count += len(sampled)
 
+    _log_news_progress(
+        f"comments crawl_from_articles candidates={comment_total_candidates} targets={comment_target_count}"
+    )
+
     t0 = time.time()
     comments_by_press = run_comment_phase(
         sampled_links_by_press,
@@ -807,6 +896,10 @@ def crawl_comment_bundles_from_articles(
         },
     }
 
+    _log_news_progress(
+        f"comments crawl_from_articles_done seconds={crawl_stats['timing_seconds']['total']} bundles={len(comment_bundles)}"
+    )
+
     return comment_bundles, crawl_stats
 
 
@@ -839,6 +932,12 @@ def crawl_news_core(
         comment_processes = int(settings.news_comment_processes)
 
     start_date, end_date = _date_range_app_tz(base_date=base_date, days_back=days_back)
+    _log_news_progress(
+        "crawl core_start "
+        f"trend_run_seq={trend_run_seq} base_date={base_date} "
+        f"keywords={len(keywords)} presses={len(press_codes)} "
+        f"pages={start_page}-{end_page} date_range={start_date}..{end_date}"
+    )
 
     all_search_urls = build_all_search_urls(
         keywords=keywords,
@@ -852,9 +951,12 @@ def crawl_news_core(
     t0 = time.time()
     links_by_press = run_search_phase(all_search_urls, processes=search_processes, headless=bool(headless))
     t1 = time.time()
+    total_links = sum(len(urls) for kw_dict in links_by_press.values() for urls in kw_dict.values())
+    _log_news_progress(f"crawl search_done seconds={round(t1 - t0, 2)} links={total_links}")
 
     parsed_by_press = asyncio.run(crawl_article_contents_async(links_by_press))
     t2 = time.time()
+    _log_news_progress(f"crawl article_fetch_done seconds={round(t2 - t1, 2)}")
 
     comments_by_press: Optional[Dict[str, Dict[str, Dict[str, List[str]]]]] = None
     comment_target_count = 0
@@ -879,6 +981,10 @@ def crawl_news_core(
         )
 
     t3 = time.time()
+    if include_comments:
+        _log_news_progress(
+            f"crawl comment_fetch_done seconds={round(t3 - t2, 2)} targets={comment_target_count}"
+        )
 
     articles: List[CrawledArticle] = []
     comment_bundles: List[CrawledCommentBundle] = []
@@ -959,5 +1065,9 @@ def crawl_news_core(
             "comment_bundles": len(comment_bundles) if include_comments else 0,
         },
     }
+
+    _log_news_progress(
+        f"crawl core_done seconds={crawl_stats['timing_seconds']['total']} articles={len(articles)}"
+    )
 
     return articles, (comment_bundles if include_comments else None), crawl_stats

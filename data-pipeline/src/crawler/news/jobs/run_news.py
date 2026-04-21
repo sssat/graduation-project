@@ -98,6 +98,10 @@ def _now_iso() -> str:
     return datetime.now(tz=ZoneInfo(settings.tz)).isoformat()
 
 
+def _log_news_job(message: str) -> None:
+    print(f"[news] {message}", flush=True)
+
+
 def _state_path(*, trend_run_seq: int, base_date: date) -> Path:
     state_dir = Path(settings.log_dir_news) / "state"
     return state_dir / f"run_news_state_{base_date.isoformat()}_run{int(trend_run_seq)}.json"
@@ -241,12 +245,18 @@ def run_news(
         limit = len(run_keywords)
     limit = max(1, min(limit, len(run_keywords)))
     news_keywords = run_keywords[:limit]
+    _log_news_job(
+        "target_loaded "
+        f"trend_run_seq={trend_run_seq} base_date={base_date} "
+        f"keywords={len(news_keywords)}/{len(run_keywords)} include_comments={int(bool(include_comments))}"
+    )
 
     state = _load_run_state(trend_run_seq=int(trend_run_seq), base_date=base_date)
     stored_articles = []
     resume_from = "articles"
 
     if _stage_status(state, "articles") == "completed":
+        _log_news_job("checkpoint articles_completed found; loading stored articles")
         stored_keywords = [str(name).strip() for name in (state or {}).get("keyword_names") or news_keywords if str(name).strip()]
         stored_articles = fetch_articles_for_run(
             trend_run_seq=int(trend_run_seq),
@@ -255,9 +265,11 @@ def run_news(
         )
 
         if not stored_articles:
+            _log_news_job("checkpoint ignored because stored articles were not found")
             state = None
         elif include_comments and _stage_status(state, "comments") != "completed":
             resume_from = "comments"
+            _log_news_job(f"resume_from=comments articles={len(stored_articles)}")
         elif not include_comments and _stage_status(state, "comments") != "completed":
             _mark_stage(
                 state,
@@ -305,6 +317,7 @@ def run_news(
     articles = list(stored_articles)
 
     if resume_from == "articles":
+        _log_news_job("articles crawl_start")
         articles, _unused_comment_bundles, article_crawl_stats = crawl_news_core(
             trend_run_seq=int(trend_run_seq),
             base_date=base_date,
@@ -318,12 +331,15 @@ def run_news(
             include_comments=False,
             comment_processes=0,
         )
+        _log_news_job(f"articles crawl_done articles={len(articles)}")
 
+        _log_news_job("articles db_write_start")
         article_db_stats = persist_articles(
             articles=articles,
             comment_bundles=None,
             refresh_same_run=bool(refresh_same_run),
         )
+        _log_news_job(f"articles db_write_done stats={article_db_stats}")
         _mark_stage(
             state,
             stage="articles",
@@ -351,19 +367,25 @@ def run_news(
 
     if include_comments:
         if not articles:
+            _log_news_job("comments loading_articles_for_resume")
             articles = fetch_articles_for_run(
                 trend_run_seq=int(trend_run_seq),
                 keyword_names=list(state.get("keyword_names") or news_keywords),
                 keyword_in_query_batch_size=int(settings.keyword_in_query_batch_size),
             )
+            _log_news_job(f"comments loaded_articles={len(articles)}")
 
+        _log_news_job(f"comments crawl_start articles={len(articles)}")
         comment_bundles, comment_crawl_stats = crawl_comment_bundles_from_articles(
             articles=articles,
             comment_processes=int(settings.news_comment_processes),
             headless=bool(settings.headless),
             press_codes=PRESS_CODES,
         )
+        _log_news_job(f"comments crawl_done bundles={len(comment_bundles)}")
+        _log_news_job("comments db_write_start")
         comment_db_stats = persist_comments_for_existing_articles(comment_bundles=comment_bundles)
+        _log_news_job(f"comments db_write_done stats={comment_db_stats}")
         _mark_stage(
             state,
             stage="comments",
@@ -446,7 +468,8 @@ def main() -> None:
             base_date=bd,
             include_comments=effective_include_comments,
             refresh_same_run=effective_refresh_same_run,
-        )
+        ),
+        flush=True,
     )
 
     result = run_news(
@@ -456,7 +479,7 @@ def main() -> None:
         refresh_same_run=effective_refresh_same_run,
     )
 
-    print(json.dumps(result, ensure_ascii=False, indent=2))
+    print(json.dumps(result, ensure_ascii=False, indent=2), flush=True)
 
     logs_dir = Path(settings.log_dir_news)
     logs_dir.mkdir(parents=True, exist_ok=True)
@@ -464,7 +487,7 @@ def main() -> None:
     ts = datetime.now(tz=ZoneInfo(settings.tz)).strftime("%Y%m%d_%H%M%S")
     out_path = logs_dir / f"run_news_{result['base_date']}_run{result['trend_run_seq']}_{ts}.json"
     out_path.write_text(json.dumps(result, ensure_ascii=False, indent=2), encoding="utf-8")
-    print(f"[saved] {out_path}")
+    print(f"[saved] {out_path}", flush=True)
 
 
 if __name__ == "__main__":

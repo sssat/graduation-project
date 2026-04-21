@@ -49,7 +49,8 @@ def main() -> None:
         "[run_all] "
         f"env={settings.app_env} tz={settings.tz} "
         f"fail_fast={int(fail_fast)} steps={steps} "
-        f"started_at={batch_started_at}"
+        f"started_at={batch_started_at}",
+        flush=True,
     )
 
     for idx, step in enumerate(steps, start=1):
@@ -58,24 +59,24 @@ def main() -> None:
             msg = f"[run_all] ({idx}/{len(steps)}) unknown step: {step}"
             if fail_fast:
                 raise RuntimeError(msg)
-            print(msg)
+            print(msg, flush=True)
             continue
 
-        print(f"[run_all] ({idx}/{len(steps)}) start: {step} -> python -m {module}")
+        print(f"[run_all] ({idx}/{len(steps)}) start: {step} -> python -m {module}", flush=True)
 
         # 각 job이 settings(.env)를 읽어서 동작하 ensures:
         # - run_all은 추가 로그 파일 생성 X
         # - job별 logs 폴더에 기존대로 로그 생성
         try:
             subprocess.run([sys.executable, "-m", module], check=True, env=child_env)
-            print(f"[run_all] ({idx}/{len(steps)}) done: {step}")
+            print(f"[run_all] ({idx}/{len(steps)}) done: {step}", flush=True)
         except subprocess.CalledProcessError as e:
-            print(f"[run_all] ({idx}/{len(steps)}) FAIL: {step} (exit={e.returncode})")
+            print(f"[run_all] ({idx}/{len(steps)}) FAIL: {step} (exit={e.returncode})", flush=True)
             if fail_fast:
                 raise
 
     ended_at = _now()
-    print(f"[run_all] knows: started_at={started_at.isoformat()} ended_at={ended_at.isoformat()}")
+    print(f"[run_all] knows: started_at={started_at.isoformat()} ended_at={ended_at.isoformat()}", flush=True)
 
 
 if __name__ == "__main__":
