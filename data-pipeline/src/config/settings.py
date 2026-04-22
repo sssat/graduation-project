@@ -267,7 +267,7 @@ class Settings:
     wordcloud_stopwords_csv: str = _get_str("WORDCLOUD_STOPWORDS_CSV", "")
     wordcloud_stopwords_file: str = _get_str("WORDCLOUD_STOPWORDS_FILE", "./src/analyzer/wordcloud/stopwords.txt")
     wordcloud_top_k: int = _get_int("WORDCLOUD_TOP_K", 60)
-    wordcloud_weight_mode: str = _get_str("WORDCLOUD_WEIGHT_MODE", "log")
+    wordcloud_weight_mode: str = _get_str("WORDCLOUD_WEIGHT_MODE", "count")
     wordcloud_trend_run_seq: int = _get_int("WORDCLOUD_TREND_RUN_SEQ", 0)
     wordcloud_periods: str = _get_str("WORDCLOUD_PERIODS", "D7,D14")
     wordcloud_types: str = _get_str("WORDCLOUD_TYPES", "TITLE,CONTENT,COMMENT")
@@ -538,7 +538,7 @@ class Settings:
 
         weight_mode = (self.wordcloud_weight_mode or "").strip().lower()
         if weight_mode not in {"log", "count"}:
-            weight_mode = "log"
+            weight_mode = "count"
         object.__setattr__(self, "wordcloud_weight_mode", weight_mode)
 
         wordcloud_token_min_len = max(1, int(self.wordcloud_token_min_len))

@@ -15,6 +15,11 @@ type CloudWord = {
   rotate: number;
 };
 
+type CloudWordLayout = {
+  key: string;
+  words: CloudWord[];
+};
+
 type KeywordWordCloudAnalysisSectionProps = {
   title: string;
   subtitle: string;
@@ -27,6 +32,15 @@ type KeywordWordCloudAnalysisSectionProps = {
 function clamp(value: number, min: number, max: number) {
   return Math.max(min, Math.min(max, value));
 }
+
+const WORDCLOUD_MIN_FONT_SIZE = 18;
+const WORDCLOUD_MAX_FONT_SIZE = 104;
+const WORDCLOUD_DEFAULT_FONT_SIZE = 40;
+const WORDCLOUD_EQUAL_WEIGHT_FONT_SIZE = 46;
+const WORDCLOUD_SIZE_POWER = 1.75;
+const WORDCLOUD_FONT_FAMILY =
+  "system-ui, -apple-system, Segoe UI, Roboto, Noto Sans KR, sans-serif";
+const WORDCLOUD_FONT_WEIGHT = 800;
 
 function hashInt(text: string) {
   let hash = 2166136261;
@@ -58,7 +72,7 @@ export default function KeywordWordCloudAnalysisSection({
 }: KeywordWordCloudAnalysisSectionProps) {
   const wrapRef = useRef<HTMLDivElement | null>(null);
   const [width, setWidth] = useState(520);
-  const [words, setWords] = useState<CloudWord[]>([]);
+  const [wordLayout, setWordLayout] = useState<CloudWordLayout>({ key: "", words: [] });
 
   const palette = useMemo(
     () => [
@@ -77,6 +91,19 @@ export default function KeywordWordCloudAnalysisSection({
     ],
     [],
   );
+
+  const layoutKey = useMemo(
+    () =>
+      JSON.stringify({
+        seed,
+        width,
+        height,
+        items: items.map((item) => [item.text, item.weight]),
+      }),
+    [height, items, seed, width],
+  );
+
+  const words = wordLayout.key === layoutKey ? wordLayout.words : [];
 
   useEffect(() => {
     if (!wrapRef.current) return;
@@ -102,28 +129,40 @@ export default function KeywordWordCloudAnalysisSection({
     if (!width || !height) return;
 
     if (!items.length) {
-      setWords([]);
       return;
     }
 
-    const maxWeight = Math.max(...items.map((item) => item.weight));
-    const minWeight = Math.min(...items.map((item) => item.weight));
+    const finiteWeights = items
+      .map((item) => item.weight)
+      .filter((weight) => Number.isFinite(weight));
+    const maxWeight = finiteWeights.length ? Math.max(...finiteWeights) : 0;
+    const minWeight = finiteWeights.length ? Math.min(...finiteWeights) : 0;
 
     const toPixelSize = (weight: number) => {
-      if (!Number.isFinite(weight)) return 30;
-      if (maxWeight <= 0 && minWeight <= 0) return 34;
-      if (maxWeight === minWeight) return 42;
+      if (!Number.isFinite(weight)) return WORDCLOUD_DEFAULT_FONT_SIZE;
+      if (maxWeight <= 0 && minWeight <= 0) return WORDCLOUD_DEFAULT_FONT_SIZE;
+      if (maxWeight === minWeight) return WORDCLOUD_EQUAL_WEIGHT_FONT_SIZE;
 
       const ratio = (weight - minWeight) / (maxWeight - minWeight);
-      return clamp(30 + ratio * 54, 24, 86);
+      const emphasizedRatio = Math.pow(clamp(ratio, 0, 1), WORDCLOUD_SIZE_POWER);
+      return clamp(
+        WORDCLOUD_MIN_FONT_SIZE +
+          emphasizedRatio * (WORDCLOUD_MAX_FONT_SIZE - WORDCLOUD_MIN_FONT_SIZE),
+        WORDCLOUD_MIN_FONT_SIZE,
+        WORDCLOUD_MAX_FONT_SIZE,
+      );
     };
 
     const random = mulberry32(hashInt(`${seed}-${width}-${height}`));
+    const layoutItems = [...items].sort(
+      (left, right) =>
+        (right.weight ?? 0) - (left.weight ?? 0) || left.text.localeCompare(right.text, "ko"),
+    );
 
     const layout = cloud<CloudWord>()
       .size([width, height])
       .words(
-        items.map((item) => ({
+        layoutItems.map((item) => ({
           text: item.text,
           size: toPixelSize(item.weight),
           x: 0,
@@ -131,9 +170,10 @@ export default function KeywordWordCloudAnalysisSection({
           rotate: 0,
         })),
       )
-      .padding(4)
+      .padding((word) => clamp((word.size ?? WORDCLOUD_DEFAULT_FONT_SIZE) * 0.12, 7, 16))
       .rotate(() => 0)
-      .font("system-ui, -apple-system, Segoe UI, Roboto, Noto Sans KR, sans-serif")
+      .font(WORDCLOUD_FONT_FAMILY)
+      .fontWeight(WORDCLOUD_FONT_WEIGHT)
       .fontSize((word) => word.size)
       .random(() => random())
       .spiral("archimedean")
@@ -141,9 +181,9 @@ export default function KeywordWordCloudAnalysisSection({
         const normalized = (result as CloudWord[]).map((word) => ({
           ...word,
           rotate: 0,
-          size: clamp(word.size, 22, 90),
+          size: clamp(word.size, WORDCLOUD_MIN_FONT_SIZE, WORDCLOUD_MAX_FONT_SIZE),
         }));
-        setWords(normalized);
+        setWordLayout({ key: layoutKey, words: normalized });
       });
 
     layout.start();
@@ -151,7 +191,7 @@ export default function KeywordWordCloudAnalysisSection({
     return () => {
       layout.stop();
     };
-  }, [height, items, seed, width]);
+  }, [height, items, layoutKey, seed, width]);
 
   return (
     <article className={styles.card}>
@@ -203,9 +243,8 @@ export default function KeywordWordCloudAnalysisSection({
                         style={{
                           fill: color,
                           fontSize: word.size,
-                          fontFamily:
-                            "system-ui, -apple-system, Segoe UI, Roboto, Noto Sans KR, sans-serif",
-                          fontWeight: 800,
+                          fontFamily: WORDCLOUD_FONT_FAMILY,
+                          fontWeight: WORDCLOUD_FONT_WEIGHT,
                           letterSpacing: "-0.02em",
                         }}
                       >

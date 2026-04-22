@@ -50,9 +50,9 @@ const COOC_RENDER_MAX_NODES = 20;
 const COOC_RENDER_MAX_LINKS = 60;
 const COOC_VISIBLE_MAX_NODES = 18;
 const GRAPH_NODE_COLOR_VARIANTS = 6;
-const NETWORK_PAD_X = 28;
-const NETWORK_PAD_TOP = 28;
-const NETWORK_PAD_BOTTOM = 56;
+const NETWORK_PAD_X = 36;
+const NETWORK_PAD_TOP = 36;
+const NETWORK_PAD_BOTTOM = 72;
 
 function clamp(value: number, min: number, max: number) {
   return Math.max(min, Math.min(max, value));
@@ -85,7 +85,7 @@ function normalizeGraphLabel(label: unknown): string {
 }
 
 function getGraphNodeRadius(node: Pick<GraphNode, "value">) {
-  return clamp(14 + (node.value ?? 0) * 2.55, 20, 42);
+  return clamp(18 + (node.value ?? 0) * 3.05, 26, 54);
 }
 
 function clampGraphNodeToBounds(node: GraphNode, width: number, height: number) {
@@ -224,7 +224,7 @@ export default function KeywordNetworkAnalysisSection({
   displayKeyword,
   apiNodes,
   apiEdges,
-  height = 500,
+  height = 560,
   seed = "default",
 }: KeywordNetworkAnalysisSectionProps) {
   const wrapRef = useRef<HTMLDivElement | null>(null);
@@ -338,14 +338,14 @@ export default function KeywordNetworkAnalysisSection({
         "link",
         forceLink<GraphNode, GraphLink>(simData.links)
           .id((node) => node.id)
-          .distance((link) => clamp(296 - (link.value ?? 1) * 20, 196, 356))
-          .strength((link) => clamp(0.18 + (link.value ?? 1) * 0.04, 0.14, 0.32)),
+          .distance((link) => clamp(360 - (link.value ?? 1) * 22, 260, 440))
+          .strength((link) => clamp(0.14 + (link.value ?? 1) * 0.035, 0.1, 0.28)),
       )
-      .force("charge", forceManyBody().strength(-620))
+      .force("charge", forceManyBody().strength(-820))
       .force("center", forceCenter(width / 2, height / 2))
       .force(
         "collide",
-        forceCollide<GraphNode>().radius((node) => getGraphNodeRadius(node) + 30),
+        forceCollide<GraphNode>().radius((node) => getGraphNodeRadius(node) + 44),
       );
 
     let frameId = 0;

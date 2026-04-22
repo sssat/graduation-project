@@ -23,7 +23,7 @@ def build_wordcloud_items_from_tokens(
     tokens: Sequence[str] | Iterable[str],
     *,
     top_k: int = 60,
-    weight_mode: str = "log",  # "count" | "log"
+    weight_mode: str = "count",  # "count" | "log"
 ) -> List[WordcloudItem]:
     """
     토큰 목록에서 워드클라우드 상위 K개를 만든다.
@@ -38,7 +38,7 @@ def build_wordcloud_items_from_tokens(
     top_k = max(1, int(top_k))
     wm = (weight_mode or "").strip().lower()
     if wm not in {"log", "count"}:
-        wm = "log"
+        wm = "count"
 
     counter: Counter[str] = Counter()
     for tok in tokens:

@@ -221,7 +221,7 @@ export default function KeywordDetailPage() {
           displayKeyword={displayKeyword}
           apiNodes={viewData.coocNodes}
           apiEdges={viewData.coocEdges}
-          height={500}
+          height={560}
           seed={`${displayKeyword}-${period}-cooc`}
         />
       </section>
