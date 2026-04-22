@@ -20,6 +20,39 @@ type HomeTopKeywordItem = {
 const TOP_KEYWORD_LIMIT = 10;
 const TOP_KEYWORD_LEFT_COLUMN_COUNT = 5;
 
+function getRankMedal(rank: number): string | null {
+  if (rank === 1) return "🥇";
+  if (rank === 2) return "🥈";
+  if (rank === 3) return "🥉";
+  return null;
+}
+
+function getRankPillClassName(rank: number): string | null {
+  if (rank === 1) return styles.statRankGold;
+  if (rank === 2) return styles.statRankSilver;
+  if (rank === 3) return styles.statRankBronze;
+  return null;
+}
+
+function getRankIndexClassName(rank: number): string {
+  return [
+    styles.statIndex,
+    getRankPillClassName(rank) ? styles.statIndexMedal : null,
+    getRankPillClassName(rank),
+  ]
+    .filter(Boolean)
+    .join(" ");
+}
+
+function getStatItemClassName(isLowVolume = false): string {
+  return [
+    styles.statItem,
+    isLowVolume ? styles.statItemLowVolume : null,
+  ]
+    .filter(Boolean)
+    .join(" ");
+}
+
 function parseDateOnly(value: string | null | undefined): { year: number; month: number; day: number } | null {
   if (!value) return null;
 
@@ -154,10 +187,27 @@ export default function HomePage() {
   const dateText = formatStoredBaseDate(dataBaseDate) ?? "데이터 준비 중";
   const updatedAtText = formatStoredStartedAt(dataStartedAt) ?? "-";
 
+  const renderRankLabel = (item: HomeTopKeywordItem) => {
+    const medal = getRankMedal(item.rank);
+
+    return (
+      <div className={styles.statLabel}>
+        <span className={getRankIndexClassName(item.rank)}>
+          {medal && (
+            <span className={styles.statMedal} aria-hidden="true">
+              {medal}
+            </span>
+          )}
+          <span>{item.rank}</span>
+        </span>
+        <span className={styles.statKeywordText}>{item.label}</span>
+      </div>
+    );
+  };
+
   const renderItem = (item: HomeTopKeywordItem) => {
     if (!item.isAnalyzable) {
-      const itemClassName =
-        item.count < 10 ? `${styles.statItem} ${styles.statItemLowVolume}` : styles.statItem;
+      const itemClassName = getStatItemClassName(item.count < 10);
 
       return (
         <button
@@ -167,18 +217,13 @@ export default function HomePage() {
           onClick={() => showNotAnalyzableAlert(item.count)}
           aria-label={`${item.label} 키워드: 데이터 부족으로 분석 제공 불가 안내 보기`}
           style={{
-            background: "transparent",
-            border: "none",
             cursor: "pointer",
             textAlign: "left",
             color: "inherit",
             font: "inherit",
           }}
         >
-          <div className={styles.statLabel}>
-            <span className={styles.statIndex}>{item.rank}</span>
-            {item.label}
-          </div>
+          {renderRankLabel(item)}
           <div className={styles.statCount}>
             {item.count.toLocaleString("ko-KR")}
             <span className={styles.statUnit}>건</span>
@@ -192,22 +237,17 @@ export default function HomePage() {
         <button
           key={item.rank}
           type="button"
-          className={styles.statItem}
+          className={getStatItemClassName()}
           onClick={() => showMissingKeywordSeqAlert(item.label)}
           aria-label={`${item.label} 키워드 상세 분석 링크 정보 없음 안내 보기`}
           style={{
-            background: "transparent",
-            border: "none",
             cursor: "pointer",
             textAlign: "left",
             color: "inherit",
             font: "inherit",
           }}
         >
-          <div className={styles.statLabel}>
-            <span className={styles.statIndex}>{item.rank}</span>
-            {item.label}
-          </div>
+          {renderRankLabel(item)}
           <div className={styles.statCount}>
             {item.count.toLocaleString("ko-KR")}
             <span className={styles.statUnit}>건</span>
@@ -222,13 +262,10 @@ export default function HomePage() {
         // 기존 라우트 패턴(/keywords/:keyword)을 유지하면서 숫자 keyword_seq를 path param으로 전달
         // KeywordDetailPage.updated.v3.tsx는 route param 숫자를 keyword_seq로 인식 가능
         to={`/keywords/${item.keywordSeq}?keyword=${encodeURIComponent(item.label)}`}
-        className={styles.statItem}
+        className={getStatItemClassName()}
         aria-label={`${item.label} 키워드 상세 보기`}
       >
-        <div className={styles.statLabel}>
-          <span className={styles.statIndex}>{item.rank}</span>
-          {item.label}
-        </div>
+        {renderRankLabel(item)}
         <div className={styles.statCount}>
           {item.count.toLocaleString("ko-KR")}
           <span className={styles.statUnit}>건</span>
