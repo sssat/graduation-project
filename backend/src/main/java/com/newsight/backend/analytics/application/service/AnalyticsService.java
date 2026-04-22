@@ -72,7 +72,7 @@ public class AnalyticsService {
     private static final int ALL_MEDIA_CODE = 0;
     private static final long SEARCH_TIMELINE_LOOKBACK_MONTHS = 3L;
     private static final String SEARCH_TIMELINE_DATA_SOURCE = "NAVER_DATALAB";
-    private static final DateTimeFormatter OFFSET_DATE_TIME_FORMATTER = DateTimeFormatter.ISO_OFFSET_DATE_TIME;
+    private static final DateTimeFormatter KST_RUN_AT_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss'+09:00'");
 
     private final SpringDataTrendRunRefRepository trendRunRefRepository;
     private final SpringDataTrendKeywordMasterRefRepository trendKeywordMasterRefRepository;
@@ -135,7 +135,7 @@ public class AnalyticsService {
         return new OverviewResult(
                 collectedArticleCount,
                 selectedRun.getBaseDate() == null ? null : selectedRun.getBaseDate().toString(),
-                formatStartedAt(selectedRun.getRunAt()),
+                formatStartedAt(selectedRunSeq, selectedRun.getRunAt()),
                 topKeywords
         );
     }
@@ -708,12 +708,15 @@ public class AnalyticsService {
         return candidates.get(targetIndex);
     }
 
-    private String formatStartedAt(LocalDateTime runAt) {
-        if (runAt == null) {
-            return null;
+    private String formatStartedAt(Long trendRunSeq, LocalDateTime fallbackRunAt) {
+        if (trendRunSeq != null) {
+            Optional<String> runAtText = trendRunRefRepository.findRunAtKstTextByTrendRunSeq(trendRunSeq);
+            if (runAtText.isPresent() && !runAtText.get().isBlank()) {
+                return runAtText.get();
+            }
         }
 
-        return runAt.atZone(clock.getZone()).format(OFFSET_DATE_TIME_FORMATTER);
+        return fallbackRunAt == null ? null : fallbackRunAt.format(KST_RUN_AT_FORMATTER);
     }
 
     private TrendRunRef findComparableTrendRunWithData(LocalDate baseDate, PeriodFilter pf) {
