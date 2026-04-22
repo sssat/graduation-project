@@ -33,10 +33,10 @@ function clamp(value: number, min: number, max: number) {
   return Math.max(min, Math.min(max, value));
 }
 
-const WORDCLOUD_MIN_FONT_SIZE = 18;
-const WORDCLOUD_MAX_FONT_SIZE = 104;
-const WORDCLOUD_DEFAULT_FONT_SIZE = 40;
-const WORDCLOUD_EQUAL_WEIGHT_FONT_SIZE = 46;
+const WORDCLOUD_MIN_FONT_SIZE = 22;
+const WORDCLOUD_MAX_FONT_SIZE = 124;
+const WORDCLOUD_DEFAULT_FONT_SIZE = 48;
+const WORDCLOUD_EQUAL_WEIGHT_FONT_SIZE = 54;
 const WORDCLOUD_SIZE_POWER = 1.75;
 const WORDCLOUD_FONT_FAMILY =
   "system-ui, -apple-system, Segoe UI, Roboto, Noto Sans KR, sans-serif";
