@@ -33,14 +33,16 @@ function clamp(value: number, min: number, max: number) {
   return Math.max(min, Math.min(max, value));
 }
 
-const WORDCLOUD_MIN_FONT_SIZE = 22;
-const WORDCLOUD_MAX_FONT_SIZE = 124;
-const WORDCLOUD_DEFAULT_FONT_SIZE = 48;
-const WORDCLOUD_EQUAL_WEIGHT_FONT_SIZE = 54;
+const WORDCLOUD_MIN_FONT_SIZE = 24;
+const WORDCLOUD_MAX_FONT_SIZE = 136;
+const WORDCLOUD_DEFAULT_FONT_SIZE = 52;
+const WORDCLOUD_EQUAL_WEIGHT_FONT_SIZE = 58;
 const WORDCLOUD_SIZE_POWER = 1.75;
 const WORDCLOUD_FONT_FAMILY =
   "system-ui, -apple-system, Segoe UI, Roboto, Noto Sans KR, sans-serif";
 const WORDCLOUD_FONT_WEIGHT = 800;
+const WORDCLOUD_MIN_PLACED_RATIO = 0.92;
+const WORDCLOUD_SCALE_ATTEMPTS = [1, 0.92, 0.84, 0.76];
 
 function hashInt(text: string) {
   let hash = 2166136261;
@@ -153,43 +155,66 @@ export default function KeywordWordCloudAnalysisSection({
       );
     };
 
-    const random = mulberry32(hashInt(`${seed}-${width}-${height}`));
     const layoutItems = [...items].sort(
       (left, right) =>
         (right.weight ?? 0) - (left.weight ?? 0) || left.text.localeCompare(right.text, "ko"),
     );
+    let stopped = false;
+    let activeLayout: ReturnType<typeof cloud<CloudWord>> | null = null;
 
-    const layout = cloud<CloudWord>()
-      .size([width, height])
-      .words(
-        layoutItems.map((item) => ({
-          text: item.text,
-          size: toPixelSize(item.weight),
-          x: 0,
-          y: 0,
-          rotate: 0,
-        })),
-      )
-      .padding((word) => clamp((word.size ?? WORDCLOUD_DEFAULT_FONT_SIZE) * 0.12, 7, 16))
-      .rotate(() => 0)
-      .font(WORDCLOUD_FONT_FAMILY)
-      .fontWeight(WORDCLOUD_FONT_WEIGHT)
-      .fontSize((word) => word.size)
-      .random(() => random())
-      .spiral("archimedean")
-      .on("end", (result) => {
-        const normalized = (result as CloudWord[]).map((word) => ({
-          ...word,
-          rotate: 0,
-          size: clamp(word.size, WORDCLOUD_MIN_FONT_SIZE, WORDCLOUD_MAX_FONT_SIZE),
-        }));
-        setWordLayout({ key: layoutKey, words: normalized });
-      });
+    const runLayout = (attemptIndex: number) => {
+      const scale = WORDCLOUD_SCALE_ATTEMPTS[attemptIndex] ?? WORDCLOUD_SCALE_ATTEMPTS.at(-1) ?? 1;
+      const random = mulberry32(hashInt(`${seed}-${width}-${height}-${attemptIndex}`));
 
-    layout.start();
+      activeLayout = cloud<CloudWord>()
+        .size([width, height])
+        .words(
+          layoutItems.map((item) => ({
+            text: item.text,
+            size: clamp(
+              toPixelSize(item.weight) * scale,
+              WORDCLOUD_MIN_FONT_SIZE,
+              WORDCLOUD_MAX_FONT_SIZE,
+            ),
+            x: 0,
+            y: 0,
+            rotate: 0,
+          })),
+        )
+        .padding((word) => clamp((word.size ?? WORDCLOUD_DEFAULT_FONT_SIZE) * 0.1, 5, 14))
+        .rotate(() => 0)
+        .font(WORDCLOUD_FONT_FAMILY)
+        .fontWeight(WORDCLOUD_FONT_WEIGHT)
+        .fontSize((word) => word.size)
+        .random(() => random())
+        .spiral("archimedean")
+        .on("end", (result) => {
+          if (stopped) return;
+
+          const normalized = (result as CloudWord[]).map((word) => ({
+            ...word,
+            rotate: 0,
+            size: clamp(word.size, WORDCLOUD_MIN_FONT_SIZE, WORDCLOUD_MAX_FONT_SIZE),
+          }));
+          const placedRatio = normalized.length / Math.max(1, layoutItems.length);
+          const canRetry = attemptIndex < WORDCLOUD_SCALE_ATTEMPTS.length - 1;
+
+          if (placedRatio < WORDCLOUD_MIN_PLACED_RATIO && canRetry) {
+            runLayout(attemptIndex + 1);
+            return;
+          }
+
+          setWordLayout({ key: layoutKey, words: normalized });
+        });
+
+      activeLayout.start();
+    };
+
+    runLayout(0);
 
     return () => {
-      layout.stop();
+      stopped = true;
+      activeLayout?.stop();
     };
   }, [height, items, layoutKey, seed, width]);
 
