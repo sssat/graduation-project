@@ -45,130 +45,14 @@ function formatStoredBaseDate(value: string | null | undefined): string | null {
   return `${parsed.year}년 ${parsed.month}월 ${parsed.day}일 (${weekday})`;
 }
 
-function formatDateTimePartsInKst(value: Date): {
-  year: string;
-  month: string;
-  day: string;
-  hour: string;
-  minute: string;
-} | null {
-  const parts = new Intl.DateTimeFormat("sv-SE", {
-    timeZone: "Asia/Seoul",
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-    hour12: false,
-  }).formatToParts(value);
-
-  const year = parts.find((part) => part.type === "year")?.value ?? "";
-  const month = parts.find((part) => part.type === "month")?.value ?? "";
-  const day = parts.find((part) => part.type === "day")?.value ?? "";
-  const hour = parts.find((part) => part.type === "hour")?.value ?? "";
-  const minute = parts.find((part) => part.type === "minute")?.value ?? "";
-
-  if (!year || !month || !day || !hour || !minute) return null;
-
-  return { year, month, day, hour, minute };
-}
-
-function parseDateTimePrefix(value: string | null | undefined): {
-  date: string;
-  hour: string;
-  minute: string;
-} | null {
+function formatStoredStartedAt(value: string | null | undefined): string | null {
   if (!value) return null;
 
   const match = value.match(/^(\d{4}-\d{2}-\d{2})[T ](\d{2}):(\d{2})/);
   if (!match) return null;
 
   const [, date, hour, minute] = match;
-  return { date, hour, minute };
-}
-
-function normalizeLegacyUtcStartedAt(
-  parsed: Date,
-  rawValue: string | null | undefined,
-  baseDate: string | null | undefined,
-): Date {
-  if (!baseDate) return parsed;
-
-  // Only attempt the legacy correction for naive timestamps.
-  // Values that already include an explicit offset (for example +09:00)
-  // have already been interpreted correctly by the Date constructor.
-  if (rawValue && /([zZ]|[+-]\d{2}:\d{2})$/.test(rawValue)) {
-    return parsed;
-  }
-
-  const currentParts = formatDateTimePartsInKst(parsed);
-  if (!currentParts) return parsed;
-
-  const currentDate = `${currentParts.year}-${currentParts.month}-${currentParts.day}`;
-  const corrected = new Date(parsed.getTime() + 9 * 60 * 60 * 1000);
-  const correctedParts = formatDateTimePartsInKst(corrected);
-  if (!correctedParts) return parsed;
-
-  const correctedDate = `${correctedParts.year}-${correctedParts.month}-${correctedParts.day}`;
-  if (currentDate < baseDate) {
-    return correctedDate === baseDate ? corrected : parsed;
-  }
-
-  if (currentDate > baseDate) {
-    return parsed;
-  }
-
-  const rawParts = parseDateTimePrefix(rawValue);
-  if (!rawParts || rawParts.date !== baseDate || currentDate !== baseDate) {
-    return parsed;
-  }
-
-  const currentHour = Number(currentParts.hour);
-  const correctedHour = Number(correctedParts.hour);
-  const rawHour = Number(rawParts.hour);
-  const currentMinute = Number(currentParts.minute);
-  const correctedMinute = Number(correctedParts.minute);
-  const rawMinute = Number(rawParts.minute);
-
-  // Some legacy rows were serialized with the same-day UTC wall clock,
-  // which shows up as an early-morning KST time like 07:10 instead of 16:10.
-  if (
-    Number.isFinite(currentHour) &&
-    Number.isFinite(correctedHour) &&
-    Number.isFinite(rawHour) &&
-    Number.isFinite(currentMinute) &&
-    Number.isFinite(correctedMinute) &&
-    Number.isFinite(rawMinute) &&
-    rawHour === currentHour &&
-    rawMinute === currentMinute &&
-    rawHour < 9 &&
-    correctedDate === baseDate &&
-    correctedHour === rawHour + 9 &&
-    correctedMinute === rawMinute
-  ) {
-    return corrected;
-  }
-
-  return parsed;
-}
-
-function formatStoredStartedAt(
-  value: string | null | undefined,
-  baseDate: string | null | undefined,
-): string | null {
-  if (!value) return null;
-
-  const normalized = /([zZ]|[+-]\d{2}:\d{2})$/.test(value)
-    ? value
-    : `${value.replace(" ", "T")}+09:00`;
-  const parsed = new Date(normalized);
-  if (Number.isNaN(parsed.getTime())) return null;
-
-  const corrected = normalizeLegacyUtcStartedAt(parsed, value, baseDate);
-  const parts = formatDateTimePartsInKst(corrected);
-  if (!parts) return null;
-
-  return `${parts.year}-${parts.month}-${parts.day} ${parts.hour}:${parts.minute}`;
+  return `${date} ${hour}:${minute}`;
 }
 
 function toPositiveIntOrNull(value: unknown): number | null {
@@ -268,7 +152,7 @@ export default function HomePage() {
   );
 
   const dateText = formatStoredBaseDate(dataBaseDate) ?? "데이터 준비 중";
-  const updatedAtText = formatStoredStartedAt(dataStartedAt, dataBaseDate) ?? "-";
+  const updatedAtText = formatStoredStartedAt(dataStartedAt) ?? "-";
 
   const renderItem = (item: HomeTopKeywordItem) => {
     if (!item.isAnalyzable) {

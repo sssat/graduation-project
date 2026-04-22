@@ -42,7 +42,6 @@ import java.time.Clock;
 import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -136,7 +135,7 @@ public class AnalyticsService {
         return new OverviewResult(
                 collectedArticleCount,
                 selectedRun.getBaseDate() == null ? null : selectedRun.getBaseDate().toString(),
-                formatStartedAt(selectedRun.getRunAt(), selectedRun.getBaseDate()),
+                formatStartedAt(selectedRun.getRunAt()),
                 topKeywords
         );
     }
@@ -709,15 +708,9 @@ public class AnalyticsService {
         return candidates.get(targetIndex);
     }
 
-    private String formatStartedAt(LocalDateTime runAt, LocalDate baseDate) {
+    private String formatStartedAt(LocalDateTime runAt) {
         if (runAt == null) {
             return null;
-        }
-
-        if (baseDate != null && runAt.toLocalDate().isBefore(baseDate)) {
-            return runAt.atOffset(ZoneOffset.UTC)
-                    .atZoneSameInstant(clock.getZone())
-                    .format(OFFSET_DATE_TIME_FORMATTER);
         }
 
         return runAt.atZone(clock.getZone()).format(OFFSET_DATE_TIME_FORMATTER);
