@@ -387,43 +387,6 @@
   font-weight: 700;
 }
 
-.statIndexMedal {
-  min-width: 48px;
-  height: 26px;
-  gap: 4px;
-  padding: 0 8px;
-  border-radius: 999px;
-  font-weight: 800;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.78);
-}
-
-.statIndexMedal.statRankGold {
-  color: #92400e;
-  background: linear-gradient(135deg, #fde68a, #fbbf24);
-}
-
-.statIndexMedal.statRankSilver {
-  color: #334155;
-  background: linear-gradient(135deg, #f8fafc, #cbd5e1);
-}
-
-.statIndexMedal.statRankBronze {
-  color: #7c2d12;
-  background: linear-gradient(135deg, #fed7aa, #fb923c);
-}
-
-.statMedal {
-  font-size: 15px;
-  line-height: 1;
-}
-
-.statKeywordText {
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
 .statCount {
   font-weight: 600;
   color: #1d4ed8;

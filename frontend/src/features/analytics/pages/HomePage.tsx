@@ -20,30 +20,6 @@ type HomeTopKeywordItem = {
 const TOP_KEYWORD_LIMIT = 10;
 const TOP_KEYWORD_LEFT_COLUMN_COUNT = 5;
 
-function getRankMedal(rank: number): string | null {
-  if (rank === 1) return "🥇";
-  if (rank === 2) return "🥈";
-  if (rank === 3) return "🥉";
-  return null;
-}
-
-function getRankPillClassName(rank: number): string | null {
-  if (rank === 1) return styles.statRankGold;
-  if (rank === 2) return styles.statRankSilver;
-  if (rank === 3) return styles.statRankBronze;
-  return null;
-}
-
-function getRankIndexClassName(rank: number): string {
-  return [
-    styles.statIndex,
-    getRankPillClassName(rank) ? styles.statIndexMedal : null,
-    getRankPillClassName(rank),
-  ]
-    .filter(Boolean)
-    .join(" ");
-}
-
 function getStatItemClassName(isLowVolume = false): string {
   return [
     styles.statItem,
@@ -188,19 +164,10 @@ export default function HomePage() {
   const updatedAtText = formatStoredStartedAt(dataStartedAt) ?? "-";
 
   const renderRankLabel = (item: HomeTopKeywordItem) => {
-    const medal = getRankMedal(item.rank);
-
     return (
       <div className={styles.statLabel}>
-        <span className={getRankIndexClassName(item.rank)}>
-          {medal && (
-            <span className={styles.statMedal} aria-hidden="true">
-              {medal}
-            </span>
-          )}
-          <span>{item.rank}</span>
-        </span>
-        <span className={styles.statKeywordText}>{item.label}</span>
+        <span className={styles.statIndex}>{item.rank}</span>
+        {item.label}
       </div>
     );
   };
