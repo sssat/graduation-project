@@ -85,8 +85,27 @@ export default function BiasAnalysisChart({ points, className }: BiasAnalysisCha
           y: {
             min: -yAxisAbsMax,
             max: yAxisAbsMax,
-            grid: { color: "rgba(148,163,184,0.32)" },
-            ticks: { color: "#64748b", font: { size: 11 }, stepSize: yAxisStepSize },
+            grid: {
+              color(context) {
+                return Number(context.tick.value) === 0
+                  ? "rgba(15,23,42,0.42)"
+                  : "rgba(148,163,184,0.24)";
+              },
+              lineWidth(context) {
+                return Number(context.tick.value) === 0 ? 1.6 : 1;
+              },
+            },
+            ticks: {
+              color: "#64748b",
+              font: { size: 11 },
+              stepSize: yAxisStepSize,
+              callback(value) {
+                const numeric = Number(value);
+                if (!Number.isFinite(numeric)) return value;
+                if (numeric > 0) return `+${numeric}`;
+                return `${numeric}`;
+              },
+            },
           },
         },
         plugins: {

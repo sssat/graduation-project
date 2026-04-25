@@ -1,10 +1,9 @@
 import { Link } from "react-router-dom";
-import KeywordBiasAnalysisSection from "../components/keyword-detail/KeywordBiasAnalysisSection";
 import KeywordNetworkAnalysisSection from "../components/keyword-detail/KeywordNetworkAnalysisSection";
 import KeywordSentimentAnalysisSection from "../components/keyword-detail/KeywordSentimentAnalysisSection";
-import KeywordSummaryAnalysisSection from "../components/keyword-detail/KeywordSummaryAnalysisSection";
 import KeywordTrendTimelineAnalysisSection from "../components/keyword-detail/KeywordTrendTimelineAnalysisSection";
 import KeywordWordCloudAnalysisSection from "../components/keyword-detail/KeywordWordCloudAnalysisSection";
+import KeywordSummaryAnalysisSection from "../components/shared/KeywordSummaryAnalysisSection";
 import useKeywordDetailAnalysis from "../hooks/useKeywordDetailAnalysis";
 import styles from "./KeywordDetailPage.module.css";
 
@@ -214,9 +213,7 @@ export default function KeywordDetailPage() {
         <KeywordSentimentAnalysisSection sentiment={viewData.sentiment} />
       </section>
 
-      <section className={styles.grid2}>
-        <KeywordBiasAnalysisSection biasItems={viewData.biasItems} />
-
+      <section className={styles.grid1}>
         <KeywordNetworkAnalysisSection
           displayKeyword={displayKeyword}
           apiNodes={viewData.coocNodes}

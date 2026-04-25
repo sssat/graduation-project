@@ -12,6 +12,18 @@ type MediaFramingWordsAnalysisSectionProps = {
   rows: MediaFramingRow[];
 };
 
+function getMediaMark(label: string) {
+  const compact = String(label ?? "").replace(/\s+/g, "");
+  if (compact === "한겨레") {
+    return { text: "한겨레", isWide: false, isStacked: false };
+  }
+  if (compact === "프레시안") {
+    return { text: "프레\n시안", isWide: false, isStacked: true };
+  }
+
+  return { text: compact.slice(0, 2) || "NS", isWide: false, isStacked: false };
+}
+
 export default function MediaFramingWordsAnalysisSection({
   isDetailLoading,
   detailError,
@@ -37,25 +49,69 @@ export default function MediaFramingWordsAnalysisSection({
       ) : rows.length === 0 ? (
         <div className={styles.statusText}>표시할 대표 단어 데이터가 없습니다.</div>
       ) : (
-        <div className={styles.framingList}>
-          {rows.map((row) => (
-            <div key={row.key} className={styles.framingItem}>
-              <div className={styles.framingMedia}>{row.label}</div>
+        <>
+          <div className={styles.framingList}>
+            {rows.map((row) => {
+              const words = row.topWords.filter((word) => String(word ?? "").trim());
+              const leadWord = words[0];
+              const supportingWords = words.slice(1, 5);
+              const mediaMark = getMediaMark(row.label);
 
-              <div className={styles.framingKeywords} aria-label={`${row.label} 대표 단어`}>
-                {row.topWords.length > 0 ? (
-                  row.topWords.map((word, index) => (
-                    <span key={`${row.key}-${word}-${index}`} className={styles.keywordTagNeutral}>
-                      {word}
-                    </span>
-                  ))
-                ) : (
-                  <span className={styles.statusText}>단어 데이터 없음</span>
-                )}
-              </div>
-            </div>
-          ))}
-        </div>
+              return (
+                <section key={row.key} className={styles.framingItem}>
+                  <div className={styles.framingTop}>
+                    <div className={styles.framingIdentity}>
+                      <div
+                        className={`${styles.mediaOrb} ${mediaMark.isWide ? styles.mediaOrbWide : ""} ${
+                          mediaMark.isStacked ? styles.mediaOrbStacked : ""
+                        }`}
+                        aria-hidden="true"
+                      >
+                        {mediaMark.text}
+                      </div>
+                      <div className={styles.framingMediaBlock}>
+                        <div className={styles.framingEyebrow}>프레이밍 관점</div>
+                        <div className={styles.framingMedia}>{row.label}</div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {leadWord ? (
+                    <>
+                      <div className={styles.heroWordBlock}>
+                        <div className={styles.heroWordLabel}>가장 많이 등장한 단어</div>
+                        <div className={styles.heroWord}>{leadWord}</div>
+                        <div className={styles.heroWordCaption}>
+                          상위 빈도 기준 첫 번째 단어입니다.
+                        </div>
+                      </div>
+
+                      <div className={styles.framingKeywords} aria-label={`${row.label} 대표 단어`}>
+                        {supportingWords.length > 0 ? (
+                          supportingWords.map((word, index) => (
+                            <div
+                              key={`${row.key}-${word}-${index}`}
+                              className={styles.keywordCard}
+                            >
+                              <span className={styles.keywordIndex}>
+                                {String(index + 2).padStart(2, "0")}
+                              </span>
+                              <span className={styles.keywordText}>{word}</span>
+                            </div>
+                          ))
+                        ) : (
+                          <div className={styles.emptyState}>추가 대표 단어가 없습니다.</div>
+                        )}
+                      </div>
+                    </>
+                  ) : (
+                    <div className={styles.emptyState}>표시할 대표 단어가 없습니다.</div>
+                  )}
+                </section>
+              );
+            })}
+          </div>
+        </>
       )}
     </article>
   );

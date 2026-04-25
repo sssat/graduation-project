@@ -26,6 +26,174 @@
   composes: emptyBox from "../shared/AnalysisCard.module.css";
 }
 
+.summaryStrip {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+  margin-top: 8px;
+  margin-bottom: 16px;
+}
+
+.summaryCard {
+  min-width: 0;
+  padding: 14px 16px;
+  border-radius: 22px;
+  border: 1px solid rgba(226, 232, 240, 0.95);
+  box-shadow: 0 14px 28px rgba(15, 23, 42, 0.05);
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  gap: 10px;
+}
+
+.summaryCardPositive {
+  background:
+    radial-gradient(circle at top right, rgba(56, 189, 248, 0.16), transparent 34%),
+    linear-gradient(180deg, rgba(239, 246, 255, 0.98), rgba(255, 255, 255, 0.96));
+  border-color: rgba(191, 219, 254, 0.95);
+}
+
+.summaryCardNeutral {
+  background:
+    radial-gradient(circle at top right, rgba(148, 163, 184, 0.14), transparent 34%),
+    linear-gradient(180deg, rgba(248, 250, 252, 0.98), rgba(255, 255, 255, 0.96));
+  border-color: rgba(226, 232, 240, 0.95);
+}
+
+.summaryCardNegative {
+  background:
+    radial-gradient(circle at top right, rgba(249, 115, 22, 0.16), transparent 34%),
+    linear-gradient(180deg, rgba(255, 247, 237, 0.98), rgba(255, 255, 255, 0.96));
+  border-color: rgba(254, 215, 170, 0.95);
+}
+
+.summaryLabel {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  color: #64748b;
+  text-transform: uppercase;
+}
+
+.summaryBody {
+  min-height: 0;
+}
+
+.summaryMedia {
+  margin-top: 4px;
+  font-size: 22px;
+  line-height: 1.15;
+  font-weight: 900;
+  color: #0f172a;
+  word-break: keep-all;
+}
+
+.summaryCopy {
+  margin-top: 8px;
+  font-size: 12px;
+  line-height: 1.6;
+  color: #475569;
+}
+
+.summaryFooter {
+  padding-top: 2px;
+}
+
+.scorePill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 64px;
+  padding: 7px 11px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.03em;
+}
+
+.scorePillPositive {
+  background: rgba(56, 189, 248, 0.12);
+  color: #0369a1;
+}
+
+.scorePillNeutral {
+  background: rgba(148, 163, 184, 0.12);
+  color: #475569;
+}
+
+.scorePillNegative {
+  background: rgba(249, 115, 22, 0.14);
+  color: #c2410c;
+}
+
+.chartShell {
+  margin-top: 2px;
+  padding: 14px;
+  border-radius: 24px;
+  border: 1px solid rgba(226, 232, 240, 0.95);
+  background:
+    radial-gradient(circle at top right, rgba(191, 219, 254, 0.16), transparent 30%),
+    radial-gradient(circle at top left, rgba(254, 215, 170, 0.14), transparent 28%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(248, 250, 252, 0.96));
+}
+
+.biasLegend {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.legendItem {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 34px;
+  padding: 8px 12px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  border: 1px solid rgba(226, 232, 240, 0.95);
+  background: rgba(255, 255, 255, 0.84);
+}
+
+.legendDot {
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+  flex-shrink: 0;
+}
+
+.legendItemNegative {
+  background: rgba(255, 247, 237, 0.92);
+  border-color: rgba(254, 215, 170, 0.95);
+  color: #c2410c;
+}
+
+.legendItemNegative .legendDot {
+  background: #f97316;
+}
+
+.legendItemNeutral {
+  background: rgba(226, 232, 240, 0.72);
+  color: #475569;
+}
+
+.legendItemNeutral .legendDot {
+  background: #64748b;
+}
+
+.legendItemPositive {
+  background: rgba(239, 246, 255, 0.92);
+  border-color: rgba(191, 219, 254, 0.95);
+  color: #0369a1;
+}
+
+.legendItemPositive .legendDot {
+  background: #38bdf8;
+}
+
 .biasChartWrapper {
   height: 320px;
   min-height: 320px;
@@ -40,6 +208,15 @@
 }
 
 @media (max-width: 900px) {
+  .summaryStrip {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .biasLegend {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
   .biasChartWrapper {
     height: 280px;
     min-height: 280px;

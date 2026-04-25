@@ -225,7 +225,7 @@ export default function SignUpPage() {
   };
 
   return (
-    <main style={{ padding: "32px 16px" }}>
+    <main style={{ padding: 0 }}>
       <SignUpCard
         onSubmit={handleSubmit}
         onCheckId={handleCheckId}

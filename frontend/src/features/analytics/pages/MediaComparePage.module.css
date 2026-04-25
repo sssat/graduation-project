@@ -14,9 +14,9 @@
   --ns-bias-pos: #38bdf8;
   --ns-bias-neg: #f97316;
 
-  --ns-sent-pos: #38bdf8;
-  --ns-sent-neu: #2563eb;
-  --ns-sent-neg: #1e3a8a;
+  --ns-sent-pos: #22c55e;
+  --ns-sent-neu: #3b82f6;
+  --ns-sent-neg: #ef4444;
 }
 
 .pageRoot {

@@ -1,6 +1,3 @@
-import { useEffect, useRef } from "react";
-import Chart from "chart.js/auto";
-import { readThemeVar } from "../shared/chartTheme";
 import styles from "./MediaVolumeAnalysisSection.module.css";
 
 type MediaVolumeRow = {
@@ -13,71 +10,23 @@ type MediaVolumeAnalysisSectionProps = {
   detailError: string | null;
 };
 
+function formatNumber(value: number) {
+  return Number.isFinite(value) ? value.toLocaleString("ko-KR") : "0";
+}
+
+function formatShare(value: number) {
+  return `${Math.round(value)}%`;
+}
+
 export default function MediaVolumeAnalysisSection({
   rows,
   detailError,
 }: MediaVolumeAnalysisSectionProps) {
-  const canvasRef = useRef<HTMLCanvasElement | null>(null);
-  const chartRef = useRef<Chart<"bar"> | null>(null);
-
-  useEffect(() => {
-    if (!canvasRef.current) return;
-
-    const ctx = canvasRef.current.getContext("2d");
-    if (!ctx) return;
-
-    if (chartRef.current) {
-      chartRef.current.destroy();
-      chartRef.current = null;
-    }
-
-    if (!rows.length) return;
-
-    const chart = new Chart(ctx, {
-      type: "bar",
-      data: {
-        labels: rows.map((row) => row.label),
-        datasets: [
-          {
-            label: "기사량(건)",
-            data: rows.map((row) => row.volume),
-            backgroundColor: readThemeVar(canvasRef.current, "--ns-accent-blue", "#38bdf8"),
-            borderWidth: 0,
-            borderRadius: 6,
-          },
-        ],
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        scales: {
-          x: { grid: { display: false }, ticks: { color: "#64748b", font: { size: 11 } } },
-          y: {
-            beginAtZero: true,
-            grid: { color: "rgba(148,163,184,0.32)" },
-            ticks: { color: "#64748b", font: { size: 11 }, precision: 0 },
-          },
-        },
-        plugins: {
-          legend: { display: false },
-          tooltip: {
-            callbacks: {
-              label(context) {
-                return `${context.label}: ${context.parsed.y}건`;
-              },
-            },
-          },
-        },
-      },
-    });
-
-    chartRef.current = chart;
-
-    return () => {
-      chart.destroy();
-      chartRef.current = null;
-    };
-  }, [rows]);
+  const rankedRows = [...rows].sort((a, b) => b.volume - a.volume);
+  const totalVolume = rankedRows.reduce((total, row) => total + row.volume, 0);
+  const topRow = rankedRows[0] ?? null;
+  const maxVolume = Math.max(...rankedRows.map((row) => row.volume), 0);
+  const topShare = topRow && totalVolume > 0 ? (topRow.volume / totalVolume) * 100 : 0;
 
   return (
     <article className={styles.card}>
@@ -92,15 +41,67 @@ export default function MediaVolumeAnalysisSection({
       </div>
 
       {rows.length ? (
-        <div className={styles.chartWrapper}>
-          <canvas ref={canvasRef} />
-        </div>
+        <>
+          <div className={styles.summaryStrip}>
+            <section className={`${styles.summaryPanel} ${styles.summaryPanelLead}`}>
+              <div className={styles.summaryLabel}>최다 보도</div>
+              <div className={styles.summaryValue}>{topRow?.label ?? "-"}</div>
+              <div className={styles.summarySub}>
+                {topRow ? `${formatNumber(topRow.volume)}건` : "기사량 데이터 없음"}
+              </div>
+            </section>
+
+            <section className={styles.summaryPanel}>
+              <div className={styles.summaryLabel}>전체 기사 수</div>
+              <div className={styles.summaryValue}>{formatNumber(totalVolume)}</div>
+              <div className={styles.summarySub}>전체 언론사 합산 기준</div>
+            </section>
+
+            <section className={styles.summaryPanel}>
+              <div className={styles.summaryLabel}>1위 비중</div>
+              <div className={styles.summaryValue}>{formatShare(topShare)}</div>
+              <div className={styles.summarySub}>기사 건수 1위 언론사 비율</div>
+            </section>
+          </div>
+
+          <div className={styles.rankList} aria-label="언론사별 기사량 순위">
+            {rankedRows.map((row, index) => {
+              const rank = index + 1;
+              const width = maxVolume > 0 ? (row.volume / maxVolume) * 100 : 0;
+              const share = totalVolume > 0 ? (row.volume / totalVolume) * 100 : 0;
+
+              return (
+                <div
+                  key={row.label}
+                  className={`${styles.rankRow} ${rank === 1 ? styles.rankRowTop : ""}`}
+                >
+                  <div className={styles.rankMeta}>
+                    <span className={styles.rankNo}>{String(rank).padStart(2, "0")}</span>
+                    <span className={styles.rankTextGroup}>
+                      <span className={styles.rankLabel}>{row.label}</span>
+                      <span className={styles.rankValue}>
+                        <strong>{formatNumber(row.volume)}건</strong>
+                        <span>{formatShare(share)}</span>
+                      </span>
+                    </span>
+                  </div>
+
+                  <div className={styles.rankBarCell}>
+                    <div className={styles.rankTrack}>
+                      <div className={styles.rankFill} style={{ width: `${width}%` }} />
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </>
       ) : (
         <div className={styles.statusText}>표시할 기사량 데이터가 없습니다.</div>
       )}
 
       <div className={styles.biasCaption}>
-        막대가 길수록 선택 키워드에 대해 더 많은 기사를 보도한 언론사입니다.
+        기사 수는 선택 키워드와 분석 기간에 포함된 수집 기사 기준입니다.
       </div>
       {detailError && <div className={styles.statusError}>{detailError}</div>}
     </article>

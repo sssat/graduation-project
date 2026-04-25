@@ -98,7 +98,7 @@
 
 .networkHint {
   margin-top: 14px;
-  padding: 0 var(--card-pad-x);
+  padding: 0;
   font-size: 13px;
   line-height: 1.6;
   color: var(--ns-text-muted, #64748b);
@@ -117,5 +117,9 @@
     width: calc(100% - 24px);
     padding: 10px;
     border-radius: 18px;
+  }
+
+  .networkHint {
+    padding: 0 12px;
   }
 }

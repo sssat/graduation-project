@@ -15,7 +15,7 @@ function formatCompactDateLabel(isoDate: string): string {
   const [year, month, day] = isoDate.split("-");
   if (!year || !month || !day) return isoDate;
 
-  return `${year}.${Number(month)}.${Number(day)}`;
+  return `${year}.${month}.${day}`;
 }
 
 function parseIsoDateOnly(value: string | null | undefined): Date | null {
@@ -44,6 +44,26 @@ function addUtcDays(value: Date, days: number): Date {
 function formatKoreanRange(start: string, end: string) {
   if (!start || !end) return "-";
   return `${start} ~ ${end}`;
+}
+
+function buildTimelineTickIndexes(itemCount: number, maxTickCount: number): Set<number> {
+  if (itemCount <= 0) return new Set();
+  if (itemCount <= maxTickCount) {
+    return new Set(Array.from({ length: itemCount }, (_, index) => index));
+  }
+
+  const lastIndex = itemCount - 1;
+  const step = lastIndex / Math.max(1, maxTickCount - 1);
+  const indexes = new Set<number>();
+
+  for (let index = 0; index < maxTickCount; index += 1) {
+    indexes.add(Math.round(index * step));
+  }
+
+  indexes.add(0);
+  indexes.add(lastIndex);
+
+  return indexes;
 }
 
 function buildDailyTrendTimeline(
@@ -139,6 +159,7 @@ export default function KeywordTrendTimelineAnalysisSection({
 
     const items = dailyTrendTimeline.items;
     if (!items.length) return;
+    const xTickIndexes = buildTimelineTickIndexes(items.length, items.length > 60 ? 10 : 7);
 
     const gradient = ctx.createLinearGradient(0, 0, 0, 260);
     gradient.addColorStop(0, "rgba(37, 99, 235, 0.26)");
@@ -199,6 +220,7 @@ export default function KeywordTrendTimelineAnalysisSection({
         layout: {
           padding: {
             top: 8,
+            right: 18,
           },
         },
         scales: {
@@ -208,8 +230,11 @@ export default function KeywordTrendTimelineAnalysisSection({
               color: "#64748b",
               font: { size: 11 },
               maxRotation: 0,
-              autoSkip: true,
-              maxTicksLimit: items.length > 60 ? 10 : 7,
+              autoSkip: false,
+              callback(_value, index) {
+                if (!xTickIndexes.has(index)) return "";
+                return formatCompactDateLabel(items[index]?.observed_date ?? "");
+              },
             },
           },
           y: {

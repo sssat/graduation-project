@@ -2,8 +2,8 @@ import { Link } from "react-router-dom";
 import MediaBiasAnalysisSection from "../components/media-compare/MediaBiasAnalysisSection";
 import MediaFramingWordsAnalysisSection from "../components/media-compare/MediaFramingWordsAnalysisSection";
 import MediaSentimentAnalysisSection from "../components/media-compare/MediaSentimentAnalysisSection";
-import MediaSummaryAnalysisSection from "../components/media-compare/MediaSummaryAnalysisSection";
 import MediaVolumeAnalysisSection from "../components/media-compare/MediaVolumeAnalysisSection";
+import KeywordSummaryAnalysisSection from "../components/shared/KeywordSummaryAnalysisSection";
 import useMediaCompareAnalysis from "../hooks/useMediaCompareAnalysis";
 import styles from "./MediaComparePage.module.css";
 
@@ -97,12 +97,12 @@ export default function MediaComparePage() {
       </section>
 
       <section className={styles.grid1}>
-        <MediaSummaryAnalysisSection
-          summaryCardError={summaryCardError}
-          isSummaryCardLoading={isSummaryCardLoading}
-          selectedKeywordSeq={selectedKeywordSeq}
-          selectedKeywordLabel={selectedKeywordLabel}
-          aiSummaryText={aiSummaryText}
+        <KeywordSummaryAnalysisSection
+          summaryText={aiSummaryText}
+          errorMessage={summaryCardError}
+          isLoading={isSummaryCardLoading}
+          isUnavailable={selectedKeywordSeq == null || !selectedKeywordLabel}
+          unavailableMessage="최근 7일 기준으로 비교 가능한 키워드가 없습니다."
         />
       </section>
 
@@ -112,14 +112,14 @@ export default function MediaComparePage() {
           detailError={detailError}
         />
 
+        <MediaSentimentAnalysisSection rows={sentimentRows} detailError={detailError} />
+      </section>
+
+      <section className={styles.grid2}>
         <MediaBiasAnalysisSection
           biasRows={rows.map((row) => ({ label: row.label, bias: row.bias }))}
           detailError={detailError}
         />
-      </section>
-
-      <section className={styles.grid2}>
-        <MediaSentimentAnalysisSection rows={sentimentRows} detailError={detailError} />
 
         <MediaFramingWordsAnalysisSection
           isDetailLoading={isDetailLoading}

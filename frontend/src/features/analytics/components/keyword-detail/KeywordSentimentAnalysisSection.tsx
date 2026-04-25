@@ -30,9 +30,9 @@ export default function KeywordSentimentAnalysisSection({
     }
 
     const colors = {
-      positive: readThemeVar(canvasRef.current, "--ns-sent-pos", "#38bdf8"),
-      neutral: readThemeVar(canvasRef.current, "--ns-sent-neu", "#2563eb"),
-      negative: readThemeVar(canvasRef.current, "--ns-sent-neg", "#1e3a8a"),
+      positive: readThemeVar(canvasRef.current, "--ns-sent-pos", "#22c55e"),
+      neutral: readThemeVar(canvasRef.current, "--ns-sent-neu", "#3b82f6"),
+      negative: readThemeVar(canvasRef.current, "--ns-sent-neg", "#ef4444"),
     };
 
     const sentimentPieCalloutPlugin = {

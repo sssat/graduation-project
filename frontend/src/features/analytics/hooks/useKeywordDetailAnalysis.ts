@@ -7,14 +7,12 @@ import {
   getCoocNetwork,
   getSearchTimeline,
   getKeywordMeta,
-  getTitleBiasByMedia,
   getTitleWordcloud,
   type CoocNetworkEdge,
   type CoocNetworkNode,
   type ContentSentimentResponse,
   type KeywordMetaResponse,
   type SearchTimelineResponse,
-  type TitleBiasByMediaItem,
 } from "../../../api/analytics";
 
 export type KeywordPeriod = "D7" | "D14";
@@ -31,7 +29,6 @@ export type KeywordDetailViewData = {
   titleWordcloud: RenderWordItem[];
   commentWordcloud: RenderWordItem[];
   sentiment: ContentSentimentResponse;
-  biasItems: TitleBiasByMediaItem[];
   coocNodes: CoocNetworkNode[];
   coocEdges: CoocNetworkEdge[];
 };
@@ -197,7 +194,6 @@ export default function useKeywordDetailAnalysis(): UseKeywordDetailAnalysisResu
             titleWordcloud: [],
             commentWordcloud: [],
             sentiment: { positive: 0, neutral: 0, negative: 0 },
-            biasItems: [],
             coocNodes: [],
             coocEdges: [],
           });
@@ -210,7 +206,6 @@ export default function useKeywordDetailAnalysis(): UseKeywordDetailAnalysisResu
           trendTimelineResponse,
           titleWordcloudResponse,
           sentimentResponse,
-          biasResponse,
           coocResponse,
           commentWordcloudResponse,
         ] = await Promise.all([
@@ -218,7 +213,6 @@ export default function useKeywordDetailAnalysis(): UseKeywordDetailAnalysisResu
           getSearchTimeline(targetKeywordSeq),
           getTitleWordcloud(targetKeywordSeq, { period }),
           getContentSentiment(targetKeywordSeq, { period }),
-          getTitleBiasByMedia(targetKeywordSeq, { period }),
           getCoocNetwork(targetKeywordSeq, { period }),
           getCommentWordcloud(targetKeywordSeq, { period }),
         ]);
@@ -232,7 +226,6 @@ export default function useKeywordDetailAnalysis(): UseKeywordDetailAnalysisResu
           titleWordcloud: normalizeWordcloudItems(titleWordcloudResponse.items ?? []),
           commentWordcloud: normalizeWordcloudItems(commentWordcloudResponse.items ?? []),
           sentiment: roundSentiment(sentimentResponse),
-          biasItems: (biasResponse.items ?? []).slice(),
           coocNodes: coocResponse.nodes ?? [],
           coocEdges: coocResponse.edges ?? [],
         });

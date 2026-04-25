@@ -306,7 +306,7 @@ export default function Header() {
           </Link>
 
           <div className={styles.brandCopy}>
-            <span className={styles.brandEyebrow}>NEWS DASHBOARD</span>
+            <span className={styles.brandEyebrow}>AI NEWS DASHBOARD</span>
             <span className={styles.brandTagline}>데이터로 읽는 오늘의 뉴스 흐름</span>
           </div>
         </div>
