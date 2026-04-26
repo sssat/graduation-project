@@ -220,7 +220,7 @@ export default function MediaSentimentAnalysisSection({
                     <div>
                       <div className={styles.summaryHeadline}>{dominantSentiment.label} 우세</div>
                       <div className={styles.summarySub}>
-                        전체 기사 본문 기준으로 가장 큰 비중을 차지한 감성입니다.
+                        전체 기사 기준으로 가장 큰 비중을 차지한 감성입니다.
                       </div>
                     </div>
                   </div>
@@ -264,7 +264,7 @@ export default function MediaSentimentAnalysisSection({
                 <div className={styles.metricName}>{mostPositiveRow?.label ?? "-"}</div>
                 <div className={styles.metricSub}>
                   {mostPositiveRow
-                    ? `긍정 ${formatPercent(mostPositiveRow.sentiment.positive)}`
+                    ? "비교 언론사 중 긍정 비중이 가장 높습니다."
                     : "비교 가능한 데이터 없음"}
                 </div>
               </div>
@@ -299,7 +299,7 @@ export default function MediaSentimentAnalysisSection({
                 <div className={styles.metricName}>{mostNegativeRow?.label ?? "-"}</div>
                 <div className={styles.metricSub}>
                   {mostNegativeRow
-                    ? `부정 ${formatPercent(mostNegativeRow.sentiment.negative)}`
+                    ? "비교 언론사 중 부정 비중이 가장 높습니다."
                     : "비교 가능한 데이터 없음"}
                 </div>
               </div>

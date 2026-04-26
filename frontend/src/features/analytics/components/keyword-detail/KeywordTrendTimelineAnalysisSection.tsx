@@ -18,6 +18,18 @@ function formatCompactDateLabel(isoDate: string): string {
   return `${year}.${month}.${day}`;
 }
 
+function formatNullableDateLabel(isoDate: string | null | undefined): string {
+  return isoDate ? formatCompactDateLabel(isoDate) : "-";
+}
+
+function formatNullableDateRangeLabel(
+  startDate: string | null | undefined,
+  endDate: string | null | undefined,
+): string {
+  if (!startDate || !endDate) return "-";
+  return `${formatCompactDateLabel(startDate)} ~ ${formatCompactDateLabel(endDate)}`;
+}
+
 function parseIsoDateOnly(value: string | null | undefined): Date | null {
   if (!value) return null;
 
@@ -145,6 +157,18 @@ export default function KeywordTrendTimelineAnalysisSection({
     dailyTrendTimeline.periodStart && dailyTrendTimeline.periodEnd
       ? formatKoreanRange(dailyTrendTimeline.periodStart, dailyTrendTimeline.periodEnd)
       : fallbackRangeLabel;
+  const latestObservedDate =
+    dailyTrendTimeline.items[dailyTrendTimeline.items.length - 1]?.observed_date ??
+    dailyTrendTimeline.periodEnd;
+  const peakObservedDate = dailyTrendTimeline.items.reduce<string | null>((peakDate, item) => {
+    const peakScore = trendTimeline.peak_score;
+    if (peakScore == null || item.interest_score !== peakScore) return peakDate;
+    return peakDate ?? item.observed_date;
+  }, null);
+  const averagePeriodLabel = formatNullableDateRangeLabel(
+    dailyTrendTimeline.periodStart,
+    dailyTrendTimeline.periodEnd,
+  );
 
   useEffect(() => {
     if (!canvasRef.current) return;
@@ -297,16 +321,23 @@ export default function KeywordTrendTimelineAnalysisSection({
             <div className={styles.timelineStatCard}>
               <div className={styles.timelineStatLabel}>최신 점수</div>
               <div className={styles.timelineStatValue}>{trendTimeline.latest_score ?? "-"}</div>
+              <div className={styles.timelineStatDate}>
+                {formatNullableDateLabel(latestObservedDate)}
+              </div>
             </div>
             <div className={styles.timelineStatCard}>
               <div className={styles.timelineStatLabel}>기간 최고치</div>
               <div className={styles.timelineStatValue}>{trendTimeline.peak_score ?? "-"}</div>
+              <div className={styles.timelineStatDate}>
+                {formatNullableDateLabel(peakObservedDate)}
+              </div>
             </div>
             <div className={styles.timelineStatCard}>
               <div className={styles.timelineStatLabel}>기간 평균</div>
               <div className={styles.timelineStatValue}>
                 {trendTimeline.average_score == null ? "-" : trendTimeline.average_score.toFixed(1)}
               </div>
+              <div className={styles.timelineStatDate}>{averagePeriodLabel}</div>
             </div>
           </div>
 

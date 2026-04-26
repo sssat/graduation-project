@@ -25,8 +25,10 @@ export default function MediaVolumeAnalysisSection({
   const rankedRows = [...rows].sort((a, b) => b.volume - a.volume);
   const totalVolume = rankedRows.reduce((total, row) => total + row.volume, 0);
   const topRow = rankedRows[0] ?? null;
+  const bottomRow = rankedRows[rankedRows.length - 1] ?? null;
   const maxVolume = Math.max(...rankedRows.map((row) => row.volume), 0);
   const topShare = topRow && totalVolume > 0 ? (topRow.volume / totalVolume) * 100 : 0;
+  const bottomShare = bottomRow && totalVolume > 0 ? (bottomRow.volume / totalVolume) * 100 : 0;
 
   return (
     <article className={styles.card}>
@@ -44,10 +46,22 @@ export default function MediaVolumeAnalysisSection({
         <>
           <div className={styles.summaryStrip}>
             <section className={`${styles.summaryPanel} ${styles.summaryPanelLead}`}>
-              <div className={styles.summaryLabel}>최다 보도</div>
+              <div className={styles.summaryLabel}>최다 보도 언론사</div>
               <div className={styles.summaryValue}>{topRow?.label ?? "-"}</div>
               <div className={styles.summarySub}>
-                {topRow ? `${formatNumber(topRow.volume)}건` : "기사량 데이터 없음"}
+                {topRow
+                  ? `${formatNumber(topRow.volume)}건 · 전체 대비 ${formatShare(topShare)}`
+                  : "기사량 데이터 없음"}
+              </div>
+            </section>
+
+            <section className={`${styles.summaryPanel} ${styles.summaryPanelLow}`}>
+              <div className={styles.summaryLabel}>최소 보도 언론사</div>
+              <div className={styles.summaryValue}>{bottomRow?.label ?? "-"}</div>
+              <div className={styles.summarySub}>
+                {bottomRow
+                  ? `${formatNumber(bottomRow.volume)}건 · 전체 대비 ${formatShare(bottomShare)}`
+                  : "기사량 데이터 없음"}
               </div>
             </section>
 
@@ -55,12 +69,6 @@ export default function MediaVolumeAnalysisSection({
               <div className={styles.summaryLabel}>전체 기사 수</div>
               <div className={styles.summaryValue}>{formatNumber(totalVolume)}</div>
               <div className={styles.summarySub}>전체 언론사 합산 기준</div>
-            </section>
-
-            <section className={styles.summaryPanel}>
-              <div className={styles.summaryLabel}>1위 비중</div>
-              <div className={styles.summaryValue}>{formatShare(topShare)}</div>
-              <div className={styles.summarySub}>기사 건수 1위 언론사 비율</div>
             </section>
           </div>
 

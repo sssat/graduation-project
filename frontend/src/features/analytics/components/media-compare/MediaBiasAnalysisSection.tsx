@@ -77,7 +77,7 @@ export default function MediaBiasAnalysisSection({
             </section>
 
             <section className={`${styles.summaryCard} ${styles.summaryCardNeutral}`}>
-              <div className={styles.summaryLabel}>균형에 가까움</div>
+              <div className={styles.summaryLabel}>편향도 낮음</div>
               <div className={styles.summaryBody}>
                 <div className={styles.summaryMedia}>{mostNeutral?.label ?? "-"}</div>
                 <div className={styles.summaryCopy}>한쪽으로 크게 치우치지 않은 편입니다.</div>
@@ -111,7 +111,7 @@ export default function MediaBiasAnalysisSection({
               </div>
               <div className={`${styles.legendItem} ${styles.legendItemNeutral}`}>
                 <span className={styles.legendDot} aria-hidden="true" />
-                <span>0선은 균형 기준선</span>
+                <span>0은 편향도 낮음</span>
               </div>
               <div className={`${styles.legendItem} ${styles.legendItemPositive}`}>
                 <span className={styles.legendDot} aria-hidden="true" />

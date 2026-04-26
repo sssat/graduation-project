@@ -260,7 +260,7 @@ export default function HomePage() {
 
           <div className={styles.heroCards}>
             <article className={styles.heroCard}>
-              <div className={styles.heroCardLabel}>최신 수집 뉴스</div>
+              <div className={styles.heroCardLabel}>오늘 수집 뉴스</div>
               <div className={styles.heroCardCount}>
                 {collectedNewsCount.toLocaleString("ko-KR")}
                 <span className={styles.unit}>건</span>
