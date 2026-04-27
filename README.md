@@ -13,6 +13,7 @@ Newsight는 트렌드 키워드와 뉴스 데이터를 수집하고, 이를 바�
 - Google Trends에서 실시간 인기 키워드를 수집합니다.
 - 수집된 키워드를 기준으로 Naver 뉴스 기사와 댓글 일부를 수집합니다.
 - 기사/댓글 전처리 후 기사량 집계, 최종 순위, AI 요약, 감성분석, 언론사 편향도 비교, 워드클라우드, 공동언급 네트워크, 검색 관심도 흐름 데이터를 생성합니다.
+- 워드클라우드와 공동언급 네트워크 분석에서는 보호 단어 파일을 통해 고유명사와 복합어가 형태소 분석 과정에서 불필요하게 분리되지 않도록 관리합니다.
 - 검색 관심도 흐름 데이터는 Naver DataLab Open API를 기준으로 수집합니다.
 - 분석 결과는 MySQL에 저장되고, backend API를 통해 frontend에 제공됩니다.
 
@@ -46,6 +47,7 @@ Newsight는 트렌드 키워드와 뉴스 데이터를 수집하고, 이를 바�
 - 최종 순위 재산정
 - AI 요약 생성
 - 감성 / 편향 / 워드클라우드 / 공동언급 네트워크 분석
+- 워드클라우드·공동언급 네트워크 보호 단어 관리
 
 ## 아키텍처
 
@@ -64,11 +66,14 @@ Newsight는 트렌드 키워드와 뉴스 데이터를 수집하고, 이를 바�
 ### Backend
 
 - Java 21
-- Spring Boot 3
+- Spring Boot 3.5.10
 - Spring Web
 - Spring Security
 - OAuth2 Resource Server
+- JJWT
 - Spring Data JPA
+- Spring Validation
+- Spring Mail
 - Flyway
 - MySQL
 
@@ -76,20 +81,23 @@ Newsight는 트렌드 키워드와 뉴스 데이터를 수집하고, 이를 바�
 
 - React 19
 - TypeScript
-- Vite
-- React Router
+- Vite 7
+- React Router 7
 - Axios
 - Chart.js
 - D3 Force / D3 Cloud
 
 ### Data Pipeline
 
-- Python
+- Python 3.11
 - PyMySQL
 - pandas / numpy
 - selenium / beautifulsoup4 / aiohttp
+- KoNLPy Komoran
 - transformers / torch
 - OpenAI Python SDK
+- Naver DataLab Open API
+- networkx
 - requests
 
 ## 저장소 구조
@@ -106,19 +114,26 @@ graduation-project/
 
 계정/문의 관련 스키마는 backend의 Flyway가 관리하고, 분석 관련 데이터는 data-pipeline이 MySQL에 적재합니다.
 
-대표적인 분석 테이블은 다음과 같습니다.
+주요 수집/분석 테이블은 다음과 같습니다.
 
+- `T_NEWS_MEDIA`
 - `T_TREND_RUN`
 - `T_TREND_KEYWORD_MASTER`
 - `T_TREND_KEYWORD_SNAPSHOT`
+- `T_NEWS_ARTICLE`
+- `T_NEWS_COMMENT`
 - `T_ANALYZE_MEDIA_STAT`
 - `T_TREND_KEYWORD_FINAL_RANK`
 - `T_ANALYZE_AI_SUMMARY`
+- `T_ANALYZE_AI_SUMMARY_ARTICLE`
 - `T_ANALYZE_SEARCH_TIMELINE`
 - `T_ANALYZE_SENTIMENT`
 - `T_ANALYZE_MEDIA_BIAS`
 - `T_ANALYZE_WORDCLOUD`
+- `T_ANALYZE_WORDCLOUD_ITEM`
 - `T_ANALYZE_CO_MENTION_GRAPH`
+- `T_ANALYZE_CO_MENTION_NODE`
+- `T_ANALYZE_CO_MENTION_EDGE`
 
 새 환경에서는 `data-pipeline/db/schema.sql`에 정의된 분석 테이블들이 DB에 반영되어 있어야 합니다.
 
@@ -181,7 +196,6 @@ python -m src.crawler.news.jobs.run_news
 python -m src.preprocess.jobs.run_preprocess
 python -m src.analyzer.aggregate.jobs.run_aggregate
 python -m src.analyzer.final_rank.jobs.run_final_rank
-python -m src.analyzer.search_timeline.jobs.run_search_timeline
 python -m src.analyzer.summary.jobs.run_summary
 python -m src.analyzer.sentiment.title.jobs.run_title_sentiment
 python -m src.analyzer.sentiment.content.jobs.run_content_sentiment
@@ -189,6 +203,7 @@ python -m src.analyzer.bias.title.jobs.run_title_bias
 python -m src.analyzer.bias.content.jobs.run_content_bias
 python -m src.analyzer.wordcloud.jobs.run_wordcloud
 python -m src.analyzer.cooc_network.jobs.run_cooc_network
+python -m src.analyzer.search_timeline.jobs.run_search_timeline
 ```
 
 특정 트렌드 회차를 직접 지정하고 싶다면:
@@ -244,16 +259,21 @@ VITE_API_BASE_URL=http://localhost:8080/api
 공용 튜닝값 예시(`data-pipeline/config/pipeline.env`):
 
 ```env
-RUN_ALL_STEPS=trend,news,preprocess,aggregate,final_rank,search_timeline,summary,title_sentiment,content_sentiment,title_bias,content_bias,wordcloud,cooc_network
+RUN_ALL_STEPS=trend,news,preprocess,aggregate,final_rank,summary,title_sentiment,content_sentiment,title_bias,content_bias,wordcloud,cooc_network,search_timeline
 RUN_ALL_FAIL_FAST=1
 HEADLESS=1
+
+WORDCLOUD_STOPWORDS_FILE=./src/analyzer/wordcloud/stopwords.txt
+WORDCLOUD_PROTECTED_TERMS_FILE=./src/analyzer/wordcloud/protected_terms.txt
+WORDCLOUD_REFRESH=1
+COOC_REFRESH=1
 
 SEARCH_TIMELINE_KEYWORD_TOP_N=0
 SEARCH_TIMELINE_BATCH_SIZE=0
 SEARCH_TIMELINE_REFRESH=1
 SEARCH_TIMELINE_TIMEFRAME=today 3-m
-SEARCH_TIMELINE_SLEEP_MIN_SECONDS=0.8
-SEARCH_TIMELINE_SLEEP_MAX_SECONDS=1.2
+SEARCH_TIMELINE_SLEEP_MIN_SECONDS=0.2
+SEARCH_TIMELINE_SLEEP_MAX_SECONDS=0.5
 
 NAVER_DATALAB_CLIENT_ID=
 NAVER_DATALAB_CLIENT_SECRET=
@@ -286,6 +306,14 @@ NAVER_DATALAB_CLIENT_SECRET=
 
 - `config/pipeline.env`는 git으로 공유
 - `.env`는 git에 올리지 않고 로컬/서버마다 별도로 관리
+
+## 워드클라우드 / 관계도 보호 단어
+
+- `data-pipeline/src/analyzer/wordcloud/protected_terms.txt`에 한 줄에 하나씩 보존할 단어를 입력합니다.
+- 파일 경로는 `WORDCLOUD_PROTECTED_TERMS_FILE` 환경변수로 지정하며, 상대경로는 `data-pipeline` 루트를 기준으로 해석됩니다.
+- 보호 단어는 Komoran 형태소 분석 전에 먼저 추출되므로 `SK 하이닉스`, `삼성 전자`처럼 공백이 포함된 표현도 한 단어로 유지할 수 있습니다.
+- 워드클라우드와 공동언급 네트워크는 같은 토큰화 로직을 사용하므로 보호 단어 설정이 두 분석에 함께 적용됩니다.
+- 기존 분석 결과를 다시 반영하려면 워드클라우드는 `WORDCLOUD_REFRESH=1`, 관계도는 `COOC_REFRESH=1`로 설정한 뒤 해당 배치를 재실행합니다.
 
 ## 검색 관심도 타임라인
 
