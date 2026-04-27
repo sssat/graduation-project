@@ -1,0 +1,18 @@
+# Wordcloud protected terms
+# One term per line. Blank lines and lines starting with # are ignored.
+# Terms listed here are extracted before Komoran tokenization and kept as-is.
+
+SK하이닉스
+하이닉스
+SK 하이닉스
+삼천당
+삼천리자전거
+삼천당제약
+코스피
+코스닥
+나스닥
+S&P500
+고유가
+유가
+삼성전자
+삼성 전자

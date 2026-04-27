@@ -266,6 +266,7 @@ class Settings:
     wordcloud_drop_numeric_only: bool = _get_bool01("WORDCLOUD_DROP_NUMERIC_ONLY", True)
     wordcloud_stopwords_csv: str = _get_str("WORDCLOUD_STOPWORDS_CSV", "")
     wordcloud_stopwords_file: str = _get_str("WORDCLOUD_STOPWORDS_FILE", "./src/analyzer/wordcloud/stopwords.txt")
+    wordcloud_protected_terms_file: str = _get_str("WORDCLOUD_PROTECTED_TERMS_FILE", "")
     wordcloud_top_k: int = _get_int("WORDCLOUD_TOP_K", 60)
     wordcloud_weight_mode: str = _get_str("WORDCLOUD_WEIGHT_MODE", "count")
     wordcloud_trend_run_seq: int = _get_int("WORDCLOUD_TREND_RUN_SEQ", 0)
@@ -555,6 +556,14 @@ class Settings:
                 p = PROJECT_ROOT / p
             wordcloud_stopwords_file = str(p)
         object.__setattr__(self, "wordcloud_stopwords_file", wordcloud_stopwords_file)
+
+        wordcloud_protected_terms_file = (self.wordcloud_protected_terms_file or "").strip()
+        if wordcloud_protected_terms_file:
+            p = Path(wordcloud_protected_terms_file)
+            if not p.is_absolute():
+                p = PROJECT_ROOT / p
+            wordcloud_protected_terms_file = str(p)
+        object.__setattr__(self, "wordcloud_protected_terms_file", wordcloud_protected_terms_file)
 
         object.__setattr__(self, "wordcloud_trend_run_seq", max(0, int(self.wordcloud_trend_run_seq)))
         object.__setattr__(self, "wordcloud_refresh", bool(self.wordcloud_refresh))

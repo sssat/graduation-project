@@ -52,6 +52,7 @@ from src.analyzer.wordcloud.storage.wdc_reader import (
 from src.analyzer.wordcloud.preprocess.wdc_preprocess import preprocess_many_for_wordcloud
 from src.analyzer.wordcloud.tokenize.wdc_tokenize import (
     TokenizeOptions,
+    default_protected_terms_from_settings,
     default_stopwords_from_settings,
     default_tokenize_options_from_settings,
     tokenize_many,
@@ -270,6 +271,7 @@ def main() -> None:
     # 토큰화 옵션/불용어는 1회 로드 후 재사용(그룹마다 파일 읽기 방지)
     tok_opt: TokenizeOptions = default_tokenize_options_from_settings()
     stopwords = default_stopwords_from_settings()
+    protected_terms = default_protected_terms_from_settings()
 
     log: Dict[str, Any] = {
         "started_at": run_started_at.isoformat(),
@@ -290,6 +292,8 @@ def main() -> None:
                 "max_len": int(tok_opt.max_len),
                 "drop_numeric_only": bool(tok_opt.drop_numeric_only),
                 "stopwords_count": int(len(stopwords)),
+                "protected_terms_count": int(len(protected_terms)),
+                "protected_terms_file": str(settings.wordcloud_protected_terms_file or ""),
             },
         },
         "groups": [],
@@ -382,7 +386,12 @@ def main() -> None:
 
                         raw_texts = [r.text for r in rows]
                         pre_texts = preprocess_many_for_wordcloud(raw_texts)
-                        tokens = tokenize_many(pre_texts, opt=tok_opt, stopwords=stopwords)
+                        tokens = tokenize_many(
+                            pre_texts,
+                            opt=tok_opt,
+                            stopwords=stopwords,
+                            protected_terms=protected_terms,
+                        )
 
                         # 토큰이 없고 refresh=0이면 DB 건드리지 않고 스킵
                         if not tokens and not refresh:

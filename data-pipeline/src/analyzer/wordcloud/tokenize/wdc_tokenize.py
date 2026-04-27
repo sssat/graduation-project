@@ -12,7 +12,7 @@ import re
 from dataclasses import dataclass
 from functools import lru_cache
 from pathlib import Path
-from typing import Iterable, Optional, Set
+from typing import Iterable, Optional, Sequence, Set
 
 from src.config.settings import settings
 
@@ -82,6 +82,47 @@ def load_stopwords_from_csv(csv_text: str) -> Set[str]:
     return _parse_stopwords_lines([csv_text])
 
 
+def _parse_protected_term_lines(lines: Iterable[str]) -> list[str]:
+    out: list[str] = []
+    seen: set[str] = set()
+
+    for line in lines:
+        s = (line or "").strip()
+        if not s or s.startswith("#"):
+            continue
+
+        parts = [s]
+        if "," in s:
+            parts = s.split(",")
+        elif "\t" in s:
+            parts = s.split("\t")
+
+        for part in parts:
+            term = part.strip()
+            if not term or term.startswith("#"):
+                continue
+            key = term.casefold()
+            if key in seen:
+                continue
+            seen.add(key)
+            out.append(term)
+
+    return sorted(out, key=len, reverse=True)
+
+
+def load_protected_terms_from_file(path: str) -> list[str]:
+    """
+    형태소 분석 전에 그대로 보존할 단어/구문 목록을 파일에서 읽는다.
+    - 한 줄에 1개 입력을 기본으로 하고, 쉼표/탭 구분도 허용한다.
+    - 빈 줄과 #으로 시작하는 주석 줄은 무시한다.
+    """
+    p = Path(path)
+    if not path or not p.exists() or not p.is_file():
+        return []
+    raw = p.read_text(encoding="utf-8")
+    return _parse_protected_term_lines(raw.splitlines())
+
+
 def default_tokenize_options_from_settings() -> TokenizeOptions:
     """
     .env -> settings 값을 기본 토큰 옵션으로 사용한다.
@@ -110,6 +151,18 @@ def default_stopwords_from_settings() -> Set[str]:
         sw |= load_stopwords_from_file(file_path)
 
     return sw
+
+
+@lru_cache(maxsize=1)
+def default_protected_terms_from_settings() -> list[str]:
+    """
+    .env -> settings 보호 단어 파일을 사용한다.
+    - 형태소 분석기가 쪼개면 안 되는 고유명사/복합어를 파일로 관리한다.
+    """
+    file_path = str(getattr(settings, "wordcloud_protected_terms_file", "") or "").strip()
+    if not file_path:
+        return []
+    return load_protected_terms_from_file(file_path)
 
 
 @lru_cache(maxsize=1)
@@ -154,11 +207,47 @@ def _keep_token(token: str, *, opt: TokenizeOptions, stopwords: Set[str]) -> boo
     return True
 
 
+def _prepare_protected_terms(protected_terms: Optional[Sequence[str]]) -> list[str]:
+    out: list[str] = []
+    seen: set[str] = set()
+
+    for term in protected_terms or ():
+        t = _normalize_token(str(term))
+        if not t:
+            continue
+        key = t.casefold()
+        if key in seen:
+            continue
+        seen.add(key)
+        out.append(t)
+
+    return sorted(out, key=len, reverse=True)
+
+
+def _extract_protected_terms(text: str, protected_terms: Sequence[str]) -> tuple[str, list[str]]:
+    terms = _prepare_protected_terms(protected_terms)
+    if not text or not terms:
+        return text, []
+
+    canonical_by_key = {term.casefold(): term for term in terms}
+    pattern = re.compile("|".join(re.escape(term) for term in terms), re.IGNORECASE)
+    found: list[str] = []
+
+    def replace_match(match: re.Match[str]) -> str:
+        matched = match.group(0)
+        found.append(canonical_by_key.get(matched.casefold(), matched))
+        return " "
+
+    masked_text = pattern.sub(replace_match, text)
+    return masked_text, found
+
+
 def tokenize_text(
     text: str,
     *,
     opt: Optional[TokenizeOptions] = None,
     stopwords: Optional[Set[str]] = None,
+    protected_terms: Optional[Sequence[str]] = None,
 ) -> list[str]:
     """
     Komoran 기반 명사 추출 + 필터링.
@@ -176,6 +265,7 @@ def tokenize_text(
     """
     opt = opt or default_tokenize_options_from_settings()
     stopwords = stopwords or default_stopwords_from_settings()
+    protected_terms = protected_terms if protected_terms is not None else default_protected_terms_from_settings()
 
     min_len = max(1, int(opt.min_len))
     max_len = max(min_len, int(opt.max_len))
@@ -185,10 +275,12 @@ def tokenize_text(
     if not s:
         return []
 
-    komoran = _get_komoran()
-    nouns = komoran.nouns(s)
+    masked_text, preserved_tokens = _extract_protected_terms(s, protected_terms)
 
-    tokens: list[str] = []
+    komoran = _get_komoran()
+    nouns = komoran.nouns(masked_text)
+
+    tokens: list[str] = list(preserved_tokens)
     for noun in nouns:
         t = _normalize_token(noun)
         if not _keep_token(t, opt=local_opt, stopwords=stopwords):
@@ -203,6 +295,7 @@ def tokenize_many(
     *,
     opt: Optional[TokenizeOptions] = None,
     stopwords: Optional[Set[str]] = None,
+    protected_terms: Optional[Sequence[str]] = None,
 ) -> list[str]:
     """
     복수 텍스트를 토큰화해서 하나의 토큰 리스트로 합친다.
@@ -210,8 +303,9 @@ def tokenize_many(
     """
     opt = opt or default_tokenize_options_from_settings()
     stopwords = stopwords or default_stopwords_from_settings()
+    protected_terms = protected_terms if protected_terms is not None else default_protected_terms_from_settings()
 
     out: list[str] = []
     for s in texts:
-        out.extend(tokenize_text(s, opt=opt, stopwords=stopwords))
+        out.extend(tokenize_text(s, opt=opt, stopwords=stopwords, protected_terms=protected_terms))
     return out
