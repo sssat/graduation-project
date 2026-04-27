@@ -72,19 +72,25 @@ Newsight는 트렌드 키워드와 뉴스 데이터를 수집하고, 이를 바�
 - OAuth2 Resource Server
 - JJWT
 - Spring Data JPA
+- Spring JDBC
 - Spring Validation
 - Spring Mail
+- Spring Boot Actuator
 - Flyway
+- Lombok
+- Gradle
+- MySQL Connector/J
 - MySQL
 
 ### Frontend
 
-- React 19
-- TypeScript
-- Vite 7
-- React Router 7
+- React 19.2
+- React DOM
+- TypeScript 5.9
+- Vite 7.2
+- React Router 7.10
 - Axios
-- Chart.js
+- Chart.js 4.5
 - D3 Force / D3 Cloud
 
 ### Data Pipeline
@@ -92,13 +98,95 @@ Newsight는 트렌드 키워드와 뉴스 데이터를 수집하고, 이를 바�
 - Python 3.11
 - PyMySQL
 - pandas / numpy
+- python-dotenv
+- requests
 - selenium / beautifulsoup4 / aiohttp
 - KoNLPy Komoran
-- transformers / torch
+- JPype1
+- Hugging Face Transformers 4.57
+- PyTorch 2.9 CPU
+- `snunlp/KR-FinBert-SC` 감성분석 모델
 - OpenAI Python SDK
+- OpenAI API
+- `gpt-4o-mini`
 - Naver DataLab Open API
-- networkx
-- requests
+
+### Auth / Security
+
+- JWT Access Token
+- HttpOnly Refresh Cookie
+- BCrypt PasswordEncoder
+- OAuth2 Resource Server
+- CORS 설정
+
+### Infra / Tools
+
+- Ubuntu EC2
+- Docker Compose
+- Gradle
+- npm
+- pip
+- Git / GitHub
+
+## 기술 스택 설명
+
+| 구분 | 기술 | 설명 |
+| --- | --- | --- |
+| Frontend | React | 사용자 화면을 컴포넌트 단위로 구성하기 위한 JavaScript UI 라이브러리입니다. |
+| Frontend | React DOM | React 컴포넌트를 브라우저 DOM에 렌더링하기 위해 사용합니다. |
+| Frontend | TypeScript | JavaScript에 정적 타입을 추가한 언어로, 프론트엔드 코드의 타입 안정성을 높이기 위해 사용합니다. |
+| Frontend | Vite | 빠른 개발 서버와 빌드 기능을 제공하는 프론트엔드 개발 도구입니다. |
+| Frontend | React Router | React 애플리케이션의 페이지 이동과 라우팅을 처리하기 위해 사용합니다. |
+| Frontend | Axios | 프론트엔드에서 백엔드 API와 HTTP 통신을 수행하기 위해 사용합니다. |
+| 시각화 | Chart.js | 감성 비율, 검색 관심도 흐름, 편향도 등 차트 기반 데이터를 시각화하기 위해 사용합니다. |
+| 시각화 | D3 Force | 키워드 간 관계를 힘 기반 네트워크 그래프로 표현하기 위해 사용합니다. |
+| 시각화 | D3 Cloud | 워드클라우드 형태로 주요 단어를 배치하고 시각화하기 위해 사용합니다. |
+| Backend | Java | Spring Boot 기반 백엔드 서버를 구현하기 위해 사용한 프로그래밍 언어입니다. |
+| Backend | Spring Boot | Java 기반 웹 애플리케이션을 빠르게 구성하기 위한 프레임워크입니다. |
+| Backend | Spring Web | REST API를 구현하고 HTTP 요청과 응답을 처리하기 위해 사용합니다. |
+| Backend | Spring Security | 인증, 인가, 보호 API 접근 제어 등 보안 기능을 구현하기 위해 사용합니다. |
+| Backend | OAuth2 Resource Server | Bearer Token 기반 인증 요청을 처리하기 위해 사용합니다. |
+| Backend | Spring Data JPA | Java 객체와 데이터베이스 테이블을 매핑하여 계정/문의 데이터를 관리하기 위해 사용합니다. |
+| Backend | Spring JDBC | 분석 결과처럼 직접 SQL 조회가 필요한 데이터를 처리하기 위해 사용합니다. |
+| Backend | Spring Validation | 회원가입, 로그인, 문의 작성 등 요청 데이터의 유효성을 검증하기 위해 사용합니다. |
+| Backend | Spring Mail | 임시 비밀번호 발급 등 메일 전송 기능을 구현하기 위해 사용합니다. |
+| Backend | Spring Boot Actuator | 서버 상태 확인과 운영 모니터링을 위한 엔드포인트를 제공하기 위해 사용합니다. |
+| Backend | Flyway | 데이터베이스 스키마 변경 이력을 코드로 관리하기 위해 사용합니다. |
+| Backend | Lombok | 반복적인 getter, builder, 생성자 코드를 줄이기 위해 사용합니다. |
+| Backend | MySQL Connector/J | Spring Boot 서버에서 MySQL 데이터베이스에 연결하기 위해 사용하는 JDBC 드라이버입니다. |
+| 인증/보안 | JWT Access Token | 로그인 후 보호 API 요청에서 사용자를 인증하기 위해 사용하는 토큰입니다. |
+| 인증/보안 | JJWT | Java에서 JWT를 생성하고 검증하기 위해 사용한 라이브러리입니다. |
+| 인증/보안 | HttpOnly Refresh Cookie | Refresh Token을 JavaScript에서 직접 읽을 수 없는 쿠키로 보관하기 위해 사용합니다. |
+| 인증/보안 | BCrypt PasswordEncoder | 사용자 비밀번호를 단방향 해시로 저장하기 위해 사용합니다. |
+| 인증/보안 | CORS 설정 | 프론트엔드와 백엔드가 다른 출처에서 통신할 수 있도록 허용 범위를 관리합니다. |
+| Data Pipeline | Python | 데이터 수집, 전처리, 분석 배치 작업을 구현하기 위해 사용한 프로그래밍 언어입니다. |
+| Data Pipeline | pandas | 수집된 뉴스와 분석 데이터를 표 형태로 처리하고 집계하기 위해 사용합니다. |
+| Data Pipeline | numpy | 수치 계산과 배열 기반 데이터 처리를 위해 사용합니다. |
+| Data Pipeline | PyMySQL | Python 파이프라인에서 MySQL에 연결하고 데이터를 저장하기 위해 사용합니다. |
+| Data Pipeline | python-dotenv | `pipeline.env`와 `.env` 파일의 환경변수를 읽어 파이프라인 설정을 관리하기 위해 사용합니다. |
+| Data Pipeline | requests | Naver DataLab Open API 등 외부 HTTP API 요청을 수행하기 위해 사용합니다. |
+| Data Pipeline | aiohttp | 비동기 방식으로 뉴스 기사 본문을 수집하기 위해 사용합니다. |
+| Data Pipeline | selenium | Google Trends와 Naver News처럼 동적 렌더링이 필요한 페이지를 수집하기 위해 사용합니다. |
+| Data Pipeline | BeautifulSoup4 | HTML 문서에서 뉴스 제목, 본문 등 필요한 정보를 추출하기 위해 사용합니다. |
+| 자연어 처리/분석 | KoNLPy Komoran | 한국어 형태소 분석을 수행하고 워드클라우드/관계도 분석에 필요한 명사를 추출하기 위해 사용합니다. |
+| 자연어 처리/분석 | JPype1 | Python에서 Java 기반 Komoran 형태소 분석기를 호출하기 위해 사용하는 브리지 라이브러리입니다. |
+| 자연어 처리/분석 | Hugging Face Transformers | 사전 학습된 자연어 처리 모델을 불러와 감성 분석에 사용합니다. |
+| 자연어 처리/분석 | PyTorch | Transformers 모델을 실행하기 위한 딥러닝 프레임워크입니다. |
+| 자연어 처리/분석 | `snunlp/KR-FinBert-SC` | 한국어 뉴스 문장을 긍정, 중립, 부정으로 분류하기 위해 사용한 감성 분석 모델입니다. |
+| AI 요약 | OpenAI Python SDK | Python 파이프라인에서 OpenAI API를 호출하기 위해 사용합니다. |
+| AI 요약 | OpenAI API | 수집된 뉴스 기사 내용을 바탕으로 키워드별 AI 요약을 생성하기 위해 사용합니다. |
+| AI 요약 | `gpt-4o-mini` | 뉴스 요약 생성에 사용한 OpenAI 모델입니다. |
+| Database | MySQL | 회원, 문의, 뉴스 기사, 댓글, 키워드, 분석 결과 데이터를 저장하기 위한 관계형 데이터베이스입니다. |
+| 외부 데이터 | Google Trends | 실시간 트렌드 키워드를 수집하기 위한 외부 데이터 출처입니다. |
+| 외부 데이터 | Naver News | 키워드 관련 뉴스 기사와 댓글 데이터를 수집하기 위한 외부 데이터 출처입니다. |
+| 외부 데이터 | Naver DataLab Open API | 키워드별 검색 관심도 흐름 데이터를 수집하기 위해 사용합니다. |
+| Infra / Tools | Ubuntu EC2 | 프로젝트 서버와 배치 작업을 실행하기 위한 클라우드 서버 환경입니다. |
+| Infra / Tools | Docker Compose | MySQL 등 실행 환경을 컨테이너 기반으로 구성하기 위해 사용합니다. |
+| Infra / Tools | Gradle | Spring Boot 백엔드 프로젝트의 빌드와 의존성 관리를 위해 사용합니다. |
+| Infra / Tools | npm | 프론트엔드 패키지 설치와 실행 스크립트 관리를 위해 사용합니다. |
+| Infra / Tools | pip | Python 패키지 설치와 의존성 관리를 위해 사용합니다. |
+| Infra / Tools | Git | 소스 코드 변경 이력을 관리하기 위한 버전 관리 도구입니다. |
+| Infra / Tools | GitHub | Git 저장소를 원격으로 관리하고 코드 백업 및 협업에 활용하기 위한 플랫폼입니다. |
 
 ## 저장소 구조
 
