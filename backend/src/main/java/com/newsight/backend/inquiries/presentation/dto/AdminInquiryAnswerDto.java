@@ -4,6 +4,7 @@ package com.newsight.backend.inquiries.presentation.dto;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.newsight.backend.inquiries.application.service.InquiriesService;
+import jakarta.validation.constraints.NotBlank;
 import java.time.LocalDateTime;
 
 public final class AdminInquiryAnswerDto {
@@ -15,7 +16,10 @@ public final class AdminInquiryAnswerDto {
      */
     public record AdminInquiryAnswerRequestDto(
             @JsonProperty("admin_message")
+            @NotBlank
             String adminMessage,
+
+            @NotBlank
             String status
     ) {
         public InquiriesService.AdminAnswerCommand toCommand() {

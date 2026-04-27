@@ -20,6 +20,7 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
+import org.springframework.security.authorization.AuthorizationDecision;
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.oauth2.core.DelegatingOAuth2TokenValidator;
@@ -164,6 +165,25 @@ public class SecurityConfig {
 
                 // analytics (public read)
                 .requestMatchers(HttpMethod.GET, "/api/analytics/**").permitAll()
+
+                // Admin APIs need an ADMIN(1) or SUPER_ADMIN(2) JWT grade claim.
+                .requestMatchers("/api/admins/**").access((authentication, context) -> {
+                    Object principal = authentication.get().getPrincipal();
+                    int gradeCode = 0;
+                    if (principal instanceof Jwt jwt) {
+                        Object raw = jwt.getClaim("gradeCode");
+                        if (raw instanceof Number n) {
+                            gradeCode = n.intValue();
+                        } else if (raw != null) {
+                            try {
+                                gradeCode = Integer.parseInt(String.valueOf(raw));
+                            } catch (NumberFormatException ignore) {
+                                gradeCode = 0;
+                            }
+                        }
+                    }
+                    return new AuthorizationDecision(gradeCode >= 1);
+                })
 
                 .anyRequest().authenticated()
         );

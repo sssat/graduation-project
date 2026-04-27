@@ -271,9 +271,16 @@ public class AccountsService {
     public TokenRefreshIssueResult refreshIssue(String refreshToken) {
         ensureNotBlank(refreshToken, "refresh");
 
-        Long userSeq = jwtService.verifyRefreshAndGetUserSeq(refreshToken);
-        User user = userRepository.findById(userSeq)
+        JwtService.RefreshTokenClaims claims = jwtService.verifyRefresh(refreshToken);
+        User user = userRepository.findById(claims.userSeq())
                 .orElseThrow(() -> new IllegalArgumentException("user not found for this refresh token"));
+
+        if (user.currentRefreshTokenVersion() != claims.refreshTokenVersion()) {
+            throw new IllegalArgumentException("리프레시 토큰이 유효하지 않거나 만료되었습니다.");
+        }
+
+        user.rotateRefreshTokenVersion();
+        userRepository.saveAndFlush(user);
 
         String newAccess = jwtService.issueAccessToken(user);
         String newRefresh = jwtService.issueRefreshToken(user);
@@ -287,7 +294,20 @@ public class AccountsService {
     // ─────────────────────────────────────────────────────────
     // 6) 로그아웃
     // ─────────────────────────────────────────────────────────
-    public LogoutResult logout() {
+    public LogoutResult logout(String refreshToken) {
+        if (!isBlank(refreshToken)) {
+            try {
+                JwtService.RefreshTokenClaims claims = jwtService.verifyRefresh(refreshToken);
+                userRepository.findById(claims.userSeq()).ifPresent(user -> {
+                    if (user.currentRefreshTokenVersion() == claims.refreshTokenVersion()) {
+                        user.rotateRefreshTokenVersion();
+                        userRepository.save(user);
+                    }
+                });
+            } catch (RuntimeException ignore) {
+                // Always let logout clear the client cookie, even if the token is already invalid.
+            }
+        }
         return new LogoutResult("로그아웃되었습니다.");
     }
 
@@ -337,6 +357,7 @@ public class AccountsService {
 
         user.setPasswordHash(passwordEncoder.encode(tempPassword));
         user.setPasswordChangedAt(LocalDateTime.now(clock));
+        user.rotateRefreshTokenVersion();
         userRepository.save(user);
         em.flush();
 
@@ -397,6 +418,7 @@ public class AccountsService {
 
         user.setPasswordHash(passwordEncoder.encode(cmd.newPassword()));
         user.setPasswordChangedAt(LocalDateTime.now(clock));
+        user.rotateRefreshTokenVersion();
         userRepository.save(user);
 
         return new ChangePasswordResult("비밀번호가 변경되었습니다.", true);

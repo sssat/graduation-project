@@ -31,6 +31,7 @@ import com.newsight.backend.accounts.presentation.dto.AdminDashboardLoginLogsDto
 import com.newsight.backend.accounts.presentation.dto.AdminDashboardLoginLogsDto.AdminDashboardLoginLogsResponseDto;
 import com.newsight.backend.accounts.presentation.dto.AdminDashboardLoginLogsDto.LoginLogItemDto;
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.validation.Valid;
 import java.time.Duration;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
@@ -60,7 +61,7 @@ public class AccountsController {
     // POST /api/auth/register/precheck/user-id/
     // ─────────────────────────────────────────────────────────
     @PostMapping({"/auth/register/precheck/user-id", "/auth/register/precheck/user-id/"})
-    public ResponseEntity<IdPrecheckResponseDto> precheckUserId(@RequestBody IdPrecheckRequestDto body) {
+    public ResponseEntity<IdPrecheckResponseDto> precheckUserId(@Valid @RequestBody IdPrecheckRequestDto body) {
         AccountsService.IdPrecheckResult r = accountsService.precheckUserId(body.userId());
 
         return ResponseEntity.ok(new IdPrecheckResponseDto(
@@ -78,7 +79,7 @@ public class AccountsController {
     // POST /api/auth/register/precheck/email/
     // ─────────────────────────────────────────────────────────
     @PostMapping({"/auth/register/precheck/email", "/auth/register/precheck/email/"})
-    public ResponseEntity<EmailPrecheckResponseDto> precheckEmail(@RequestBody EmailPrecheckRequestDto body) {
+    public ResponseEntity<EmailPrecheckResponseDto> precheckEmail(@Valid @RequestBody EmailPrecheckRequestDto body) {
         AccountsService.EmailPrecheckResult r = accountsService.precheckEmail(body.email());
 
         return ResponseEntity.ok(new EmailPrecheckResponseDto(
@@ -97,7 +98,7 @@ public class AccountsController {
     // POST /api/auth/register/
     // ─────────────────────────────────────────────────────────
     @PostMapping({"/auth/register", "/auth/register/"})
-    public ResponseEntity<SignUpResponseDto> signUp(@RequestBody SignUpRequestDto body) {
+    public ResponseEntity<SignUpResponseDto> signUp(@Valid @RequestBody SignUpRequestDto body) {
         AccountsService.SignUpCommand cmd = new AccountsService.SignUpCommand(
                 body.userId(),
                 body.email(),
@@ -122,7 +123,7 @@ public class AccountsController {
     // ─────────────────────────────────────────────────────────
     @PostMapping({"/auth/login", "/auth/login/"})
     public ResponseEntity<LoginResponseDto> login(
-            @RequestBody LoginRequestDto body,
+            @Valid @RequestBody LoginRequestDto body,
             HttpServletRequest request
     ) {
         String ip = extractClientIp(request);
@@ -179,7 +180,8 @@ public class AccountsController {
     // ─────────────────────────────────────────────────────────
     @PostMapping({"/auth/logout", "/auth/logout/"})
     public ResponseEntity<LogoutResponseDto> logout(HttpServletRequest request) {
-        accountsService.logout();
+        String refresh = readCookie(request, REFRESH_COOKIE_NAME);
+        accountsService.logout(refresh);
         ResponseCookie cleared = clearRefreshCookie(request);
 
         return ResponseEntity.ok()
@@ -192,7 +194,7 @@ public class AccountsController {
     // POST /api/auth/find-id
     // ─────────────────────────────────────────────────────────
     @PostMapping({"/auth/find-id", "/auth/find-id/"})
-    public ResponseEntity<FindIdResponseDto> findId(@RequestBody FindIdRequestDto body) {
+    public ResponseEntity<FindIdResponseDto> findId(@Valid @RequestBody FindIdRequestDto body) {
         AccountsService.FindIdResult r = accountsService.findUserId(
                 new AccountsService.FindIdCommand(body.email(), body.name())
         );
@@ -204,7 +206,7 @@ public class AccountsController {
     // POST /api/auth/find-password
     // ─────────────────────────────────────────────────────────
     @PostMapping({"/auth/find-password", "/auth/find-password/"})
-    public ResponseEntity<FindPasswordResponseDto> findPassword(@RequestBody FindPasswordRequestDto body) {
+    public ResponseEntity<FindPasswordResponseDto> findPassword(@Valid @RequestBody FindPasswordRequestDto body) {
         AccountsService.FindPasswordResult r = accountsService.findPassword(
                 new AccountsService.FindPasswordCommand(body.userId(), body.name(), body.email())
         );
@@ -218,7 +220,7 @@ public class AccountsController {
     @PostMapping({"/auth/change-password", "/auth/change-password/"})
     public ResponseEntity<ChangePasswordResponseDto> changePassword(
             @AuthenticationPrincipal Jwt jwt,
-            @RequestBody ChangePasswordRequestDto body,
+            @Valid @RequestBody ChangePasswordRequestDto body,
             HttpServletRequest request
     ) {
         Long actorUserSeq = requireUserSeq(jwt);
@@ -332,7 +334,7 @@ public class AccountsController {
     @PostMapping({"/admins/promote", "/admins/promote/"})
     public ResponseEntity<AdminPromoteResponseDto> promote(
             @AuthenticationPrincipal Jwt jwt,
-            @RequestBody AdminPromoteRequestDto body
+            @Valid @RequestBody AdminPromoteRequestDto body
     ) {
         Long actorUserSeq = requireUserSeq(jwt);
 
@@ -354,7 +356,7 @@ public class AccountsController {
     @PostMapping({"/admins/demote", "/admins/demote/"})
     public ResponseEntity<AdminDemoteResponseDto> demote(
             @AuthenticationPrincipal Jwt jwt,
-            @RequestBody AdminDemoteRequestDto body
+            @Valid @RequestBody AdminDemoteRequestDto body
     ) {
         Long actorUserSeq = requireUserSeq(jwt);
 
@@ -375,7 +377,7 @@ public class AccountsController {
     @PostMapping({"/admins/users/withdraw", "/admins/users/withdraw/"})
     public ResponseEntity<WithdrawResponseDto> withdraw(
             @AuthenticationPrincipal Jwt jwt,
-            @RequestBody WithdrawRequestDto body
+            @Valid @RequestBody WithdrawRequestDto body
     ) {
         Long actorUserSeq = requireUserSeq(jwt);
 
@@ -422,11 +424,12 @@ public class AccountsController {
         // 로컬에서 http로 테스트하려면 프론트/백을 같은 사이트로 맞추거나(동일 도메인),
         // HTTPS 터널(예: https) 환경으로 테스트하는 것을 권장.
         boolean secure = isHttps(request);
+        String sameSite = secure ? "None" : "Lax";
 
         return ResponseCookie.from(REFRESH_COOKIE_NAME, refreshToken == null ? "" : refreshToken)
                 .httpOnly(true)
                 .secure(secure)
-                .sameSite("None")
+                .sameSite(sameSite)
                 .path("/api/auth")
                 .maxAge(maxAgeSec)
                 .build();
@@ -434,11 +437,12 @@ public class AccountsController {
 
     private ResponseCookie clearRefreshCookie(HttpServletRequest request) {
         boolean secure = isHttps(request);
+        String sameSite = secure ? "None" : "Lax";
 
         return ResponseCookie.from(REFRESH_COOKIE_NAME, "")
                 .httpOnly(true)
                 .secure(secure)
-                .sameSite("None")
+                .sameSite(sameSite)
                 .path("/api/auth")
                 .maxAge(0)
                 .build();

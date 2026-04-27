@@ -96,11 +96,26 @@ public class User {
     @Column(name = "PASSWORD_HASH", nullable = false, length = 255)
     private String passwordHash;
 
+    @Column(name = "REFRESH_TOKEN_VERSION", nullable = false)
+    @Builder.Default
+    private Integer refreshTokenVersion = 0;
+
     @PrePersist
     void prePersist() {
         if (this.joinedAt == null) {
             this.joinedAt = LocalDateTime.now();
         }
+        if (this.refreshTokenVersion == null) {
+            this.refreshTokenVersion = 0;
+        }
+    }
+
+    public int currentRefreshTokenVersion() {
+        return refreshTokenVersion == null ? 0 : refreshTokenVersion;
+    }
+
+    public void rotateRefreshTokenVersion() {
+        this.refreshTokenVersion = currentRefreshTokenVersion() + 1;
     }
 
     @Override

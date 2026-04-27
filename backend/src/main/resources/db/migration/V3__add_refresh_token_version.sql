@@ -1,0 +1,3 @@
+-- Add server-side refresh token invalidation support.
+ALTER TABLE T_USER
+  ADD COLUMN REFRESH_TOKEN_VERSION INT NOT NULL DEFAULT 0 AFTER PASSWORD_HASH;

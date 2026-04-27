@@ -3,6 +3,8 @@ package com.newsight.backend.accounts.presentation.dto;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 
@@ -15,29 +17,39 @@ public final class SignUpDto {
 
     public record SignUpRequestDto(
             @JsonProperty("user_id")
+            @NotBlank
             String userId,
 
+            @NotBlank
             String email,
 
+            @NotBlank
             String password,
 
             @JsonProperty("password2")
+            @NotBlank
             String password2,
 
+            @NotBlank
             String username,
 
             @JsonProperty("birth_date")
+            @NotNull
             LocalDate birthDate,
 
+            @NotBlank
             String gender, // "M" | "F"
 
             @JsonProperty("agree_whether")
+            @NotNull
             Boolean agreeWhether,
 
             @JsonProperty("id_check_token")
+            @NotBlank
             String idCheckToken,
 
             @JsonProperty("email_check_token")
+            @NotBlank
             String emailCheckToken
     ) {}
 

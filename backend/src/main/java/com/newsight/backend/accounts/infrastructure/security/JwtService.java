@@ -77,6 +77,10 @@ public class JwtService {
      * - token_type=refresh가 아니면 실패
      */
     public Long verifyRefreshAndGetUserSeq(String refreshJwt) {
+        return verifyRefresh(refreshJwt).userSeq();
+    }
+
+    public RefreshTokenClaims verifyRefresh(String refreshJwt) {
         String jwt = stripBearer(refreshJwt);
 
         try {
@@ -126,7 +130,8 @@ public class JwtService {
                 throw new IllegalArgumentException("invalid user seq");
             }
 
-            return userSeq;
+            Integer refreshTokenVersion = toInteger(claims.get("rtv"));
+            return new RefreshTokenClaims(userSeq, refreshTokenVersion == null ? 0 : refreshTokenVersion);
 
         } catch (Exception e) {
             throw new IllegalArgumentException("리프레시 토큰이 유효하지 않거나 만료되었습니다.");
@@ -160,6 +165,7 @@ public class JwtService {
                 .claim("userId", safe(user.getUserId()))
                 .claim("email", safe(user.getEmail()))
                 .claim("gradeCode", gradeCode == null ? 0 : gradeCode)
+                .claim("rtv", user.currentRefreshTokenVersion())
                 // 중요: HS256 강제 (키 길이에 따라 자동으로 HS512로 바뀌는 상황 방지)
                 .signWith(key, Jwts.SIG.HS256)
                 .compact();
@@ -193,6 +199,13 @@ public class JwtService {
         return null;
     }
 
+    private static Integer toInteger(Object v) {
+        Long value = toLong(v);
+        if (value == null) return null;
+        if (value > Integer.MAX_VALUE || value < Integer.MIN_VALUE) return null;
+        return value.intValue();
+    }
+
     private static boolean audienceMatches(Object audObj, String expected) {
         if (audObj == null) return false;
 
@@ -209,4 +222,6 @@ public class JwtService {
 
         return expected.equals(String.valueOf(audObj));
     }
+
+    public record RefreshTokenClaims(Long userSeq, int refreshTokenVersion) {}
 }

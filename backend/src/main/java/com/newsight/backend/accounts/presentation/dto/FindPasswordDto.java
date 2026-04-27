@@ -3,6 +3,7 @@ package com.newsight.backend.accounts.presentation.dto;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import jakarta.validation.constraints.NotBlank;
 
 /**
  * /api/auth/find-password/
@@ -13,8 +14,13 @@ public final class FindPasswordDto {
 
     public record FindPasswordRequestDto(
             @JsonProperty("user_id")
+            @NotBlank
             String userId,
+
+            @NotBlank
             String name,
+
+            @NotBlank
             String email
     ) {}
 

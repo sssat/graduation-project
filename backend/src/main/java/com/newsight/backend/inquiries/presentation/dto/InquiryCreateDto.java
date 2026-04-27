@@ -4,6 +4,8 @@ package com.newsight.backend.inquiries.presentation.dto;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.newsight.backend.inquiries.application.service.InquiriesService;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
 import java.time.LocalDateTime;
 
 public final class InquiryCreateDto {
@@ -15,9 +17,16 @@ public final class InquiryCreateDto {
      */
     public record InquiryCreateRequestDto(
             @JsonProperty("inquiry_type")
+            @NotBlank
             String inquiryType,
+
+            @NotBlank
+            @Size(max = 200)
             String title,
+
+            @NotBlank
             String message,
+
             @JsonProperty("is_private")
             Boolean isPrivate
     ) {

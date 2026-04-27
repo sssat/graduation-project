@@ -3,6 +3,7 @@ package com.newsight.backend.accounts.presentation.dto;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import jakarta.validation.constraints.NotBlank;
 
 /**
  * /api/auth/register/precheck/email/
@@ -12,6 +13,7 @@ public final class EmailPrecheckDto {
     private EmailPrecheckDto() {}
 
     public record EmailPrecheckRequestDto(
+            @NotBlank
             String email
     ) {}
 

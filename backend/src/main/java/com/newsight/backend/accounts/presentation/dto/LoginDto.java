@@ -3,6 +3,7 @@ package com.newsight.backend.accounts.presentation.dto;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import jakarta.validation.constraints.NotBlank;
 
 /**
  * /api/auth/login/
@@ -14,7 +15,10 @@ public final class LoginDto {
 
     public record LoginRequestDto(
             @JsonProperty("user_id")
+            @NotBlank
             String userId,
+
+            @NotBlank
             String password
     ) {}
 

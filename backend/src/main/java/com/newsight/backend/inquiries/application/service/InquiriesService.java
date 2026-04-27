@@ -561,11 +561,14 @@ public class InquiriesService {
             return predicates;
         }
 
-        // 변경(USER): 목록은 비공개 포함 전체 노출 (mine=true면 내 글만)
+        // USER: 공개 글 + 본인 비공개 글만 노출한다.
         if (mineOnly) {
             predicates.add(cb.equal(inquirerJoin.get("userSeq"), actorUserSeq));
         } else {
-            // 아무 제약 없음: 전체 노출
+            predicates.add(cb.or(
+                    cb.isFalse(root.get("isPrivate")),
+                    cb.equal(inquirerJoin.get("userSeq"), actorUserSeq)
+            ));
         }
 
         return predicates;

@@ -3,6 +3,7 @@ package com.newsight.backend.accounts.presentation.dto;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import jakarta.validation.constraints.NotBlank;
 
 /**
  * /api/auth/find-id/
@@ -12,7 +13,10 @@ public final class FindIdDto {
     private FindIdDto() {}
 
     public record FindIdRequestDto(
+            @NotBlank
             String email,
+
+            @NotBlank
             String name
     ) {}
 

@@ -9,6 +9,7 @@ import com.newsight.backend.inquiries.presentation.dto.AdminInquiryListDto;
 import com.newsight.backend.inquiries.presentation.dto.InquiryCreateDto;
 import com.newsight.backend.inquiries.presentation.dto.InquiryDetailDto;
 import com.newsight.backend.inquiries.presentation.dto.InquiryListDto;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -79,7 +80,7 @@ public class InquiriesController {
     @PostMapping({"/api/inquiries", "/api/inquiries/"})
     public ResponseEntity<InquiryCreateDto.InquiryCreateResponseDto> createInquiry(
             @AuthenticationPrincipal Jwt jwt,
-            @RequestBody InquiryCreateDto.InquiryCreateRequestDto request
+            @Valid @RequestBody InquiryCreateDto.InquiryCreateRequestDto request
     ) {
         Long actorUserSeq = extractUserSeq(jwt);
 
@@ -137,7 +138,7 @@ public class InquiriesController {
     public ResponseEntity<AdminInquiryAnswerDto.AdminInquiryAnswerResponseDto> saveOrUpdateAdminAnswer(
             @AuthenticationPrincipal Jwt jwt,
             @PathVariable("inquiry_seq") Long inquirySeq,
-            @RequestBody AdminInquiryAnswerDto.AdminInquiryAnswerRequestDto request
+            @Valid @RequestBody AdminInquiryAnswerDto.AdminInquiryAnswerRequestDto request
     ) {
         Long actorUserSeq = extractUserSeq(jwt);
 

@@ -3,6 +3,7 @@ package com.newsight.backend.accounts.presentation.dto;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import jakarta.validation.constraints.NotNull;
 import java.time.LocalDateTime;
 
 /**
@@ -14,6 +15,7 @@ public final class AdminDemoteDto {
 
     public record AdminDemoteRequestDto(
             @JsonProperty("user_seq")
+            @NotNull
             Long userSeq
     ) {}
 
