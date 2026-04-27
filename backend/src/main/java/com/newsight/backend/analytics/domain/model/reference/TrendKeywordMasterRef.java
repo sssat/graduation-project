@@ -26,4 +26,4 @@ public class TrendKeywordMasterRef {
 
     @Column(name = "CREATED_AT", nullable = false, insertable = false, updatable = false)
     private LocalDateTime createdAt;
-}g
+}
