@@ -307,12 +307,12 @@ export default function KeywordTrendTimelineAnalysisSection({
     <article className={styles.card}>
       <div className={styles.cardHeader}>
         <div>
-          <div className={styles.cardTitle}>검색 관심도 흐름</div>
+          <div className={styles.cardTitle}>검색어 관심도 흐름</div>
           <div className={styles.cardSub}>
             {trendTimelineRangeLabel} 기준 {displayKeyword} 키워드의 검색 관심도 변화를 보여줍니다.
           </div>
         </div>
-        <span className={styles.badgeSoft}>관심도 변화</span>
+        <span className={styles.badgeSoft}>시계열 분석</span>
       </div>
 
       {dailyTrendTimeline.items.length ? (

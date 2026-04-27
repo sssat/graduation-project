@@ -3,6 +3,7 @@
 # Terms listed here are extracted before Komoran tokenization and kept as-is.
 
 SK하이닉스
+하이 닉스
 하이닉스
 SK 하이닉스
 삼천당
@@ -20,3 +21,7 @@ S&P500
 삼성 전자
 니케이
 항셍
+1분기
+2분기
+3분기
+4분기
