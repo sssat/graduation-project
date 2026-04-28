@@ -4,6 +4,7 @@ import com.newsight.backend.accounts.application.service.AccountsService;
 import com.newsight.backend.accounts.presentation.dto.AdminDashboardLoginLogsDto.AdminDashboardLoginLogsRequestDto;
 import com.newsight.backend.accounts.presentation.dto.AdminDashboardLoginLogsDto.AdminDashboardLoginLogsResponseDto;
 import com.newsight.backend.accounts.presentation.dto.AdminDashboardLoginLogsDto.LoginLogItemDto;
+import com.newsight.backend.common.security.CurrentUserExtractor;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -27,7 +28,7 @@ public class AdminLoginLogController {
             @RequestParam(value = "page", required = false) Integer page,
             @RequestParam(value = "size", required = false) Integer size
     ) {
-        Long actorUserSeq = AccountControllerSupport.requireUserSeq(jwt);
+        Long actorUserSeq = CurrentUserExtractor.requireUserSeq(jwt);
 
         AdminDashboardLoginLogsRequestDto req = new AdminDashboardLoginLogsRequestDto(page, size);
 

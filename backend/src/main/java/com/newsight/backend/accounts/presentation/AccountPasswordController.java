@@ -3,6 +3,7 @@ package com.newsight.backend.accounts.presentation;
 import com.newsight.backend.accounts.application.service.AccountsService;
 import com.newsight.backend.accounts.presentation.dto.ChangePasswordDto.ChangePasswordRequestDto;
 import com.newsight.backend.accounts.presentation.dto.ChangePasswordDto.ChangePasswordResponseDto;
+import com.newsight.backend.common.security.CurrentUserExtractor;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -28,7 +29,7 @@ public class AccountPasswordController {
             @Valid @RequestBody ChangePasswordRequestDto body,
             HttpServletRequest request
     ) {
-        Long actorUserSeq = AccountControllerSupport.requireUserSeq(jwt);
+        Long actorUserSeq = CurrentUserExtractor.requireUserSeq(jwt);
 
         AccountsService.ChangePasswordResult r = accountsService.changePassword(
                 new AccountsService.ChangePasswordCommand(

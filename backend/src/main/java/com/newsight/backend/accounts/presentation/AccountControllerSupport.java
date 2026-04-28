@@ -4,43 +4,12 @@ import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import java.time.Duration;
 import org.springframework.http.ResponseCookie;
-import org.springframework.security.authentication.AuthenticationCredentialsNotFoundException;
-import org.springframework.security.oauth2.jwt.Jwt;
 
 final class AccountControllerSupport {
 
     static final String REFRESH_COOKIE_NAME = "refresh";
 
     private AccountControllerSupport() {}
-
-    static Long requireUserSeq(Jwt jwt) {
-        if (jwt == null) {
-            throw new AuthenticationCredentialsNotFoundException("濡쒓렇?몄씠 ?꾩슂?⑸땲??");
-        }
-
-        Object v = jwt.getClaim("user_seq");
-        if (v instanceof Number n) {
-            return n.longValue();
-        }
-        if (v instanceof String s) {
-            try {
-                return Long.parseLong(s.trim());
-            } catch (Exception ignore) {
-                // fall through
-            }
-        }
-
-        try {
-            String sub = jwt.getSubject();
-            if (sub != null && !sub.isBlank()) {
-                return Long.parseLong(sub.trim());
-            }
-        } catch (Exception ignore) {
-            // ignore
-        }
-
-        throw new AuthenticationCredentialsNotFoundException("濡쒓렇?몄씠 ?꾩슂?⑸땲??");
-    }
 
     static ResponseCookie buildRefreshCookie(String refreshToken, HttpServletRequest request, int refreshMinutes) {
         long maxAgeSec = Math.max(60L, Duration.ofMinutes(Math.max(1, refreshMinutes)).toSeconds());

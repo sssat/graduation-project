@@ -10,6 +10,7 @@ import com.newsight.backend.accounts.presentation.dto.UserListDto.UserListReques
 import com.newsight.backend.accounts.presentation.dto.UserListDto.UserListResponseDto;
 import com.newsight.backend.accounts.presentation.dto.WithdrawDto.WithdrawRequestDto;
 import com.newsight.backend.accounts.presentation.dto.WithdrawDto.WithdrawResponseDto;
+import com.newsight.backend.common.security.CurrentUserExtractor;
 import jakarta.validation.Valid;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
@@ -37,7 +38,7 @@ public class AdminUserController {
             @RequestParam(value = "size", required = false) Integer size,
             @RequestParam(value = "q", required = false) String q
     ) {
-        Long actorUserSeq = AccountControllerSupport.requireUserSeq(jwt);
+        Long actorUserSeq = CurrentUserExtractor.requireUserSeq(jwt);
 
         UserListRequestDto req = new UserListRequestDto(page, size, q);
 
@@ -77,7 +78,7 @@ public class AdminUserController {
             @AuthenticationPrincipal Jwt jwt,
             @Valid @RequestBody AdminPromoteRequestDto body
     ) {
-        Long actorUserSeq = AccountControllerSupport.requireUserSeq(jwt);
+        Long actorUserSeq = CurrentUserExtractor.requireUserSeq(jwt);
 
         AccountsService.PromoteResult r = accountsService.promoteToAdmin(body.userSeq(), actorUserSeq);
 
@@ -95,7 +96,7 @@ public class AdminUserController {
             @AuthenticationPrincipal Jwt jwt,
             @Valid @RequestBody AdminDemoteRequestDto body
     ) {
-        Long actorUserSeq = AccountControllerSupport.requireUserSeq(jwt);
+        Long actorUserSeq = CurrentUserExtractor.requireUserSeq(jwt);
 
         AccountsService.DemoteResult r = accountsService.demoteToUser(body.userSeq(), actorUserSeq);
 
@@ -112,7 +113,7 @@ public class AdminUserController {
             @AuthenticationPrincipal Jwt jwt,
             @Valid @RequestBody WithdrawRequestDto body
     ) {
-        Long actorUserSeq = AccountControllerSupport.requireUserSeq(jwt);
+        Long actorUserSeq = CurrentUserExtractor.requireUserSeq(jwt);
 
         AccountsService.WithdrawResult r = accountsService.withdrawUser(body.userSeq(), actorUserSeq);
 
