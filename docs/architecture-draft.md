@@ -86,7 +86,110 @@ flowchart TB
   AnalysisJobs --> MySQL
 ```
 
-## 3. 데이터 파이프라인 흐름
+## 3. 백엔드 레이어드 아키텍처
+
+```mermaid
+flowchart TB
+  Client["프론트엔드"]
+
+  subgraph Backend["백엔드: Spring Boot"]
+    subgraph FeatureModules["기능 모듈"]
+      Accounts["accounts<br/>계정 / 인증 / 관리자"]
+      Analytics["analytics<br/>뉴스 분석 조회 / 대시보드"]
+      Inquiries["inquiries<br/>문의 게시판 / 관리자 답변"]
+    end
+
+    Presentation["Presentation Layer<br/>Controller<br/>Request / Response DTO"]
+    Application["Application Layer<br/>Service<br/>유스케이스 처리"]
+    Domain["Domain Layer<br/>Entity / Domain Model<br/>비즈니스 규칙"]
+    Infrastructure["Infrastructure Layer<br/>Repository / JPA / JDBC<br/>Security / Mail"]
+    Common["Common<br/>공통 예외 처리 / 웹 설정"]
+  end
+
+  DB[("MySQL")]
+  Mail["메일 서버"]
+
+  Client -->|"HTTP REST"| Presentation
+  FeatureModules -.-> Presentation
+  FeatureModules -.-> Application
+  FeatureModules -.-> Domain
+  FeatureModules -.-> Infrastructure
+
+  Presentation --> Application
+  Application --> Domain
+  Application --> Infrastructure
+  Infrastructure --> DB
+  Infrastructure --> Mail
+  Common -.-> Presentation
+  Common -.-> Application
+```
+
+## 4. 프론트엔드 기능 기반 아키텍처
+
+```mermaid
+flowchart TB
+  Browser["브라우저"]
+
+  subgraph Frontend["프론트엔드: React + TypeScript"]
+    Main["main.tsx<br/>애플리케이션 진입점"]
+
+    subgraph AppLayer["app"]
+      App["App.tsx"]
+      Router["router<br/>페이지 라우팅"]
+      Layout["layout<br/>공통 레이아웃"]
+      Styles["styles<br/>전역 스타일"]
+    end
+
+    subgraph FeatureLayer["features"]
+      Analytics["analytics<br/>홈, 키워드 상세, 언론사 비교"]
+      Auth["auth<br/>로그인, 회원가입, 아이디/비밀번호 찾기"]
+      Inquiries["inquiries<br/>문의 목록, 상세, 등록"]
+      Admin["admin<br/>관리자 대시보드, 회원 관리"]
+    end
+
+    subgraph SharedLayer["shared / utils"]
+      SharedComponents["공통 컴포넌트<br/>Header, Footer"]
+      Utils["공통 유틸<br/>회원가입 검증 등"]
+    end
+
+    subgraph ApiLayer["api"]
+      Http["http.ts<br/>Axios 인스턴스 / 토큰 처리"]
+      AccountsApi["accounts.ts"]
+      AnalyticsApi["analytics.ts"]
+      InquiriesApi["inquiries.ts"]
+      Types["types.ts"]
+    end
+  end
+
+  Backend["백엔드 API"]
+
+  Browser --> Main
+  Main --> App
+  App --> Router
+  Router --> Layout
+  Router --> Analytics
+  Router --> Auth
+  Router --> Inquiries
+  Router --> Admin
+
+  Analytics --> AnalyticsApi
+  Auth --> AccountsApi
+  Inquiries --> InquiriesApi
+  Admin --> AccountsApi
+  Admin --> AnalyticsApi
+  Admin --> InquiriesApi
+
+  AccountsApi --> Http
+  AnalyticsApi --> Http
+  InquiriesApi --> Http
+  Http -->|"HTTP REST / JWT"| Backend
+
+  FeatureLayer --> SharedComponents
+  FeatureLayer --> Utils
+  ApiLayer --> Types
+```
+
+## 5. 데이터 파이프라인 흐름
 
 ```mermaid
 flowchart LR
@@ -125,7 +228,37 @@ flowchart LR
   SearchTimeline --> DB
 ```
 
-## 4. 키워드 상세 조회 흐름
+## 6. 배포 및 운영 아키텍처
+
+```mermaid
+flowchart LR
+  User["일반 사용자"]
+  Admin["관리자"]
+
+  subgraph AppServer["EC2 t3.small<br/>프론트엔드 / 백엔드 공용 서버"]
+    Web["React 정적 파일"]
+    Api["Spring Boot Backend API"]
+  end
+
+  subgraph BatchServer["EC2 m6i.xlarge<br/>크롤링 및 분석 전용 서버"]
+    Scheduler["자동 스케줄러<br/>하루 약 90분 실행"]
+    Pipeline["Python Data Pipeline<br/>수집 / 전처리 / 분석"]
+  end
+
+  DB[("MySQL<br/>서비스 데이터 / 분석 결과")]
+  External["외부 API<br/>Google Trends / Naver News<br/>Naver DataLab / OpenAI API"]
+
+  User -->|"웹 접속"| Web
+  Admin -->|"관리자 화면 접속"| Web
+  Web -->|"API 요청"| Api
+  Api -->|"조회 / 저장"| DB
+
+  Scheduler -->|"서버 시작 / 배치 실행 / 서버 종료"| Pipeline
+  Pipeline -->|"데이터 수집 / 요약 요청"| External
+  Pipeline -->|"수집 및 분석 결과 저장"| DB
+```
+
+## 7. 키워드 상세 조회 흐름
 
 ```mermaid
 sequenceDiagram
@@ -153,7 +286,7 @@ sequenceDiagram
   F-->>U: 차트, 워드클라우드, 네트워크로 시각화
 ```
 
-## 5. 인증 흐름
+## 8. 인증 흐름
 
 ```mermaid
 sequenceDiagram
@@ -176,10 +309,13 @@ sequenceDiagram
   B-->>F: 새 Access Token 반환
 ```
 
-## 6. 다이어그램 표기 기준
+## 9. 다이어그램 표기 기준
 
 - 큰 그림에서는 `Frontend`, `Backend API`, `Data Pipeline`, `MySQL`, `External APIs`만 보여준다.
 - 상세 그림에서는 기능 단위를 `Accounts`, `Analytics`, `Inquiries`, `Pipeline Jobs`로 나눈다.
+- 백엔드 구조는 `Presentation`, `Application`, `Domain`, `Infrastructure` 계층으로 표현한다.
+- 프론트엔드는 `app`, `features`, `api`, `shared` 중심의 기능 기반 구조로 표현한다.
+- 운영 구조는 프론트엔드/백엔드 공용 서버와 크롤링/분석 전용 서버를 분리해서 표현한다.
 - 화살표에는 통신 방식이나 데이터 성격을 적는다: `REST API`, `JWT`, `JPA/JDBC`, `수집 데이터`, `분석 결과`.
 - 외부 시스템은 서비스 바깥에 둔다: Google Trends, Naver News, Naver DataLab, OpenAI API, Mail Server.
 - DB는 계정/문의 데이터와 분석 데이터를 구분해서 표현한다.
