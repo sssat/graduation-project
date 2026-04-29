@@ -1,8 +1,6 @@
-# Newsight Architecture Draft
+# Newsight 아키텍처 설계서
 
-이 문서는 현재 저장소 구조를 기준으로 작성한 아키텍처 그림 초안입니다.
-
-## 1. System Context
+## 1. 시스템 전체 아키텍처
 
 ```mermaid
 flowchart LR
@@ -10,9 +8,9 @@ flowchart LR
   Admin["관리자 / 최고 관리자"]
 
   subgraph Newsight["Newsight 서비스"]
-    Frontend["React Frontend<br/>Vite, TypeScript<br/>분석 화면 / 문의 게시판 / 관리자 화면"]
-    Backend["Spring Boot Backend API<br/>인증, 계정, 문의, 분석 조회 API"]
-    Pipeline["Python Data Pipeline<br/>뉴스/트렌드 수집 및 분석 배치"]
+    Frontend["프론트엔드<br/>React, Vite, TypeScript<br/>분석 화면 / 문의 게시판 / 관리자 화면"]
+    Backend["백엔드 API<br/>Spring Boot<br/>인증, 계정, 문의, 분석 조회 API"]
+    Pipeline["데이터 파이프라인<br/>Python<br/>뉴스/트렌드 수집 및 분석 배치"]
     DB[("MySQL<br/>회원/문의/뉴스/분석 결과")]
   end
 
@@ -20,7 +18,7 @@ flowchart LR
   NaverNews["Naver News"]
   NaverDataLab["Naver DataLab Open API"]
   OpenAI["OpenAI API<br/>뉴스 요약 생성"]
-  Mail["Mail Server<br/>임시 비밀번호 등"]
+  Mail["메일 서버<br/>임시 비밀번호 등"]
 
   User -->|"웹 화면 이용"| Frontend
   Admin -->|"관리자 화면 이용"| Frontend
@@ -37,31 +35,31 @@ flowchart LR
   Backend -->|"분석 결과 조회"| DB
 ```
 
-## 2. Container / Component View
+## 2. 컨테이너 및 컴포넌트 구조
 
 ```mermaid
 flowchart TB
-  subgraph Client["Frontend: React + TypeScript"]
-    Router["React Router<br/>Home / Keyword Detail / Media Compare / Inquiry / Admin"]
-    ApiClient["Axios API Client<br/>accounts / analytics / inquiries"]
-    AuthState["Auth Context<br/>Access Token in memory/localStorage"]
-    Charts["Visualization<br/>Chart.js / D3 Force / D3 Cloud"]
+  subgraph Client["프론트엔드: React + TypeScript"]
+    Router["라우팅<br/>홈 / 키워드 상세 / 언론사 비교 / 문의 / 관리자"]
+    ApiClient["API 클라이언트<br/>Axios<br/>accounts / analytics / inquiries"]
+    AuthState["인증 상태 관리<br/>Access Token in memory/localStorage"]
+    Charts["시각화<br/>Chart.js / D3 Force / D3 Cloud"]
   end
 
-  subgraph Api["Backend: Spring Boot"]
+  subgraph Api["백엔드: Spring Boot"]
     Security["Spring Security<br/>JWT, Refresh Cookie, CORS"]
-    Accounts["Accounts Module<br/>회원가입, 로그인, 비밀번호, 관리자 권한"]
-    Analytics["Analytics Module<br/>상위 키워드, 상세 분석, 언론사 비교, 대시보드"]
-    Inquiries["Inquiries Module<br/>문의 등록/조회/관리자 답변"]
-    Persistence["Persistence Layer<br/>Spring Data JPA + Spring JDBC"]
-    Flyway["Flyway Migration<br/>계정/문의 스키마 관리"]
+    Accounts["계정 모듈<br/>회원가입, 로그인, 비밀번호, 관리자 권한"]
+    Analytics["분석 모듈<br/>상위 키워드, 상세 분석, 언론사 비교, 대시보드"]
+    Inquiries["문의 모듈<br/>문의 등록/조회/관리자 답변"]
+    Persistence["영속성 계층<br/>Spring Data JPA + Spring JDBC"]
+    Flyway["DB 마이그레이션<br/>Flyway<br/>계정/문의 스키마 관리"]
   end
 
-  subgraph Batch["Data Pipeline: Python"]
-    TrendCrawler["Trend Crawler<br/>Google Trends 키워드 수집"]
-    NewsCrawler["News Crawler<br/>Naver 기사/댓글 수집"]
-    Preprocess["Preprocess<br/>공통 전처리"]
-    AnalysisJobs["Analysis Jobs<br/>집계, 최종 랭킹, 요약, 감성, 편향,<br/>워드클라우드, 공동언급 네트워크, 검색량"]
+  subgraph Batch["데이터 파이프라인: Python"]
+    TrendCrawler["트렌드 수집기<br/>Google Trends 키워드 수집"]
+    NewsCrawler["뉴스 수집기<br/>Naver 기사/댓글 수집"]
+    Preprocess["전처리<br/>공통 데이터 정제"]
+    AnalysisJobs["분석 작업<br/>집계, 최종 랭킹, 요약, 감성, 편향,<br/>워드클라우드, 공동언급 네트워크, 검색량"]
     PipelineConfig["pipeline.env / settings.py"]
   end
 
@@ -88,7 +86,7 @@ flowchart TB
   AnalysisJobs --> MySQL
 ```
 
-## 3. Data Pipeline Flow
+## 3. 데이터 파이프라인 흐름
 
 ```mermaid
 flowchart LR
@@ -127,16 +125,16 @@ flowchart LR
   SearchTimeline --> DB
 ```
 
-## 4. Keyword Detail Sequence
+## 4. 키워드 상세 조회 흐름
 
 ```mermaid
 sequenceDiagram
   actor U as 사용자
-  participant F as React Frontend
-  participant B as Spring Boot API
+  participant F as 프론트엔드
+  participant B as 백엔드 API
   participant D as MySQL
-  participant P as Python Data Pipeline
-  participant E as External APIs
+  participant P as 데이터 파이프라인
+  participant E as 외부 API
 
   P->>E: Google Trends / Naver News / Naver DataLab / OpenAI 호출
   E-->>P: 트렌드, 기사, 댓글, 검색량, 요약 결과
@@ -155,13 +153,13 @@ sequenceDiagram
   F-->>U: 차트, 워드클라우드, 네트워크로 시각화
 ```
 
-## 5. Authentication Flow
+## 5. 인증 흐름
 
 ```mermaid
 sequenceDiagram
   actor U as 사용자
-  participant F as React Frontend
-  participant B as Spring Boot Auth API
+  participant F as 프론트엔드
+  participant B as 백엔드 인증 API
   participant D as MySQL
 
   U->>F: 로그인 정보 입력
@@ -178,13 +176,12 @@ sequenceDiagram
   B-->>F: 새 Access Token 반환
 ```
 
-## 6. Diagram Rules For This Project
+## 6. 다이어그램 표기 기준
 
 - 큰 그림에서는 `Frontend`, `Backend API`, `Data Pipeline`, `MySQL`, `External APIs`만 보여준다.
 - 상세 그림에서는 기능 단위를 `Accounts`, `Analytics`, `Inquiries`, `Pipeline Jobs`로 나눈다.
 - 화살표에는 통신 방식이나 데이터 성격을 적는다: `REST API`, `JWT`, `JPA/JDBC`, `수집 데이터`, `분석 결과`.
 - 외부 시스템은 서비스 바깥에 둔다: Google Trends, Naver News, Naver DataLab, OpenAI API, Mail Server.
-- DB 테이블을 전부 한 장에 넣지 말고, 필요할 때만 계정/문의 테이블과 분석 테이블을 나누어 보인다.
-- 발표용은 System Context 1장 + Data Pipeline Flow 1장 조합이 가장 무난하다.
-- 구현 설명용은 Container / Component View와 Sequence Diagram을 함께 사용한다.
-
+- DB는 계정/문의 데이터와 분석 데이터를 구분해서 표현한다.
+- 발표 자료에서는 시스템 전체 아키텍처와 데이터 파이프라인 흐름을 중심으로 구성한다.
+- 구현 설명에서는 컨테이너 및 컴포넌트 구조와 주요 기능 흐름을 함께 사용한다.
