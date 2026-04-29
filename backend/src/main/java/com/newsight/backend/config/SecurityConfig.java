@@ -159,7 +159,15 @@ public class SecurityConfig {
                         "/v3/api-docs.yaml",
                         "/v3/api-docs.yaml/**",
                         "/swagger-ui.html",
-                        "/swagger-ui/**"
+                        "/swagger-ui/**",
+                        "/api/v3/api-docs",
+                        "/api/v3/api-docs/**",
+                        "/api/v3/api-docs.yaml",
+                        "/api/v3/api-docs.yaml/**",
+                        "/api/docs",
+                        "/api/docs/**",
+                        "/api/swagger-ui.html",
+                        "/api/swagger-ui/**"
                 ).permitAll()
 
                 // accounts (public)
