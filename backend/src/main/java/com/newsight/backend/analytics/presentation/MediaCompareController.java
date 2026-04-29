@@ -24,7 +24,7 @@ public class MediaCompareController {
 
     private final AnalyticsService analyticsService;
 
-    @GetMapping({"/media-compare/keywords/top", "/media-compare/keywords/top/"})
+    @GetMapping("/media-compare/keywords/top")
     @Operation(summary = "List top keywords for media comparison")
     public ResponseEntity<MediaCompareTopKeywordsDto.MediaCompareTopKeywordsResponseDto> getMediaCompareTopKeywords(
             @RequestParam(value = "period", required = false) String period,
@@ -47,10 +47,7 @@ public class MediaCompareController {
         ));
     }
 
-    @GetMapping({
-            "/media-compare/keywords/{keyword_seq}/media-article-counts",
-            "/media-compare/keywords/{keyword_seq}/media-article-counts/"
-    })
+    @GetMapping("/media-compare/keywords/{keyword_seq}/media-article-counts")
     @Operation(summary = "Get article counts by media")
     public ResponseEntity<MediaArticleCountsDto.MediaArticleCountsResponseDto> getMediaArticleCounts(
             @PathVariable("keyword_seq") Long keywordSeq,
@@ -65,10 +62,7 @@ public class MediaCompareController {
         return ResponseEntity.ok(new MediaArticleCountsDto.MediaArticleCountsResponseDto(items));
     }
 
-    @GetMapping({
-            "/media-compare/keywords/{keyword_seq}/sentiment/content",
-            "/media-compare/keywords/{keyword_seq}/sentiment/content/"
-    })
+    @GetMapping("/media-compare/keywords/{keyword_seq}/sentiment/content")
     @Operation(summary = "Get content sentiment by media")
     public ResponseEntity<MediaContentSentimentCompareDto.MediaContentSentimentCompareResponseDto> getMediaCompareContentSentiment(
             @PathVariable("keyword_seq") Long keywordSeq,
@@ -88,10 +82,7 @@ public class MediaCompareController {
         return ResponseEntity.ok(new MediaContentSentimentCompareDto.MediaContentSentimentCompareResponseDto(items));
     }
 
-    @GetMapping({
-            "/media-compare/keywords/{keyword_seq}/framing/title-top-words",
-            "/media-compare/keywords/{keyword_seq}/framing/title-top-words/"
-    })
+    @GetMapping("/media-compare/keywords/{keyword_seq}/framing/title-top-words")
     @Operation(summary = "Get title top words by media")
     public ResponseEntity<MediaTitleTopWordsDto.MediaTitleTopWordsResponseDto> getMediaCompareTitleTopWords(
             @PathVariable("keyword_seq") Long keywordSeq,

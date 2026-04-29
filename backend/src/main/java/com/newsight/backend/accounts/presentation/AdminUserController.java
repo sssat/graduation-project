@@ -37,7 +37,7 @@ public class AdminUserController {
 
     private final AccountsService accountsService;
 
-    @GetMapping({"/users", "/users/"})
+    @GetMapping("/users")
     @Operation(summary = "List users")
     public ResponseEntity<UserListResponseDto> listUsers(
             @Parameter(hidden = true) @AuthenticationPrincipal Jwt jwt,
@@ -80,7 +80,7 @@ public class AdminUserController {
         ));
     }
 
-    @PostMapping({"/promote", "/promote/"})
+    @PostMapping("/promote")
     @Operation(summary = "Promote user to admin")
     public ResponseEntity<AdminPromoteResponseDto> promote(
             @Parameter(hidden = true) @AuthenticationPrincipal Jwt jwt,
@@ -99,7 +99,7 @@ public class AdminUserController {
         ));
     }
 
-    @PostMapping({"/demote", "/demote/"})
+    @PostMapping("/demote")
     @Operation(summary = "Demote admin to user")
     public ResponseEntity<AdminDemoteResponseDto> demote(
             @Parameter(hidden = true) @AuthenticationPrincipal Jwt jwt,
@@ -117,7 +117,7 @@ public class AdminUserController {
         ));
     }
 
-    @PostMapping({"/users/withdraw", "/users/withdraw/"})
+    @PostMapping("/users/withdraw")
     @Operation(summary = "Withdraw user")
     public ResponseEntity<WithdrawResponseDto> withdraw(
             @Parameter(hidden = true) @AuthenticationPrincipal Jwt jwt,

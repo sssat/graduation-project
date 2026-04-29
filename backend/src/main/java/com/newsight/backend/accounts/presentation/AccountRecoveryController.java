@@ -23,7 +23,7 @@ public class AccountRecoveryController {
 
     private final AccountsService accountsService;
 
-    @PostMapping({"/find-id", "/find-id/"})
+    @PostMapping("/find-id")
     @Operation(summary = "Find user ID")
     public ResponseEntity<FindIdResponseDto> findId(@Valid @RequestBody FindIdRequestDto body) {
         AccountsService.FindIdResult r = accountsService.findUserId(
@@ -32,7 +32,7 @@ public class AccountRecoveryController {
         return ResponseEntity.ok(FindIdResponseDto.success(r.user_id()));
     }
 
-    @PostMapping({"/find-password", "/find-password/"})
+    @PostMapping("/find-password")
     @Operation(summary = "Issue temporary password")
     public ResponseEntity<FindPasswordResponseDto> findPassword(@Valid @RequestBody FindPasswordRequestDto body) {
         AccountsService.FindPasswordResult r = accountsService.findPassword(

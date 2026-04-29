@@ -33,7 +33,7 @@ public class AdminInquiryController {
 
     private final InquiriesService inquiriesService;
 
-    @GetMapping({"", "/"})
+    @GetMapping("")
     @Operation(summary = "List inquiries for admin")
     public ResponseEntity<AdminInquiryListDto.AdminInquiryListResponseDto> listInquiriesForAdmin(
             @Parameter(hidden = true) @AuthenticationPrincipal Jwt jwt,
@@ -48,7 +48,7 @@ public class AdminInquiryController {
         return ResponseEntity.ok(AdminInquiryListDto.AdminInquiryListResponseDto.from(result));
     }
 
-    @GetMapping({"/{inquiry_seq}", "/{inquiry_seq}/"})
+    @GetMapping("/{inquiry_seq}")
     @Operation(summary = "Get inquiry detail for admin")
     public ResponseEntity<AdminInquiryDetailDto.AdminInquiryDetailResponseDto> getInquiryDetailForAdmin(
             @Parameter(hidden = true) @AuthenticationPrincipal Jwt jwt,
@@ -62,7 +62,7 @@ public class AdminInquiryController {
         return ResponseEntity.ok(AdminInquiryDetailDto.AdminInquiryDetailResponseDto.from(result));
     }
 
-    @PutMapping({"/{inquiry_seq}/answer", "/{inquiry_seq}/answer/"})
+    @PutMapping("/{inquiry_seq}/answer")
     @Operation(summary = "Save or update admin answer")
     public ResponseEntity<AdminInquiryAnswerDto.AdminInquiryAnswerResponseDto> saveOrUpdateAdminAnswer(
             @Parameter(hidden = true) @AuthenticationPrincipal Jwt jwt,
@@ -77,7 +77,7 @@ public class AdminInquiryController {
         return ResponseEntity.ok(AdminInquiryAnswerDto.AdminInquiryAnswerResponseDto.from(result));
     }
 
-    @DeleteMapping({"/{inquiry_seq}", "/{inquiry_seq}/"})
+    @DeleteMapping("/{inquiry_seq}")
     @Operation(summary = "Delete inquiry")
     public ResponseEntity<AdminInquiryDeleteDto.AdminInquiryDeleteResponseDto> deleteInquiryForAdmin(
             @Parameter(hidden = true) @AuthenticationPrincipal Jwt jwt,

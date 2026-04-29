@@ -24,7 +24,7 @@ public class AdminDashboardController {
 
     private final AnalyticsService analyticsService;
 
-    @GetMapping({"/summary", "/summary/"})
+    @GetMapping("/summary")
     @Operation(summary = "Get dashboard summary")
     public ResponseEntity<AdminDashboardSummaryDto.AdminDashboardSummaryResponseDto> getSummary(
             @Parameter(hidden = true) @AuthenticationPrincipal Jwt jwt

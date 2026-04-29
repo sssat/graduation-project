@@ -28,7 +28,7 @@ public class AdminLoginLogController {
 
     private final AccountsService accountsService;
 
-    @GetMapping({"/login-logs", "/login-logs/"})
+    @GetMapping("/login-logs")
     @Operation(summary = "List login logs")
     public ResponseEntity<AdminDashboardLoginLogsResponseDto> listAdminDashboardLoginLogs(
             @Parameter(hidden = true) @AuthenticationPrincipal Jwt jwt,

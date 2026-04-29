@@ -19,7 +19,7 @@ public class AnalyticsOverviewController {
 
     private final AnalyticsService analyticsService;
 
-    @GetMapping({"/overview", "/overview/"})
+    @GetMapping("/overview")
     @Operation(summary = "Get analytics overview")
     public ResponseEntity<AnalyticsOverviewDto.AnalyticsOverviewResponseDto> getOverview() {
         AnalyticsService.OverviewResult result = analyticsService.getOverview();

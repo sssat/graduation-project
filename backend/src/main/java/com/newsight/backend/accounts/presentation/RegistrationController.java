@@ -27,7 +27,7 @@ public class RegistrationController {
 
     private final AccountsService accountsService;
 
-    @PostMapping({"/precheck/user-id", "/precheck/user-id/"})
+    @PostMapping("/precheck/user-id")
     @Operation(summary = "Check user ID availability")
     public ResponseEntity<IdPrecheckResponseDto> precheckUserId(@Valid @RequestBody IdPrecheckRequestDto body) {
         AccountsService.IdPrecheckResult r = accountsService.precheckUserId(body.userId());
@@ -42,7 +42,7 @@ public class RegistrationController {
         ));
     }
 
-    @PostMapping({"/precheck/email", "/precheck/email/"})
+    @PostMapping("/precheck/email")
     @Operation(summary = "Check email availability")
     public ResponseEntity<EmailPrecheckResponseDto> precheckEmail(@Valid @RequestBody EmailPrecheckRequestDto body) {
         AccountsService.EmailPrecheckResult r = accountsService.precheckEmail(body.email());
@@ -58,7 +58,7 @@ public class RegistrationController {
         ));
     }
 
-    @PostMapping({"", "/"})
+    @PostMapping("")
     @Operation(summary = "Create account")
     public ResponseEntity<SignUpResponseDto> signUp(@Valid @RequestBody SignUpRequestDto body) {
         AccountsService.SignUpCommand cmd = new AccountsService.SignUpCommand(

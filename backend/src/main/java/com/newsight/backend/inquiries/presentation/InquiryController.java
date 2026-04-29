@@ -32,7 +32,7 @@ public class InquiryController {
 
     private final InquiriesService inquiriesService;
 
-    @GetMapping({"", "/"})
+    @GetMapping("")
     @Operation(summary = "List inquiries")
     public ResponseEntity<InquiryListDto.InquiryListResponseDto> listInquiries(
             @Parameter(hidden = true) @AuthenticationPrincipal Jwt jwt,
@@ -56,7 +56,7 @@ public class InquiryController {
         return ResponseEntity.ok(InquiryListDto.InquiryListResponseDto.from(result));
     }
 
-    @GetMapping({"/{inquiry_seq}", "/{inquiry_seq}/"})
+    @GetMapping("/{inquiry_seq}")
     @Operation(summary = "Get inquiry detail")
     public ResponseEntity<InquiryDetailDto.InquiryDetailResponseDto> getInquiryDetail(
             @Parameter(hidden = true) @AuthenticationPrincipal Jwt jwt,
@@ -67,7 +67,7 @@ public class InquiryController {
         return ResponseEntity.ok(InquiryDetailDto.InquiryDetailResponseDto.from(result));
     }
 
-    @PostMapping({"", "/"})
+    @PostMapping("")
     @Operation(summary = "Create inquiry")
     public ResponseEntity<InquiryCreateDto.InquiryCreateResponseDto> createInquiry(
             @Parameter(hidden = true) @AuthenticationPrincipal Jwt jwt,

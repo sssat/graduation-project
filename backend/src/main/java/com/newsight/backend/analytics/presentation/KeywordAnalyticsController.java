@@ -27,7 +27,7 @@ public class KeywordAnalyticsController {
 
     private final AnalyticsService analyticsService;
 
-    @GetMapping({"/keywords/{keyword_seq}", "/keywords/{keyword_seq}/"})
+    @GetMapping("/keywords/{keyword_seq}")
     @Operation(summary = "Get keyword metadata")
     public ResponseEntity<KeywordMetaDto.KeywordMetaResponseDto> getKeywordMeta(
             @PathVariable("keyword_seq") Long keywordSeq,
@@ -46,7 +46,7 @@ public class KeywordAnalyticsController {
         ));
     }
 
-    @GetMapping({"/keywords/{keyword_seq}/summary", "/keywords/{keyword_seq}/summary/"})
+    @GetMapping("/keywords/{keyword_seq}/summary")
     @Operation(summary = "Get AI summary")
     public ResponseEntity<AiSummaryDto.AiSummaryResponseDto> getAiSummary(
             @PathVariable("keyword_seq") Long keywordSeq,
@@ -56,7 +56,7 @@ public class KeywordAnalyticsController {
         return ResponseEntity.ok(new AiSummaryDto.AiSummaryResponseDto(result.summaryText()));
     }
 
-    @GetMapping({"/keywords/{keyword_seq}/wordcloud/title", "/keywords/{keyword_seq}/wordcloud/title/"})
+    @GetMapping("/keywords/{keyword_seq}/wordcloud/title")
     @Operation(summary = "Get title wordcloud")
     public ResponseEntity<WordcloudDto.WordcloudResponseDto> getTitleWordcloud(
             @PathVariable("keyword_seq") Long keywordSeq,
@@ -71,7 +71,7 @@ public class KeywordAnalyticsController {
         return ResponseEntity.ok(new WordcloudDto.WordcloudResponseDto(items));
     }
 
-    @GetMapping({"/keywords/{keyword_seq}/wordcloud/comment", "/keywords/{keyword_seq}/wordcloud/comment/"})
+    @GetMapping("/keywords/{keyword_seq}/wordcloud/comment")
     @Operation(summary = "Get comment wordcloud")
     public ResponseEntity<WordcloudDto.WordcloudResponseDto> getCommentWordcloud(
             @PathVariable("keyword_seq") Long keywordSeq,
@@ -86,10 +86,7 @@ public class KeywordAnalyticsController {
         return ResponseEntity.ok(new WordcloudDto.WordcloudResponseDto(items));
     }
 
-    @GetMapping({
-            "/keywords/{keyword_seq}/search-timeline",
-            "/keywords/{keyword_seq}/search-timeline/"
-    })
+    @GetMapping("/keywords/{keyword_seq}/search-timeline")
     @Operation(summary = "Get search interest timeline")
     public ResponseEntity<SearchTimelineDto.SearchTimelineResponseDto> getSearchTimeline(
             @PathVariable("keyword_seq") Long keywordSeq,
@@ -116,7 +113,7 @@ public class KeywordAnalyticsController {
         ));
     }
 
-    @GetMapping({"/keywords/{keyword_seq}/sentiment/content", "/keywords/{keyword_seq}/sentiment/content/"})
+    @GetMapping("/keywords/{keyword_seq}/sentiment/content")
     @Operation(summary = "Get content sentiment")
     public ResponseEntity<ContentSentimentDto.ContentSentimentResponseDto> getContentSentiment(
             @PathVariable("keyword_seq") Long keywordSeq,
@@ -131,7 +128,7 @@ public class KeywordAnalyticsController {
         ));
     }
 
-    @GetMapping({"/keywords/{keyword_seq}/bias/title", "/keywords/{keyword_seq}/bias/title/"})
+    @GetMapping("/keywords/{keyword_seq}/bias/title")
     @Operation(summary = "Get title bias by media")
     public ResponseEntity<TitleBiasByMediaDto.TitleBiasByMediaResponseDto> getTitleBiasByMedia(
             @PathVariable("keyword_seq") Long keywordSeq,
@@ -146,7 +143,7 @@ public class KeywordAnalyticsController {
         return ResponseEntity.ok(new TitleBiasByMediaDto.TitleBiasByMediaResponseDto(items));
     }
 
-    @GetMapping({"/keywords/{keyword_seq}/cooc-network", "/keywords/{keyword_seq}/cooc-network/"})
+    @GetMapping("/keywords/{keyword_seq}/cooc-network")
     @Operation(summary = "Get co-occurrence network")
     public ResponseEntity<CoocNetworkDto.CoocNetworkResponseDto> getCoocNetwork(
             @PathVariable("keyword_seq") Long keywordSeq,

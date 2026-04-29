@@ -33,7 +33,7 @@ public class AuthController {
     @Value("${app.jwt.refresh-minutes:60}")
     private int refreshMinutes;
 
-    @PostMapping({"/login", "/login/"})
+    @PostMapping("/login")
     @Operation(summary = "Login")
     public ResponseEntity<LoginResponseDto> login(
             @Valid @RequestBody LoginRequestDto body,
@@ -68,7 +68,7 @@ public class AuthController {
                 .body(resp);
     }
 
-    @PostMapping({"/refresh", "/refresh/"})
+    @PostMapping("/refresh")
     @Operation(summary = "Refresh access token")
     public ResponseEntity<TokenRefreshResponseDto> refresh(@Parameter(hidden = true) HttpServletRequest request) {
         String refresh = AccountControllerSupport.readCookie(request, REFRESH_COOKIE_NAME);
@@ -90,7 +90,7 @@ public class AuthController {
                 .body(resp);
     }
 
-    @PostMapping({"/logout", "/logout/"})
+    @PostMapping("/logout")
     @Operation(summary = "Logout")
     public ResponseEntity<LogoutResponseDto> logout(@Parameter(hidden = true) HttpServletRequest request) {
         String refresh = AccountControllerSupport.readCookie(request, REFRESH_COOKIE_NAME);

@@ -29,7 +29,7 @@ public class AccountPasswordController {
 
     private final AccountsService accountsService;
 
-    @PostMapping({"/change-password", "/change-password/"})
+    @PostMapping("/change-password")
     @Operation(summary = "Change password")
     public ResponseEntity<ChangePasswordResponseDto> changePassword(
             @Parameter(hidden = true) @AuthenticationPrincipal Jwt jwt,
