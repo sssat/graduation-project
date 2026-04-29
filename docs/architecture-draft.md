@@ -1,7 +1,6 @@
 # Newsight Architecture Draft
 
 이 문서는 현재 저장소 구조를 기준으로 작성한 아키텍처 그림 초안입니다.
-보고서나 발표 자료에서는 아래 Mermaid 코드를 복사해서 다이어그램으로 렌더링하면 됩니다.
 
 ## 1. System Context
 
