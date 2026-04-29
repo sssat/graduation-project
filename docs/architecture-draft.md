@@ -59,70 +59,7 @@ flowchart LR
   style External fill:#F9FAFB,stroke:#9CA3AF,stroke-width:1.5px
 ```
 
-## 2. 컨테이너 및 컴포넌트 구조
-
-```mermaid
-flowchart TB
-  subgraph Client["프론트엔드: React + TypeScript"]
-    Router["라우팅<br/>홈 / 키워드 상세 / 언론사 비교 / 문의 / 관리자"]
-    ApiClient["API 클라이언트<br/>Axios<br/>accounts / analytics / inquiries"]
-    AuthState["인증 상태 관리<br/>Access Token in memory/localStorage"]
-    Charts["시각화<br/>Chart.js / D3 Force / D3 Cloud"]
-  end
-
-  subgraph Api["백엔드: Spring Boot"]
-    Security["Spring Security<br/>JWT, Refresh Cookie, CORS"]
-    Accounts["계정 모듈<br/>회원가입, 로그인, 비밀번호, 관리자 권한"]
-    Analytics["분석 모듈<br/>상위 키워드, 상세 분석, 언론사 비교, 대시보드"]
-    Inquiries["문의 모듈<br/>문의 등록/조회/관리자 답변"]
-    Persistence["영속성 계층<br/>Spring Data JPA + Spring JDBC"]
-    Flyway["DB 마이그레이션<br/>Flyway<br/>계정/문의 스키마 관리"]
-  end
-
-  subgraph Batch["데이터 파이프라인: Python"]
-    TrendCrawler["트렌드 수집기<br/>Google Trends 키워드 수집"]
-    NewsCrawler["뉴스 수집기<br/>Naver 기사/댓글 수집"]
-    Preprocess["전처리<br/>공통 데이터 정제"]
-    AnalysisJobs["분석 작업<br/>집계, 최종 랭킹, 요약, 감성, 편향,<br/>워드클라우드, 공동언급 네트워크, 검색량"]
-    PipelineConfig["pipeline.env / settings.py"]
-  end
-
-  MySQL[("MySQL 8.0<br/>Docker Compose: newsight-mysql<br/>local 3307 -> container 3306")]
-
-  Router --> ApiClient
-  AuthState --> ApiClient
-  Charts --> Router
-  ApiClient -->|"REST API"| Security
-  Security --> Accounts
-  Security --> Analytics
-  Security --> Inquiries
-  Accounts --> Persistence
-  Analytics --> Persistence
-  Inquiries --> Persistence
-  Persistence --> MySQL
-  Flyway --> MySQL
-
-  PipelineConfig --> TrendCrawler
-  PipelineConfig --> NewsCrawler
-  TrendCrawler --> Preprocess
-  NewsCrawler --> Preprocess
-  Preprocess --> AnalysisJobs
-  AnalysisJobs --> MySQL
-
-  classDef frontend fill:#E9F7EF,stroke:#3E8E5A,color:#1F2937,stroke-width:1.5px
-  classDef backend fill:#FFF3CD,stroke:#C69026,color:#1F2937,stroke-width:1.5px
-  classDef batch fill:#F2E7FE,stroke:#7E57C2,color:#1F2937,stroke-width:1.5px
-  classDef db fill:#FCE8E6,stroke:#C5221F,color:#1F2937,stroke-width:1.5px
-  class Router,ApiClient,AuthState,Charts frontend
-  class Security,Accounts,Analytics,Inquiries,Persistence,Flyway backend
-  class TrendCrawler,NewsCrawler,Preprocess,AnalysisJobs,PipelineConfig batch
-  class MySQL db
-  style Client fill:#F8FAFC,stroke:#3E8E5A,stroke-width:1.5px
-  style Api fill:#FFFBEB,stroke:#C69026,stroke-width:1.5px
-  style Batch fill:#FAF5FF,stroke:#7E57C2,stroke-width:1.5px
-```
-
-## 3. 백엔드 레이어드 아키텍처
+## 2. 백엔드 레이어드 아키텍처
 
 ```mermaid
 flowchart TB
@@ -177,7 +114,7 @@ flowchart TB
   style FeatureModules fill:#FAF5FF,stroke:#7E57C2,stroke-width:1.5px
 ```
 
-## 4. 데이터 파이프라인 흐름
+## 3. 데이터 파이프라인 흐름
 
 ```mermaid
 flowchart LR
@@ -240,7 +177,7 @@ flowchart LR
   style Analyze fill:#FAF5FF,stroke:#7E57C2,stroke-width:1.5px
 ```
 
-## 5. 배포 및 운영 아키텍처
+## 4. 배포 및 운영 아키텍처
 
 ```mermaid
 flowchart LR
@@ -285,7 +222,7 @@ flowchart LR
   style BatchServer fill:#FAF5FF,stroke:#7E57C2,stroke-width:1.5px
 ```
 
-## 6. 키워드 상세 조회 흐름
+## 5. 키워드 상세 조회 흐름
 
 ```mermaid
 sequenceDiagram
@@ -318,7 +255,7 @@ sequenceDiagram
   end
 ```
 
-## 7. 인증 흐름
+## 6. 인증 흐름
 
 ```mermaid
 sequenceDiagram
@@ -347,15 +284,3 @@ sequenceDiagram
   B-->>F: 새 Access Token 반환
   end
 ```
-
-## 8. 다이어그램 표기 기준
-
-- 큰 그림에서는 `Frontend`, `Backend API`, `Data Pipeline`, `MySQL`, `External APIs`만 보여준다.
-- 상세 그림에서는 기능 단위를 `Accounts`, `Analytics`, `Inquiries`, `Pipeline Jobs`로 나눈다.
-- 백엔드 구조는 `Presentation`, `Application`, `Domain`, `Infrastructure` 계층으로 표현한다.
-- 운영 구조는 프론트엔드/백엔드/DB 공용 서버와 크롤링/분석 전용 서버를 분리해서 표현한다.
-- 화살표에는 통신 방식이나 데이터 성격을 적는다: `REST API`, `JWT`, `JPA/JDBC`, `수집 데이터`, `분석 결과`.
-- 외부 시스템은 서비스 바깥에 둔다: Google Trends, Naver News, Naver DataLab, OpenAI API, Mail Server.
-- DB는 계정/문의 데이터와 분석 데이터를 구분해서 표현한다.
-- 발표 자료에서는 시스템 전체 아키텍처와 데이터 파이프라인 흐름을 중심으로 구성한다.
-- 구현 설명에서는 컨테이너 및 컴포넌트 구조와 주요 기능 흐름을 함께 사용한다.

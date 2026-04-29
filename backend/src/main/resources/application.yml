@@ -78,6 +78,17 @@ app:
   analytics:
     trend-run-offset: ${ANALYTICS_TREND_RUN_OFFSET:0}
 
+springdoc:
+  packages-to-scan: com.newsight.backend
+  api-docs:
+    path: /v3/api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+    urls-primary-name: all
+    operations-sorter: method
+    tags-sorter: alpha
+    display-request-duration: true
+
 management:
   health:
     mail:

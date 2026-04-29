@@ -152,6 +152,16 @@ public class SecurityConfig {
                 // /actuator/health 는 물론 /actuator/health/db, /actuator/health/mail 등 세부 확인도 허용
                 .requestMatchers("/actuator/health", "/actuator/health/**").permitAll()
 
+                // OpenAPI / Swagger UI
+                .requestMatchers(
+                        "/v3/api-docs",
+                        "/v3/api-docs/**",
+                        "/v3/api-docs.yaml",
+                        "/v3/api-docs.yaml/**",
+                        "/swagger-ui.html",
+                        "/swagger-ui/**"
+                ).permitAll()
+
                 // accounts (public)
                 .requestMatchers("/api/auth/register/**").permitAll()
                 .requestMatchers("/api/auth/login").permitAll()

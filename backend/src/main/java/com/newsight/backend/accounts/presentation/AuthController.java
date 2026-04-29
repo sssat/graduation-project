@@ -7,6 +7,9 @@ import com.newsight.backend.accounts.presentation.dto.LoginDto.LoginRequestDto;
 import com.newsight.backend.accounts.presentation.dto.LoginDto.LoginResponseDto;
 import com.newsight.backend.accounts.presentation.dto.LogoutDto.LogoutResponseDto;
 import com.newsight.backend.accounts.presentation.dto.TokenRefreshDto.TokenRefreshResponseDto;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -22,6 +25,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api/auth")
+@Tag(name = "Authentication", description = "Login, token refresh, and logout APIs")
 public class AuthController {
 
     private final AccountsService accountsService;
@@ -30,9 +34,10 @@ public class AuthController {
     private int refreshMinutes;
 
     @PostMapping({"/login", "/login/"})
+    @Operation(summary = "Login")
     public ResponseEntity<LoginResponseDto> login(
             @Valid @RequestBody LoginRequestDto body,
-            HttpServletRequest request
+            @Parameter(hidden = true) HttpServletRequest request
     ) {
         String ip = AccountControllerSupport.extractClientIp(request);
         String ua = request.getHeader("User-Agent");
@@ -64,7 +69,8 @@ public class AuthController {
     }
 
     @PostMapping({"/refresh", "/refresh/"})
-    public ResponseEntity<TokenRefreshResponseDto> refresh(HttpServletRequest request) {
+    @Operation(summary = "Refresh access token")
+    public ResponseEntity<TokenRefreshResponseDto> refresh(@Parameter(hidden = true) HttpServletRequest request) {
         String refresh = AccountControllerSupport.readCookie(request, REFRESH_COOKIE_NAME);
         if (refresh == null || refresh.isBlank()) {
             return ResponseEntity.status(401).body(TokenRefreshResponseDto.failure("由ы봽?덉떆 ?좏겙???놁뒿?덈떎."));
@@ -85,7 +91,8 @@ public class AuthController {
     }
 
     @PostMapping({"/logout", "/logout/"})
-    public ResponseEntity<LogoutResponseDto> logout(HttpServletRequest request) {
+    @Operation(summary = "Logout")
+    public ResponseEntity<LogoutResponseDto> logout(@Parameter(hidden = true) HttpServletRequest request) {
         String refresh = AccountControllerSupport.readCookie(request, REFRESH_COOKIE_NAME);
         accountsService.logout(refresh);
         ResponseCookie cleared = AccountControllerSupport.clearRefreshCookie(request);

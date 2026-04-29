@@ -1,0 +1,2482 @@
+openapi: 3.1.0
+info:
+  title: Newsight API
+  description: REST API documentation for the Newsight backend.
+  contact:
+    name: Newsight
+  version: v1
+servers:
+- url: http://localhost:8080
+  description: Local backend
+- url: https://newsightkr.com
+  description: Production
+tags:
+- name: Media Compare Analytics
+  description: Public media comparison analytics APIs
+- name: Analytics Overview
+  description: Public analytics overview APIs
+- name: Admin Dashboard
+  description: Administrator dashboard APIs
+- name: Keyword Analytics
+  description: Public keyword detail analytics APIs
+- name: Admin Inquiries
+  description: Administrator inquiry management APIs
+- name: Admin Users
+  description: Administrator user management APIs
+- name: Authentication
+  description: "Login, token refresh, and logout APIs"
+- name: Registration
+  description: Account registration and duplicate checks
+- name: Account Password
+  description: Authenticated password management APIs
+- name: User Inquiries
+  description: Authenticated user inquiry APIs
+- name: Account Recovery
+  description: User ID lookup and temporary password APIs
+paths:
+  /api/admins/inquiries/{inquiry_seq}/answer/:
+    put:
+      tags:
+      - Admin Inquiries
+      summary: Save or update admin answer
+      operationId: saveOrUpdateAdminAnswer
+      parameters:
+      - name: inquiry_seq
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AdminInquiryAnswerRequestDto"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/AdminInquiryAnswerResponseDto"
+      security:
+      - bearerAuth: []
+  /api/admins/inquiries/{inquiry_seq}/answer:
+    put:
+      tags:
+      - Admin Inquiries
+      summary: Save or update admin answer
+      operationId: saveOrUpdateAdminAnswer_1
+      parameters:
+      - name: inquiry_seq
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AdminInquiryAnswerRequestDto"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/AdminInquiryAnswerResponseDto"
+      security:
+      - bearerAuth: []
+  /api/inquiries:
+    get:
+      tags:
+      - User Inquiries
+      summary: List inquiries
+      operationId: listInquiries
+      parameters:
+      - name: inquiry_type
+        in: query
+        required: false
+        schema:
+          type: string
+      - name: status
+        in: query
+        required: false
+        schema:
+          type: string
+      - name: mine
+        in: query
+        required: false
+        schema:
+          type: boolean
+      - name: page
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int32
+      - name: size
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int32
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/InquiryListResponseDto"
+      security:
+      - bearerAuth: []
+    post:
+      tags:
+      - User Inquiries
+      summary: Create inquiry
+      operationId: createInquiry
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/InquiryCreateRequestDto"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/InquiryCreateResponseDto"
+      security:
+      - bearerAuth: []
+  /api/inquiries/:
+    get:
+      tags:
+      - User Inquiries
+      summary: List inquiries
+      operationId: listInquiries_1
+      parameters:
+      - name: inquiry_type
+        in: query
+        required: false
+        schema:
+          type: string
+      - name: status
+        in: query
+        required: false
+        schema:
+          type: string
+      - name: mine
+        in: query
+        required: false
+        schema:
+          type: boolean
+      - name: page
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int32
+      - name: size
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int32
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/InquiryListResponseDto"
+      security:
+      - bearerAuth: []
+    post:
+      tags:
+      - User Inquiries
+      summary: Create inquiry
+      operationId: createInquiry_1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/InquiryCreateRequestDto"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/InquiryCreateResponseDto"
+      security:
+      - bearerAuth: []
+  /api/auth/register/precheck/user-id:
+    post:
+      tags:
+      - Registration
+      summary: Check user ID availability
+      operationId: precheckUserId
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/IdPrecheckRequestDto"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/IdPrecheckResponseDto"
+  /api/auth/register/precheck/user-id/:
+    post:
+      tags:
+      - Registration
+      summary: Check user ID availability
+      operationId: precheckUserId_1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/IdPrecheckRequestDto"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/IdPrecheckResponseDto"
+  /api/auth/register/precheck/email:
+    post:
+      tags:
+      - Registration
+      summary: Check email availability
+      operationId: precheckEmail
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/EmailPrecheckRequestDto"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/EmailPrecheckResponseDto"
+  /api/auth/register/precheck/email/:
+    post:
+      tags:
+      - Registration
+      summary: Check email availability
+      operationId: precheckEmail_1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/EmailPrecheckRequestDto"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/EmailPrecheckResponseDto"
+  /api/auth/register:
+    post:
+      tags:
+      - Registration
+      summary: Create account
+      operationId: signUp
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SignUpRequestDto"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/SignUpResponseDto"
+  /api/auth/register/:
+    post:
+      tags:
+      - Registration
+      summary: Create account
+      operationId: signUp_1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SignUpRequestDto"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/SignUpResponseDto"
+  /api/auth/refresh:
+    post:
+      tags:
+      - Authentication
+      summary: Refresh access token
+      operationId: refresh
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/TokenRefreshResponseDto"
+  /api/auth/refresh/:
+    post:
+      tags:
+      - Authentication
+      summary: Refresh access token
+      operationId: refresh_1
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/TokenRefreshResponseDto"
+  /api/auth/logout/:
+    post:
+      tags:
+      - Authentication
+      summary: Logout
+      operationId: logout
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/LogoutResponseDto"
+  /api/auth/logout:
+    post:
+      tags:
+      - Authentication
+      summary: Logout
+      operationId: logout_1
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/LogoutResponseDto"
+  /api/auth/login:
+    post:
+      tags:
+      - Authentication
+      summary: Login
+      operationId: login
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginRequestDto"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/LoginResponseDto"
+  /api/auth/login/:
+    post:
+      tags:
+      - Authentication
+      summary: Login
+      operationId: login_1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginRequestDto"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/LoginResponseDto"
+  /api/auth/find-password:
+    post:
+      tags:
+      - Account Recovery
+      summary: Issue temporary password
+      operationId: findPassword
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/FindPasswordRequestDto"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/FindPasswordResponseDto"
+  /api/auth/find-password/:
+    post:
+      tags:
+      - Account Recovery
+      summary: Issue temporary password
+      operationId: findPassword_1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/FindPasswordRequestDto"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/FindPasswordResponseDto"
+  /api/auth/find-id:
+    post:
+      tags:
+      - Account Recovery
+      summary: Find user ID
+      operationId: findId
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/FindIdRequestDto"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/FindIdResponseDto"
+  /api/auth/find-id/:
+    post:
+      tags:
+      - Account Recovery
+      summary: Find user ID
+      operationId: findId_1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/FindIdRequestDto"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/FindIdResponseDto"
+  /api/auth/change-password:
+    post:
+      tags:
+      - Account Password
+      summary: Change password
+      operationId: changePassword
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ChangePasswordRequestDto"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ChangePasswordResponseDto"
+      security:
+      - bearerAuth: []
+  /api/auth/change-password/:
+    post:
+      tags:
+      - Account Password
+      summary: Change password
+      operationId: changePassword_1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ChangePasswordRequestDto"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ChangePasswordResponseDto"
+      security:
+      - bearerAuth: []
+  /api/admins/users/withdraw:
+    post:
+      tags:
+      - Admin Users
+      summary: Withdraw user
+      operationId: withdraw
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WithdrawRequestDto"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/WithdrawResponseDto"
+      security:
+      - bearerAuth: []
+  /api/admins/users/withdraw/:
+    post:
+      tags:
+      - Admin Users
+      summary: Withdraw user
+      operationId: withdraw_1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WithdrawRequestDto"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/WithdrawResponseDto"
+      security:
+      - bearerAuth: []
+  /api/admins/promote:
+    post:
+      tags:
+      - Admin Users
+      summary: Promote user to admin
+      operationId: promote
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AdminPromoteRequestDto"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/AdminPromoteResponseDto"
+      security:
+      - bearerAuth: []
+  /api/admins/promote/:
+    post:
+      tags:
+      - Admin Users
+      summary: Promote user to admin
+      operationId: promote_1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AdminPromoteRequestDto"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/AdminPromoteResponseDto"
+      security:
+      - bearerAuth: []
+  /api/admins/demote/:
+    post:
+      tags:
+      - Admin Users
+      summary: Demote admin to user
+      operationId: demote
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AdminDemoteRequestDto"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/AdminDemoteResponseDto"
+      security:
+      - bearerAuth: []
+  /api/admins/demote:
+    post:
+      tags:
+      - Admin Users
+      summary: Demote admin to user
+      operationId: demote_1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AdminDemoteRequestDto"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/AdminDemoteResponseDto"
+      security:
+      - bearerAuth: []
+  /api/inquiries/{inquiry_seq}/:
+    get:
+      tags:
+      - User Inquiries
+      summary: Get inquiry detail
+      operationId: getInquiryDetail
+      parameters:
+      - name: inquiry_seq
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/InquiryDetailResponseDto"
+      security:
+      - bearerAuth: []
+  /api/inquiries/{inquiry_seq}:
+    get:
+      tags:
+      - User Inquiries
+      summary: Get inquiry detail
+      operationId: getInquiryDetail_1
+      parameters:
+      - name: inquiry_seq
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/InquiryDetailResponseDto"
+      security:
+      - bearerAuth: []
+  /api/analytics/overview/:
+    get:
+      tags:
+      - Analytics Overview
+      summary: Get analytics overview
+      operationId: getOverview
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/AnalyticsOverviewResponseDto"
+  /api/analytics/overview:
+    get:
+      tags:
+      - Analytics Overview
+      summary: Get analytics overview
+      operationId: getOverview_1
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/AnalyticsOverviewResponseDto"
+  /api/analytics/media-compare/keywords/{keyword_seq}/sentiment/content/:
+    get:
+      tags:
+      - Media Compare Analytics
+      summary: Get content sentiment by media
+      operationId: getMediaCompareContentSentiment
+      parameters:
+      - name: keyword_seq
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      - name: period
+        in: query
+        required: false
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/MediaContentSentimentCompareResponseDto"
+  /api/analytics/media-compare/keywords/{keyword_seq}/sentiment/content:
+    get:
+      tags:
+      - Media Compare Analytics
+      summary: Get content sentiment by media
+      operationId: getMediaCompareContentSentiment_1
+      parameters:
+      - name: keyword_seq
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      - name: period
+        in: query
+        required: false
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/MediaContentSentimentCompareResponseDto"
+  /api/analytics/media-compare/keywords/{keyword_seq}/media-article-counts:
+    get:
+      tags:
+      - Media Compare Analytics
+      summary: Get article counts by media
+      operationId: getMediaArticleCounts
+      parameters:
+      - name: keyword_seq
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      - name: period
+        in: query
+        required: false
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/MediaArticleCountsResponseDto"
+  /api/analytics/media-compare/keywords/{keyword_seq}/media-article-counts/:
+    get:
+      tags:
+      - Media Compare Analytics
+      summary: Get article counts by media
+      operationId: getMediaArticleCounts_1
+      parameters:
+      - name: keyword_seq
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      - name: period
+        in: query
+        required: false
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/MediaArticleCountsResponseDto"
+  /api/analytics/media-compare/keywords/{keyword_seq}/framing/title-top-words/:
+    get:
+      tags:
+      - Media Compare Analytics
+      summary: Get title top words by media
+      operationId: getMediaCompareTitleTopWords
+      parameters:
+      - name: keyword_seq
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      - name: period
+        in: query
+        required: false
+        schema:
+          type: string
+      - name: top_n
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int32
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/MediaTitleTopWordsResponseDto"
+  /api/analytics/media-compare/keywords/{keyword_seq}/framing/title-top-words:
+    get:
+      tags:
+      - Media Compare Analytics
+      summary: Get title top words by media
+      operationId: getMediaCompareTitleTopWords_1
+      parameters:
+      - name: keyword_seq
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      - name: period
+        in: query
+        required: false
+        schema:
+          type: string
+      - name: top_n
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int32
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/MediaTitleTopWordsResponseDto"
+  /api/analytics/media-compare/keywords/top/:
+    get:
+      tags:
+      - Media Compare Analytics
+      summary: List top keywords for media comparison
+      operationId: getMediaCompareTopKeywords
+      parameters:
+      - name: period
+        in: query
+        required: false
+        schema:
+          type: string
+      - name: limit
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int32
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/MediaCompareTopKeywordsResponseDto"
+  /api/analytics/media-compare/keywords/top:
+    get:
+      tags:
+      - Media Compare Analytics
+      summary: List top keywords for media comparison
+      operationId: getMediaCompareTopKeywords_1
+      parameters:
+      - name: period
+        in: query
+        required: false
+        schema:
+          type: string
+      - name: limit
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int32
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/MediaCompareTopKeywordsResponseDto"
+  /api/analytics/keywords/{keyword_seq}/wordcloud/title/:
+    get:
+      tags:
+      - Keyword Analytics
+      summary: Get title wordcloud
+      operationId: getTitleWordcloud
+      parameters:
+      - name: keyword_seq
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      - name: period
+        in: query
+        required: false
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/WordcloudResponseDto"
+  /api/analytics/keywords/{keyword_seq}/wordcloud/title:
+    get:
+      tags:
+      - Keyword Analytics
+      summary: Get title wordcloud
+      operationId: getTitleWordcloud_1
+      parameters:
+      - name: keyword_seq
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      - name: period
+        in: query
+        required: false
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/WordcloudResponseDto"
+  /api/analytics/keywords/{keyword_seq}/wordcloud/comment:
+    get:
+      tags:
+      - Keyword Analytics
+      summary: Get comment wordcloud
+      operationId: getCommentWordcloud
+      parameters:
+      - name: keyword_seq
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      - name: period
+        in: query
+        required: false
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/WordcloudResponseDto"
+  /api/analytics/keywords/{keyword_seq}/wordcloud/comment/:
+    get:
+      tags:
+      - Keyword Analytics
+      summary: Get comment wordcloud
+      operationId: getCommentWordcloud_1
+      parameters:
+      - name: keyword_seq
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      - name: period
+        in: query
+        required: false
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/WordcloudResponseDto"
+  /api/analytics/keywords/{keyword_seq}/summary:
+    get:
+      tags:
+      - Keyword Analytics
+      summary: Get AI summary
+      operationId: getAiSummary
+      parameters:
+      - name: keyword_seq
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      - name: period
+        in: query
+        required: false
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/AiSummaryResponseDto"
+  /api/analytics/keywords/{keyword_seq}/summary/:
+    get:
+      tags:
+      - Keyword Analytics
+      summary: Get AI summary
+      operationId: getAiSummary_1
+      parameters:
+      - name: keyword_seq
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      - name: period
+        in: query
+        required: false
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/AiSummaryResponseDto"
+  /api/analytics/keywords/{keyword_seq}/sentiment/content:
+    get:
+      tags:
+      - Keyword Analytics
+      summary: Get content sentiment
+      operationId: getContentSentiment
+      parameters:
+      - name: keyword_seq
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      - name: period
+        in: query
+        required: false
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ContentSentimentResponseDto"
+  /api/analytics/keywords/{keyword_seq}/sentiment/content/:
+    get:
+      tags:
+      - Keyword Analytics
+      summary: Get content sentiment
+      operationId: getContentSentiment_1
+      parameters:
+      - name: keyword_seq
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      - name: period
+        in: query
+        required: false
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ContentSentimentResponseDto"
+  /api/analytics/keywords/{keyword_seq}/search-timeline:
+    get:
+      tags:
+      - Keyword Analytics
+      summary: Get search interest timeline
+      operationId: getSearchTimeline
+      parameters:
+      - name: keyword_seq
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      - name: period
+        in: query
+        required: false
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/SearchTimelineResponseDto"
+  /api/analytics/keywords/{keyword_seq}/search-timeline/:
+    get:
+      tags:
+      - Keyword Analytics
+      summary: Get search interest timeline
+      operationId: getSearchTimeline_1
+      parameters:
+      - name: keyword_seq
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      - name: period
+        in: query
+        required: false
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/SearchTimelineResponseDto"
+  /api/analytics/keywords/{keyword_seq}/cooc-network/:
+    get:
+      tags:
+      - Keyword Analytics
+      summary: Get co-occurrence network
+      operationId: getCoocNetwork
+      parameters:
+      - name: keyword_seq
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      - name: period
+        in: query
+        required: false
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/CoocNetworkResponseDto"
+  /api/analytics/keywords/{keyword_seq}/cooc-network:
+    get:
+      tags:
+      - Keyword Analytics
+      summary: Get co-occurrence network
+      operationId: getCoocNetwork_1
+      parameters:
+      - name: keyword_seq
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      - name: period
+        in: query
+        required: false
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/CoocNetworkResponseDto"
+  /api/analytics/keywords/{keyword_seq}/bias/title:
+    get:
+      tags:
+      - Keyword Analytics
+      summary: Get title bias by media
+      operationId: getTitleBiasByMedia
+      parameters:
+      - name: keyword_seq
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      - name: period
+        in: query
+        required: false
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/TitleBiasByMediaResponseDto"
+  /api/analytics/keywords/{keyword_seq}/bias/title/:
+    get:
+      tags:
+      - Keyword Analytics
+      summary: Get title bias by media
+      operationId: getTitleBiasByMedia_1
+      parameters:
+      - name: keyword_seq
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      - name: period
+        in: query
+        required: false
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/TitleBiasByMediaResponseDto"
+  /api/analytics/keywords/{keyword_seq}/:
+    get:
+      tags:
+      - Keyword Analytics
+      summary: Get keyword metadata
+      operationId: getKeywordMeta
+      parameters:
+      - name: keyword_seq
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      - name: period
+        in: query
+        required: false
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/KeywordMetaResponseDto"
+  /api/analytics/keywords/{keyword_seq}:
+    get:
+      tags:
+      - Keyword Analytics
+      summary: Get keyword metadata
+      operationId: getKeywordMeta_1
+      parameters:
+      - name: keyword_seq
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      - name: period
+        in: query
+        required: false
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/KeywordMetaResponseDto"
+  /api/admins/users/:
+    get:
+      tags:
+      - Admin Users
+      summary: List users
+      operationId: listUsers
+      parameters:
+      - name: page
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int32
+      - name: size
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int32
+      - name: q
+        in: query
+        required: false
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/UserListResponseDto"
+      security:
+      - bearerAuth: []
+  /api/admins/users:
+    get:
+      tags:
+      - Admin Users
+      summary: List users
+      operationId: listUsers_1
+      parameters:
+      - name: page
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int32
+      - name: size
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int32
+      - name: q
+        in: query
+        required: false
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/UserListResponseDto"
+      security:
+      - bearerAuth: []
+  /api/admins/inquiries/{inquiry_seq}:
+    get:
+      tags:
+      - Admin Inquiries
+      summary: Get inquiry detail for admin
+      operationId: getInquiryDetailForAdmin
+      parameters:
+      - name: inquiry_seq
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/AdminInquiryDetailResponseDto"
+      security:
+      - bearerAuth: []
+    delete:
+      tags:
+      - Admin Inquiries
+      summary: Delete inquiry
+      operationId: deleteInquiryForAdmin
+      parameters:
+      - name: inquiry_seq
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/AdminInquiryDeleteResponseDto"
+      security:
+      - bearerAuth: []
+  /api/admins/inquiries/{inquiry_seq}/:
+    get:
+      tags:
+      - Admin Inquiries
+      summary: Get inquiry detail for admin
+      operationId: getInquiryDetailForAdmin_1
+      parameters:
+      - name: inquiry_seq
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/AdminInquiryDetailResponseDto"
+      security:
+      - bearerAuth: []
+    delete:
+      tags:
+      - Admin Inquiries
+      summary: Delete inquiry
+      operationId: deleteInquiryForAdmin_1
+      parameters:
+      - name: inquiry_seq
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/AdminInquiryDeleteResponseDto"
+      security:
+      - bearerAuth: []
+  /api/admins/inquiries/:
+    get:
+      tags:
+      - Admin Inquiries
+      summary: List inquiries for admin
+      operationId: listInquiriesForAdmin
+      parameters:
+      - name: page
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int32
+      - name: size
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int32
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/AdminInquiryListResponseDto"
+      security:
+      - bearerAuth: []
+  /api/admins/inquiries:
+    get:
+      tags:
+      - Admin Inquiries
+      summary: List inquiries for admin
+      operationId: listInquiriesForAdmin_1
+      parameters:
+      - name: page
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int32
+      - name: size
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int32
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/AdminInquiryListResponseDto"
+      security:
+      - bearerAuth: []
+  /api/admins/dashboard/summary:
+    get:
+      tags:
+      - Admin Dashboard
+      summary: Get dashboard summary
+      operationId: getSummary
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/AdminDashboardSummaryResponseDto"
+      security:
+      - bearerAuth: []
+  /api/admins/dashboard/summary/:
+    get:
+      tags:
+      - Admin Dashboard
+      summary: Get dashboard summary
+      operationId: getSummary_1
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/AdminDashboardSummaryResponseDto"
+      security:
+      - bearerAuth: []
+  /api/admins/dashboard/login-logs/:
+    get:
+      tags:
+      - Admin Dashboard
+      summary: List login logs
+      operationId: listAdminDashboardLoginLogs
+      parameters:
+      - name: page
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int32
+      - name: size
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int32
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/AdminDashboardLoginLogsResponseDto"
+      security:
+      - bearerAuth: []
+  /api/admins/dashboard/login-logs:
+    get:
+      tags:
+      - Admin Dashboard
+      summary: List login logs
+      operationId: listAdminDashboardLoginLogs_1
+      parameters:
+      - name: page
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int32
+      - name: size
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int32
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/AdminDashboardLoginLogsResponseDto"
+      security:
+      - bearerAuth: []
+components:
+  schemas:
+    AdminInquiryAnswerRequestDto:
+      type: object
+      properties:
+        admin_message:
+          type: string
+          minLength: 1
+        status:
+          type: string
+          minLength: 1
+      required:
+      - admin_message
+      - status
+    AdminInquiryAnswerResponseDto:
+      type: object
+      properties:
+        inquiry_seq:
+          type: integer
+          format: int64
+        status:
+          type: string
+        processed_at:
+          type: string
+          format: date-time
+        answer_updated_at:
+          type: string
+          format: date-time
+    InquiryCreateRequestDto:
+      type: object
+      properties:
+        inquiry_type:
+          type: string
+          minLength: 1
+        title:
+          type: string
+          maxLength: 200
+          minLength: 0
+        message:
+          type: string
+          minLength: 1
+        is_private:
+          type: boolean
+      required:
+      - inquiry_type
+      - message
+      - title
+    InquiryCreateResponseDto:
+      type: object
+      properties:
+        inquiry_seq:
+          type: integer
+          format: int64
+        submitted_at:
+          type: string
+          format: date-time
+    IdPrecheckRequestDto:
+      type: object
+      properties:
+        user_id:
+          type: string
+          minLength: 1
+      required:
+      - user_id
+    IdPrecheckResponseDto:
+      type: object
+      properties:
+        user_id:
+          $ref: "#/components/schemas/UserIdInfo"
+        id_check_token:
+          type: string
+        expires_in:
+          type: integer
+          format: int32
+    UserIdInfo:
+      type: object
+      properties:
+        valid:
+          type: boolean
+        status:
+          type: string
+    EmailPrecheckRequestDto:
+      type: object
+      properties:
+        email:
+          type: string
+          minLength: 1
+      required:
+      - email
+    EmailInfo:
+      type: object
+      properties:
+        valid:
+          type: boolean
+        status:
+          type: string
+    EmailPrecheckResponseDto:
+      type: object
+      properties:
+        email:
+          $ref: "#/components/schemas/EmailInfo"
+        email_check_token:
+          type: string
+        expires_in:
+          type: integer
+          format: int32
+        message:
+          type: string
+    SignUpRequestDto:
+      type: object
+      properties:
+        user_id:
+          type: string
+          minLength: 1
+        email:
+          type: string
+          minLength: 1
+        password:
+          type: string
+          minLength: 1
+        password2:
+          type: string
+          minLength: 1
+        username:
+          type: string
+          minLength: 1
+        birth_date:
+          type: string
+          format: date
+        gender:
+          type: string
+          minLength: 1
+        agree_whether:
+          type: boolean
+        id_check_token:
+          type: string
+          minLength: 1
+        email_check_token:
+          type: string
+          minLength: 1
+      required:
+      - agree_whether
+      - birth_date
+      - email
+      - email_check_token
+      - gender
+      - id_check_token
+      - password
+      - password2
+      - user_id
+      - username
+    SignUpResponseDto:
+      type: object
+      properties:
+        user_seq:
+          type: integer
+          format: int64
+        joined_at:
+          type: string
+          format: date-time
+    TokenRefreshResponseDto:
+      type: object
+      properties:
+        access:
+          type: string
+        message:
+          type: string
+    LogoutResponseDto:
+      type: object
+      properties:
+        message:
+          type: string
+    LoginRequestDto:
+      type: object
+      properties:
+        user_id:
+          type: string
+          minLength: 1
+        password:
+          type: string
+          minLength: 1
+      required:
+      - password
+      - user_id
+    LoginResponseDto:
+      type: object
+      properties:
+        access:
+          type: string
+        role:
+          type: string
+        user_seq:
+          type: integer
+          format: int64
+        user_id:
+          type: string
+        message:
+          type: string
+    FindPasswordRequestDto:
+      type: object
+      properties:
+        user_id:
+          type: string
+          minLength: 1
+        name:
+          type: string
+          minLength: 1
+        email:
+          type: string
+          minLength: 1
+      required:
+      - email
+      - name
+      - user_id
+    FindPasswordResponseDto:
+      type: object
+      properties:
+        message:
+          type: string
+        temp_password:
+          type: string
+    FindIdRequestDto:
+      type: object
+      properties:
+        email:
+          type: string
+          minLength: 1
+        name:
+          type: string
+          minLength: 1
+      required:
+      - email
+      - name
+    FindIdResponseDto:
+      type: object
+      properties:
+        user_id:
+          type: string
+        message:
+          type: string
+    ChangePasswordRequestDto:
+      type: object
+      properties:
+        current_password:
+          type: string
+          minLength: 1
+        new_password:
+          type: string
+          minLength: 1
+        new_password_confirm:
+          type: string
+          minLength: 1
+      required:
+      - current_password
+      - new_password
+      - new_password_confirm
+    ChangePasswordResponseDto:
+      type: object
+      properties:
+        message:
+          type: string
+        clear_refresh_cookie:
+          type: boolean
+    WithdrawRequestDto:
+      type: object
+      properties:
+        user_seq:
+          type: integer
+          format: int64
+      required:
+      - user_seq
+    WithdrawResponseDto:
+      type: object
+      properties:
+        user_seq:
+          type: integer
+          format: int64
+        deleted_at:
+          type: string
+          format: date-time
+        acted_seq:
+          type: integer
+          format: int64
+    AdminPromoteRequestDto:
+      type: object
+      properties:
+        user_seq:
+          type: integer
+          format: int64
+      required:
+      - user_seq
+    AdminPromoteResponseDto:
+      type: object
+      properties:
+        user_seq:
+          type: integer
+          format: int64
+        acted_seq:
+          type: integer
+          format: int64
+        admin_level:
+          type: string
+        granted_at:
+          type: string
+          format: date-time
+        message:
+          type: string
+    AdminDemoteRequestDto:
+      type: object
+      properties:
+        user_seq:
+          type: integer
+          format: int64
+      required:
+      - user_seq
+    AdminDemoteResponseDto:
+      type: object
+      properties:
+        user_seq:
+          type: integer
+          format: int64
+        acted_seq:
+          type: integer
+          format: int64
+        demoted_at:
+          type: string
+          format: date-time
+        message:
+          type: string
+    InquiryDetailResponseDto:
+      type: object
+      properties:
+        inquiry:
+          $ref: "#/components/schemas/InquiryDto"
+    InquiryDto:
+      type: object
+      properties:
+        inquiry_seq:
+          type: integer
+          format: int64
+        inquiry_type:
+          type: string
+        title:
+          type: string
+        content:
+          type: string
+        writer_user_id:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+        status:
+          type: string
+        is_private:
+          type: boolean
+        admin_message:
+          type: string
+        processed_at:
+          type: string
+          format: date-time
+        answer_updated_at:
+          type: string
+          format: date-time
+        answered_by:
+          type: string
+        answer_team_label:
+          type: string
+    InquiryItemDto:
+      type: object
+      properties:
+        inquiry_seq:
+          type: integer
+          format: int64
+        inquiry_type:
+          type: string
+        title:
+          type: string
+        writer_user_id:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+        status:
+          type: string
+        is_private:
+          type: boolean
+    InquiryListResponseDto:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/InquiryItemDto"
+        page:
+          type: integer
+          format: int32
+        size:
+          type: integer
+          format: int32
+        total_count:
+          type: integer
+          format: int64
+        total_pages:
+          type: integer
+          format: int32
+    AnalyticsOverviewResponseDto:
+      type: object
+      properties:
+        collected_article_count:
+          type: integer
+          format: int64
+        data_base_date:
+          type: string
+        data_started_at:
+          type: string
+        top_keywords:
+          type: array
+          items:
+            $ref: "#/components/schemas/TopKeywordItemDto"
+    TopKeywordItemDto:
+      type: object
+      properties:
+        rank_no:
+          type: integer
+          format: int32
+        keyword_seq:
+          type: integer
+          format: int64
+        keyword:
+          type: string
+        article_count:
+          type: integer
+          format: int32
+        is_analyzable:
+          type: boolean
+    MediaContentSentimentCompareResponseDto:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/MediaSentimentItemDto"
+    MediaSentimentItemDto:
+      type: object
+      properties:
+        media_name:
+          type: string
+        positive:
+          type: number
+          format: double
+        neutral:
+          type: number
+          format: double
+        negative:
+          type: number
+          format: double
+    MediaArticleCountItemDto:
+      type: object
+      properties:
+        media_name:
+          type: string
+        article_count:
+          type: integer
+          format: int32
+    MediaArticleCountsResponseDto:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/MediaArticleCountItemDto"
+    MediaTitleTopWordsResponseDto:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/MediaTopWordsItemDto"
+    MediaTopWordsItemDto:
+      type: object
+      properties:
+        media_name:
+          type: string
+        words:
+          type: array
+          items:
+            type: string
+    KeywordPillItemDto:
+      type: object
+      properties:
+        keyword_seq:
+          type: integer
+          format: int64
+        keyword:
+          type: string
+    MediaCompareTopKeywordsResponseDto:
+      type: object
+      properties:
+        period_start:
+          type: string
+        period_end:
+          type: string
+        selected_keyword:
+          type: string
+        selected_article_count:
+          type: integer
+          format: int32
+        selected_media_count:
+          type: integer
+          format: int32
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/KeywordPillItemDto"
+        selected_keyword_seq:
+          type: integer
+          format: int64
+    WordItemDto:
+      type: object
+      properties:
+        word:
+          type: string
+        weight:
+          type: number
+          format: double
+    WordcloudResponseDto:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/WordItemDto"
+    AiSummaryResponseDto:
+      type: object
+      properties:
+        summary_text:
+          type: string
+    ContentSentimentResponseDto:
+      type: object
+      properties:
+        positive:
+          type: number
+          format: double
+        neutral:
+          type: number
+          format: double
+        negative:
+          type: number
+          format: double
+    SearchTimelineResponseDto:
+      type: object
+      properties:
+        period_start:
+          type: string
+        period_end:
+          type: string
+        latest_score:
+          type: integer
+          format: int32
+        peak_score:
+          type: integer
+          format: int32
+        average_score:
+          type: number
+          format: double
+        has_partial:
+          type: boolean
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/TimelinePointDto"
+    TimelinePointDto:
+      type: object
+      properties:
+        observed_date:
+          type: string
+        interest_score:
+          type: integer
+          format: int32
+        is_partial:
+          type: boolean
+    CoocNetworkResponseDto:
+      type: object
+      properties:
+        nodes:
+          type: array
+          items:
+            $ref: "#/components/schemas/NodeItemDto"
+        edges:
+          type: array
+          items:
+            $ref: "#/components/schemas/EdgeItemDto"
+    EdgeItemDto:
+      type: object
+      properties:
+        source:
+          type: integer
+          format: int64
+        target:
+          type: integer
+          format: int64
+        weight:
+          type: number
+          format: double
+    NodeItemDto:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        label:
+          type: string
+        size:
+          type: number
+          format: double
+    BiasByMediaItemDto:
+      type: object
+      properties:
+        media_name:
+          type: string
+        bias_score:
+          type: number
+          format: double
+    TitleBiasByMediaResponseDto:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/BiasByMediaItemDto"
+    KeywordMetaResponseDto:
+      type: object
+      properties:
+        keyword_seq:
+          type: integer
+          format: int64
+        keyword:
+          type: string
+        period_start:
+          type: string
+        period_end:
+          type: string
+        article_count:
+          type: integer
+          format: int32
+        media_count:
+          type: integer
+          format: int32
+        is_analyzable:
+          type: boolean
+    UserListItemDto:
+      type: object
+      properties:
+        user_seq:
+          type: integer
+          format: int64
+        user_id:
+          type: string
+        user_name:
+          type: string
+        grade_code:
+          type: integer
+          format: int32
+        grade_name:
+          type: string
+        email:
+          type: string
+        birth_date:
+          type: string
+          format: date
+        gender:
+          type: string
+        last_login_at:
+          type: string
+          format: date-time
+        joined_at:
+          type: string
+          format: date-time
+        granted_at:
+          type: string
+          format: date-time
+        password_changed_at:
+          type: string
+          format: date-time
+    UserListResponseDto:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/UserListItemDto"
+        page:
+          type: integer
+          format: int32
+        size:
+          type: integer
+          format: int32
+        total_count:
+          type: integer
+          format: int64
+        total_pages:
+          type: integer
+          format: int32
+        message:
+          type: string
+    AdminInquiryDetailResponseDto:
+      type: object
+      properties:
+        inquiry:
+          $ref: "#/components/schemas/AdminInquiryDto"
+    AdminInquiryDto:
+      type: object
+      properties:
+        inquiry_seq:
+          type: integer
+          format: int64
+        type_code:
+          type: string
+        title:
+          type: string
+        message:
+          type: string
+        inquirer_id:
+          type: string
+        submitted_at:
+          type: string
+          format: date-time
+        status:
+          type: string
+        admin_message:
+          type: string
+    AdminInquiryListItemDto:
+      type: object
+      properties:
+        inquiry_seq:
+          type: integer
+          format: int64
+        type_code:
+          type: string
+        title:
+          type: string
+        inquirer_id:
+          type: string
+        submitted_at:
+          type: string
+          format: date-time
+        status:
+          type: string
+    AdminInquiryListResponseDto:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/AdminInquiryListItemDto"
+        page:
+          type: integer
+          format: int32
+        size:
+          type: integer
+          format: int32
+        total_count:
+          type: integer
+          format: int64
+        total_pages:
+          type: integer
+          format: int32
+    AdminDashboardSummaryResponseDto:
+      type: object
+      properties:
+        today_joined_count:
+          type: integer
+          format: int64
+        today_joined_delta_rate:
+          type: number
+          format: double
+        today_collected_article_count:
+          type: integer
+          format: int64
+        today_collected_article_delta_rate:
+          type: number
+          format: double
+        processing_inquiry_count:
+          type: integer
+          format: int64
+        processing_inquiry_avg_elapsed_days:
+          type: number
+          format: double
+    AdminDashboardLoginLogsResponseDto:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/LoginLogItemDto"
+        page:
+          type: integer
+          format: int32
+        size:
+          type: integer
+          format: int32
+        total_count:
+          type: integer
+          format: int64
+        total_pages:
+          type: integer
+          format: int32
+    LoginLogItemDto:
+      type: object
+      properties:
+        login_log_seq:
+          type: integer
+          format: int64
+        input_id:
+          type: string
+        attempted_at:
+          type: string
+          format: date-time
+        user_seq:
+          type: integer
+          format: int64
+        is_success:
+          type: boolean
+        ip_address:
+          type: string
+        user_agent:
+          type: string
+    AdminInquiryDeleteResponseDto:
+      type: object
+      properties:
+        inquiry_seq:
+          type: integer
+          format: int64
+  securitySchemes:
+    bearerAuth:
+      type: http
+      description: Use the access token returned by the login API.
+      name: bearerAuth
+      scheme: bearer
+      bearerFormat: JWT

@@ -9,6 +9,8 @@ import com.newsight.backend.accounts.presentation.dto.IdPrecheckDto.IdPrecheckRe
 import com.newsight.backend.accounts.presentation.dto.IdPrecheckDto.UserIdInfo;
 import com.newsight.backend.accounts.presentation.dto.SignUpDto.SignUpRequestDto;
 import com.newsight.backend.accounts.presentation.dto.SignUpDto.SignUpResponseDto;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -20,11 +22,13 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api/auth/register")
+@Tag(name = "Registration", description = "Account registration and duplicate checks")
 public class RegistrationController {
 
     private final AccountsService accountsService;
 
     @PostMapping({"/precheck/user-id", "/precheck/user-id/"})
+    @Operation(summary = "Check user ID availability")
     public ResponseEntity<IdPrecheckResponseDto> precheckUserId(@Valid @RequestBody IdPrecheckRequestDto body) {
         AccountsService.IdPrecheckResult r = accountsService.precheckUserId(body.userId());
 
@@ -39,6 +43,7 @@ public class RegistrationController {
     }
 
     @PostMapping({"/precheck/email", "/precheck/email/"})
+    @Operation(summary = "Check email availability")
     public ResponseEntity<EmailPrecheckResponseDto> precheckEmail(@Valid @RequestBody EmailPrecheckRequestDto body) {
         AccountsService.EmailPrecheckResult r = accountsService.precheckEmail(body.email());
 
@@ -54,6 +59,7 @@ public class RegistrationController {
     }
 
     @PostMapping({"", "/"})
+    @Operation(summary = "Create account")
     public ResponseEntity<SignUpResponseDto> signUp(@Valid @RequestBody SignUpRequestDto body) {
         AccountsService.SignUpCommand cmd = new AccountsService.SignUpCommand(
                 body.userId(),

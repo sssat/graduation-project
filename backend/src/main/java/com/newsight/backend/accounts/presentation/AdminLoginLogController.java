@@ -5,6 +5,10 @@ import com.newsight.backend.accounts.presentation.dto.AdminDashboardLoginLogsDto
 import com.newsight.backend.accounts.presentation.dto.AdminDashboardLoginLogsDto.AdminDashboardLoginLogsResponseDto;
 import com.newsight.backend.accounts.presentation.dto.AdminDashboardLoginLogsDto.LoginLogItemDto;
 import com.newsight.backend.common.security.CurrentUserExtractor;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -18,13 +22,16 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api/admins/dashboard")
+@Tag(name = "Admin Dashboard", description = "Administrator dashboard APIs")
+@SecurityRequirement(name = "bearerAuth")
 public class AdminLoginLogController {
 
     private final AccountsService accountsService;
 
     @GetMapping({"/login-logs", "/login-logs/"})
+    @Operation(summary = "List login logs")
     public ResponseEntity<AdminDashboardLoginLogsResponseDto> listAdminDashboardLoginLogs(
-            @AuthenticationPrincipal Jwt jwt,
+            @Parameter(hidden = true) @AuthenticationPrincipal Jwt jwt,
             @RequestParam(value = "page", required = false) Integer page,
             @RequestParam(value = "size", required = false) Integer size
     ) {

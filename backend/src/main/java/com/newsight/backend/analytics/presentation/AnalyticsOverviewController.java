@@ -2,6 +2,8 @@ package com.newsight.backend.analytics.presentation;
 
 import com.newsight.backend.analytics.application.service.AnalyticsService;
 import com.newsight.backend.analytics.presentation.dto.AnalyticsOverviewDto;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -12,11 +14,13 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequestMapping("/api/analytics")
 @RequiredArgsConstructor
+@Tag(name = "Analytics Overview", description = "Public analytics overview APIs")
 public class AnalyticsOverviewController {
 
     private final AnalyticsService analyticsService;
 
     @GetMapping({"/overview", "/overview/"})
+    @Operation(summary = "Get analytics overview")
     public ResponseEntity<AnalyticsOverviewDto.AnalyticsOverviewResponseDto> getOverview() {
         AnalyticsService.OverviewResult result = analyticsService.getOverview();
 

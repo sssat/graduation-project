@@ -5,6 +5,10 @@ import com.newsight.backend.inquiries.application.service.InquiriesService;
 import com.newsight.backend.inquiries.presentation.dto.InquiryCreateDto;
 import com.newsight.backend.inquiries.presentation.dto.InquiryDetailDto;
 import com.newsight.backend.inquiries.presentation.dto.InquiryListDto;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -22,13 +26,16 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api/inquiries")
+@Tag(name = "User Inquiries", description = "Authenticated user inquiry APIs")
+@SecurityRequirement(name = "bearerAuth")
 public class InquiryController {
 
     private final InquiriesService inquiriesService;
 
     @GetMapping({"", "/"})
+    @Operation(summary = "List inquiries")
     public ResponseEntity<InquiryListDto.InquiryListResponseDto> listInquiries(
-            @AuthenticationPrincipal Jwt jwt,
+            @Parameter(hidden = true) @AuthenticationPrincipal Jwt jwt,
             @RequestParam(name = "inquiry_type", required = false) String inquiryType,
             @RequestParam(name = "status", required = false) String status,
             @RequestParam(name = "mine", required = false) Boolean mine,
@@ -50,8 +57,9 @@ public class InquiryController {
     }
 
     @GetMapping({"/{inquiry_seq}", "/{inquiry_seq}/"})
+    @Operation(summary = "Get inquiry detail")
     public ResponseEntity<InquiryDetailDto.InquiryDetailResponseDto> getInquiryDetail(
-            @AuthenticationPrincipal Jwt jwt,
+            @Parameter(hidden = true) @AuthenticationPrincipal Jwt jwt,
             @PathVariable("inquiry_seq") Long inquirySeq
     ) {
         Long actorUserSeq = CurrentUserExtractor.requireUserSeq(jwt);
@@ -60,8 +68,9 @@ public class InquiryController {
     }
 
     @PostMapping({"", "/"})
+    @Operation(summary = "Create inquiry")
     public ResponseEntity<InquiryCreateDto.InquiryCreateResponseDto> createInquiry(
-            @AuthenticationPrincipal Jwt jwt,
+            @Parameter(hidden = true) @AuthenticationPrincipal Jwt jwt,
             @Valid @RequestBody InquiryCreateDto.InquiryCreateRequestDto request
     ) {
         Long actorUserSeq = CurrentUserExtractor.requireUserSeq(jwt);

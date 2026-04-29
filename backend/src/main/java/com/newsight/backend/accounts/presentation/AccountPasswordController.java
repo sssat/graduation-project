@@ -4,6 +4,10 @@ import com.newsight.backend.accounts.application.service.AccountsService;
 import com.newsight.backend.accounts.presentation.dto.ChangePasswordDto.ChangePasswordRequestDto;
 import com.newsight.backend.accounts.presentation.dto.ChangePasswordDto.ChangePasswordResponseDto;
 import com.newsight.backend.common.security.CurrentUserExtractor;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -19,15 +23,18 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api/auth")
+@Tag(name = "Account Password", description = "Authenticated password management APIs")
+@SecurityRequirement(name = "bearerAuth")
 public class AccountPasswordController {
 
     private final AccountsService accountsService;
 
     @PostMapping({"/change-password", "/change-password/"})
+    @Operation(summary = "Change password")
     public ResponseEntity<ChangePasswordResponseDto> changePassword(
-            @AuthenticationPrincipal Jwt jwt,
+            @Parameter(hidden = true) @AuthenticationPrincipal Jwt jwt,
             @Valid @RequestBody ChangePasswordRequestDto body,
-            HttpServletRequest request
+            @Parameter(hidden = true) HttpServletRequest request
     ) {
         Long actorUserSeq = CurrentUserExtractor.requireUserSeq(jwt);
 

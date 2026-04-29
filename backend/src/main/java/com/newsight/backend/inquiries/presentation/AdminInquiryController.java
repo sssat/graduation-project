@@ -6,6 +6,10 @@ import com.newsight.backend.inquiries.presentation.dto.AdminInquiryAnswerDto;
 import com.newsight.backend.inquiries.presentation.dto.AdminInquiryDeleteDto;
 import com.newsight.backend.inquiries.presentation.dto.AdminInquiryDetailDto;
 import com.newsight.backend.inquiries.presentation.dto.AdminInquiryListDto;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -23,13 +27,16 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api/admins/inquiries")
+@Tag(name = "Admin Inquiries", description = "Administrator inquiry management APIs")
+@SecurityRequirement(name = "bearerAuth")
 public class AdminInquiryController {
 
     private final InquiriesService inquiriesService;
 
     @GetMapping({"", "/"})
+    @Operation(summary = "List inquiries for admin")
     public ResponseEntity<AdminInquiryListDto.AdminInquiryListResponseDto> listInquiriesForAdmin(
-            @AuthenticationPrincipal Jwt jwt,
+            @Parameter(hidden = true) @AuthenticationPrincipal Jwt jwt,
             @RequestParam(name = "page", required = false) Integer page,
             @RequestParam(name = "size", required = false) Integer size
     ) {
@@ -42,8 +49,9 @@ public class AdminInquiryController {
     }
 
     @GetMapping({"/{inquiry_seq}", "/{inquiry_seq}/"})
+    @Operation(summary = "Get inquiry detail for admin")
     public ResponseEntity<AdminInquiryDetailDto.AdminInquiryDetailResponseDto> getInquiryDetailForAdmin(
-            @AuthenticationPrincipal Jwt jwt,
+            @Parameter(hidden = true) @AuthenticationPrincipal Jwt jwt,
             @PathVariable("inquiry_seq") Long inquirySeq
     ) {
         Long actorUserSeq = CurrentUserExtractor.requireUserSeq(jwt);
@@ -55,8 +63,9 @@ public class AdminInquiryController {
     }
 
     @PutMapping({"/{inquiry_seq}/answer", "/{inquiry_seq}/answer/"})
+    @Operation(summary = "Save or update admin answer")
     public ResponseEntity<AdminInquiryAnswerDto.AdminInquiryAnswerResponseDto> saveOrUpdateAdminAnswer(
-            @AuthenticationPrincipal Jwt jwt,
+            @Parameter(hidden = true) @AuthenticationPrincipal Jwt jwt,
             @PathVariable("inquiry_seq") Long inquirySeq,
             @Valid @RequestBody AdminInquiryAnswerDto.AdminInquiryAnswerRequestDto request
     ) {
@@ -69,8 +78,9 @@ public class AdminInquiryController {
     }
 
     @DeleteMapping({"/{inquiry_seq}", "/{inquiry_seq}/"})
+    @Operation(summary = "Delete inquiry")
     public ResponseEntity<AdminInquiryDeleteDto.AdminInquiryDeleteResponseDto> deleteInquiryForAdmin(
-            @AuthenticationPrincipal Jwt jwt,
+            @Parameter(hidden = true) @AuthenticationPrincipal Jwt jwt,
             @PathVariable("inquiry_seq") Long inquirySeq
     ) {
         Long actorUserSeq = CurrentUserExtractor.requireUserSeq(jwt);

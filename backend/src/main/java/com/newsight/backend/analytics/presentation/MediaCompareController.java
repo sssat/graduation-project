@@ -5,6 +5,8 @@ import com.newsight.backend.analytics.presentation.dto.MediaArticleCountsDto;
 import com.newsight.backend.analytics.presentation.dto.MediaCompareTopKeywordsDto;
 import com.newsight.backend.analytics.presentation.dto.MediaContentSentimentCompareDto;
 import com.newsight.backend.analytics.presentation.dto.MediaTitleTopWordsDto;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -17,11 +19,13 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequestMapping("/api/analytics")
 @RequiredArgsConstructor
+@Tag(name = "Media Compare Analytics", description = "Public media comparison analytics APIs")
 public class MediaCompareController {
 
     private final AnalyticsService analyticsService;
 
     @GetMapping({"/media-compare/keywords/top", "/media-compare/keywords/top/"})
+    @Operation(summary = "List top keywords for media comparison")
     public ResponseEntity<MediaCompareTopKeywordsDto.MediaCompareTopKeywordsResponseDto> getMediaCompareTopKeywords(
             @RequestParam(value = "period", required = false) String period,
             @RequestParam(value = "limit", required = false) Integer limit
@@ -47,6 +51,7 @@ public class MediaCompareController {
             "/media-compare/keywords/{keyword_seq}/media-article-counts",
             "/media-compare/keywords/{keyword_seq}/media-article-counts/"
     })
+    @Operation(summary = "Get article counts by media")
     public ResponseEntity<MediaArticleCountsDto.MediaArticleCountsResponseDto> getMediaArticleCounts(
             @PathVariable("keyword_seq") Long keywordSeq,
             @RequestParam(value = "period", required = false) String period
@@ -64,6 +69,7 @@ public class MediaCompareController {
             "/media-compare/keywords/{keyword_seq}/sentiment/content",
             "/media-compare/keywords/{keyword_seq}/sentiment/content/"
     })
+    @Operation(summary = "Get content sentiment by media")
     public ResponseEntity<MediaContentSentimentCompareDto.MediaContentSentimentCompareResponseDto> getMediaCompareContentSentiment(
             @PathVariable("keyword_seq") Long keywordSeq,
             @RequestParam(value = "period", required = false) String period
@@ -86,6 +92,7 @@ public class MediaCompareController {
             "/media-compare/keywords/{keyword_seq}/framing/title-top-words",
             "/media-compare/keywords/{keyword_seq}/framing/title-top-words/"
     })
+    @Operation(summary = "Get title top words by media")
     public ResponseEntity<MediaTitleTopWordsDto.MediaTitleTopWordsResponseDto> getMediaCompareTitleTopWords(
             @PathVariable("keyword_seq") Long keywordSeq,
             @RequestParam(value = "period", required = false) String period,

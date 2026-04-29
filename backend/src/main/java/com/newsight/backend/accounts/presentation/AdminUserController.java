@@ -11,6 +11,10 @@ import com.newsight.backend.accounts.presentation.dto.UserListDto.UserListRespon
 import com.newsight.backend.accounts.presentation.dto.WithdrawDto.WithdrawRequestDto;
 import com.newsight.backend.accounts.presentation.dto.WithdrawDto.WithdrawResponseDto;
 import com.newsight.backend.common.security.CurrentUserExtractor;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
@@ -27,13 +31,16 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api/admins")
+@Tag(name = "Admin Users", description = "Administrator user management APIs")
+@SecurityRequirement(name = "bearerAuth")
 public class AdminUserController {
 
     private final AccountsService accountsService;
 
     @GetMapping({"/users", "/users/"})
+    @Operation(summary = "List users")
     public ResponseEntity<UserListResponseDto> listUsers(
-            @AuthenticationPrincipal Jwt jwt,
+            @Parameter(hidden = true) @AuthenticationPrincipal Jwt jwt,
             @RequestParam(value = "page", required = false) Integer page,
             @RequestParam(value = "size", required = false) Integer size,
             @RequestParam(value = "q", required = false) String q
@@ -74,8 +81,9 @@ public class AdminUserController {
     }
 
     @PostMapping({"/promote", "/promote/"})
+    @Operation(summary = "Promote user to admin")
     public ResponseEntity<AdminPromoteResponseDto> promote(
-            @AuthenticationPrincipal Jwt jwt,
+            @Parameter(hidden = true) @AuthenticationPrincipal Jwt jwt,
             @Valid @RequestBody AdminPromoteRequestDto body
     ) {
         Long actorUserSeq = CurrentUserExtractor.requireUserSeq(jwt);
@@ -92,8 +100,9 @@ public class AdminUserController {
     }
 
     @PostMapping({"/demote", "/demote/"})
+    @Operation(summary = "Demote admin to user")
     public ResponseEntity<AdminDemoteResponseDto> demote(
-            @AuthenticationPrincipal Jwt jwt,
+            @Parameter(hidden = true) @AuthenticationPrincipal Jwt jwt,
             @Valid @RequestBody AdminDemoteRequestDto body
     ) {
         Long actorUserSeq = CurrentUserExtractor.requireUserSeq(jwt);
@@ -109,8 +118,9 @@ public class AdminUserController {
     }
 
     @PostMapping({"/users/withdraw", "/users/withdraw/"})
+    @Operation(summary = "Withdraw user")
     public ResponseEntity<WithdrawResponseDto> withdraw(
-            @AuthenticationPrincipal Jwt jwt,
+            @Parameter(hidden = true) @AuthenticationPrincipal Jwt jwt,
             @Valid @RequestBody WithdrawRequestDto body
     ) {
         Long actorUserSeq = CurrentUserExtractor.requireUserSeq(jwt);
