@@ -235,9 +235,10 @@ flowchart LR
   User["일반 사용자"]
   Admin["관리자"]
 
-  subgraph AppServer["EC2 t3.small<br/>프론트엔드 / 백엔드 공용 서버"]
+  subgraph AppServer["EC2 t3.small<br/>프론트엔드 / 백엔드 / DB 공용 서버"]
     Web["React 정적 파일"]
     Api["Spring Boot Backend API"]
+    DB[("MySQL<br/>서비스 데이터 / 분석 결과")]
   end
 
   subgraph BatchServer["EC2 m6i.xlarge<br/>크롤링 및 분석 전용 서버"]
@@ -245,7 +246,6 @@ flowchart LR
     Pipeline["Python Data Pipeline<br/>수집 / 전처리 / 분석"]
   end
 
-  DB[("MySQL<br/>서비스 데이터 / 분석 결과")]
   External["외부 API<br/>Google Trends / Naver News<br/>Naver DataLab / OpenAI API"]
 
   User -->|"웹 접속"| Web
@@ -315,7 +315,7 @@ sequenceDiagram
 - 상세 그림에서는 기능 단위를 `Accounts`, `Analytics`, `Inquiries`, `Pipeline Jobs`로 나눈다.
 - 백엔드 구조는 `Presentation`, `Application`, `Domain`, `Infrastructure` 계층으로 표현한다.
 - 프론트엔드는 `app`, `features`, `api`, `shared` 중심의 기능 기반 구조로 표현한다.
-- 운영 구조는 프론트엔드/백엔드 공용 서버와 크롤링/분석 전용 서버를 분리해서 표현한다.
+- 운영 구조는 프론트엔드/백엔드/DB 공용 서버와 크롤링/분석 전용 서버를 분리해서 표현한다.
 - 화살표에는 통신 방식이나 데이터 성격을 적는다: `REST API`, `JWT`, `JPA/JDBC`, `수집 데이터`, `분석 결과`.
 - 외부 시스템은 서비스 바깥에 둔다: Google Trends, Naver News, Naver DataLab, OpenAI API, Mail Server.
 - DB는 계정/문의 데이터와 분석 데이터를 구분해서 표현한다.
