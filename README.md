@@ -105,7 +105,7 @@ Newsight는 트렌드 키워드와 뉴스 데이터를 수집하고, 이를 바�
 - JPype1
 - Hugging Face Transformers 4.57
 - PyTorch 2.9 CPU
-- `snunlp/KR-FinBert-SC` 감성분석 모델
+- `FISA-conclave/klue-roberta-news-sentiment` 감성분석 모델
 - OpenAI Python SDK
 - OpenAI API
 - `gpt-4o-mini`
@@ -172,7 +172,7 @@ Newsight는 트렌드 키워드와 뉴스 데이터를 수집하고, 이를 바�
 | 자연어 처리/분석 | JPype1 | Python에서 Java 기반 Komoran 형태소 분석기를 호출하기 위해 사용하는 브리지 라이브러리입니다. |
 | 자연어 처리/분석 | Hugging Face Transformers | 사전 학습된 자연어 처리 모델을 불러와 감성 분석에 사용합니다. |
 | 자연어 처리/분석 | PyTorch | Transformers 모델을 실행하기 위한 딥러닝 프레임워크입니다. |
-| 자연어 처리/분석 | `snunlp/KR-FinBert-SC` | 한국어 뉴스 문장을 긍정, 중립, 부정으로 분류하기 위해 사용한 감성 분석 모델입니다. |
+| 자연어 처리/분석 | `FISA-conclave/klue-roberta-news-sentiment` | 한국어 뉴스 문장을 긍정, 중립, 부정으로 분류하기 위해 사용한 KLUE-RoBERTa 기반 감성 분석 모델입니다. |
 | AI 요약 | OpenAI Python SDK | Python 파이프라인에서 OpenAI API를 호출하기 위해 사용합니다. |
 | AI 요약 | OpenAI API | 수집된 뉴스 기사 내용을 바탕으로 키워드별 AI 요약을 생성하기 위해 사용합니다. |
 | AI 요약 | `gpt-4o-mini` | 뉴스 요약 생성에 사용한 OpenAI 모델입니다. |

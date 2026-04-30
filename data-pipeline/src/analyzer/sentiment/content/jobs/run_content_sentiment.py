@@ -501,7 +501,7 @@ def main() -> None:
 
     model_name = (args.model_name or "").strip() or default_model
     if not model_name:
-        model_name = "snunlp/KR-FinBert-SC"
+        model_name = "FISA-conclave/klue-roberta-news-sentiment"
 
     device = (args.device or "").strip()
     batch_size = int(args.batch_size)

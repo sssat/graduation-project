@@ -345,7 +345,7 @@ def main() -> None:
 
     model_name = (args.model_name or "").strip() or (settings.sentiment_title_model_name or "").strip()
     if not model_name:
-        model_name = "snunlp/KR-FinBert-SC"
+        model_name = "FISA-conclave/klue-roberta-news-sentiment"
 
     device = (args.device or "").strip()
     batch_size = int(args.batch_size)
