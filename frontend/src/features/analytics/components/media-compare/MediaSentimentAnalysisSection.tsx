@@ -41,6 +41,15 @@ const SENTIMENT_ITEMS: Array<{
   },
 ];
 
+const DOMINANT_TONE_CLASS_BY_SENTIMENT: Record<
+  SentimentKey,
+  "summaryCardPositiveTone" | "summaryCardNeutralTone" | "summaryCardNegativeTone"
+> = {
+  positive: "summaryCardPositiveTone",
+  neutral: "summaryCardNeutralTone",
+  negative: "summaryCardNegativeTone",
+};
+
 function formatPercent(value: number) {
   return `${Math.round(value)}%`;
 }
@@ -86,6 +95,9 @@ export default function MediaSentimentAnalysisSection({
   const mostPositiveRow = useMemo(() => findTopMediaRow(mediaRows, "positive"), [mediaRows]);
   const mostNegativeRow = useMemo(() => findTopMediaRow(mediaRows, "negative"), [mediaRows]);
   const chartHeight = Math.max(320, mediaRows.length * 52 + 48);
+  const dominantToneClassName = dominantSentiment
+    ? styles[DOMINANT_TONE_CLASS_BY_SENTIMENT[dominantSentiment.key]]
+    : styles.summaryCardNeutralTone;
 
   useEffect(() => {
     if (!canvasRef.current) return;
@@ -212,7 +224,7 @@ export default function MediaSentimentAnalysisSection({
       {rows.length ? (
         <>
           <div className={styles.summaryStrip}>
-            <section className={`${styles.summaryCard} ${styles.summaryCardWide}`}>
+            <section className={`${styles.summaryCard} ${styles.summaryCardWide} ${dominantToneClassName}`}>
               <div className={styles.summaryLabel}>전체 감성 흐름</div>
               {overallRow && dominantSentiment ? (
                 <>

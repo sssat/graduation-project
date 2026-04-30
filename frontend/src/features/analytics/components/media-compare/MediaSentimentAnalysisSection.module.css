@@ -46,6 +46,13 @@
   border-color: rgba(147, 197, 253, 0.82);
 }
 
+.summaryCardNeutralTone {
+  background:
+    radial-gradient(circle at top right, rgba(59, 130, 246, 0.16), transparent 34%),
+    linear-gradient(135deg, rgba(239, 246, 255, 0.98), rgba(248, 250, 252, 0.96));
+  border-color: rgba(147, 197, 253, 0.82);
+}
+
 .summaryCardCompact {
   min-height: 0;
 }
