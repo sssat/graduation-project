@@ -209,7 +209,7 @@ class Settings:
     # title_sentiment 단계
     sentiment_title_model_name: str = _get_str("SENTIMENT_TITLE_MODEL_NAME", "FISA-conclave/klue-roberta-news-sentiment")
     sentiment_title_device: str = _get_str("SENTIMENT_TITLE_DEVICE", "cpu")
-    sentiment_title_batch_size: int = _get_int("SENTIMENT_TITLE_BATCH_SIZE", 64)
+    sentiment_title_batch_size: int = _get_int("SENTIMENT_TITLE_BATCH_SIZE", 128)
     sentiment_title_max_length: int = _get_int("SENTIMENT_TITLE_MAX_LENGTH", 128)
     sentiment_title_keyword_top_n: int = _get_int("SENTIMENT_TITLE_KEYWORD_TOP_N", 0)
     sentiment_title_min_articles_per_group: int = _get_int("SENTIMENT_TITLE_MIN_ARTICLES_PER_GROUP", 0)
@@ -221,7 +221,7 @@ class Settings:
     # content_sentiment 단계
     sentiment_content_model_name: str = _get_str("SENTIMENT_CONTENT_MODEL_NAME", "FISA-conclave/klue-roberta-news-sentiment")
     sentiment_content_device: str = _get_str("SENTIMENT_CONTENT_DEVICE", "cpu")
-    sentiment_content_batch_size: int = _get_int("SENTIMENT_CONTENT_BATCH_SIZE", 16)
+    sentiment_content_batch_size: int = _get_int("SENTIMENT_CONTENT_BATCH_SIZE", 32)
     sentiment_content_max_length: int = _get_int("SENTIMENT_CONTENT_MAX_LENGTH", 256)
     sentiment_content_keyword_top_n: int = _get_int("SENTIMENT_CONTENT_KEYWORD_TOP_N", 0)
     sentiment_content_chunk_size_chars: int = _get_int("SENTIMENT_CONTENT_CHUNK_SIZE_CHARS", 1200)

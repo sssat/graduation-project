@@ -177,52 +177,7 @@ flowchart LR
   style Analyze fill:#FAF5FF,stroke:#7E57C2,stroke-width:1.5px
 ```
 
-## 4. 배포 및 운영 아키텍처
-
-```mermaid
-flowchart LR
-  User["일반 사용자"]
-  Admin["관리자"]
-
-  subgraph AppServer["EC2 t3.small<br/>프론트엔드 / 백엔드 / DB 공용 서버"]
-    Web["React 정적 파일"]
-    Api["Spring Boot Backend API"]
-    DB[("MySQL<br/>서비스 데이터 / 분석 결과")]
-  end
-
-  subgraph BatchServer["EC2 m6i.xlarge<br/>크롤링 및 분석 전용 서버"]
-    Scheduler["자동 스케줄러<br/>하루 약 90분 실행"]
-    Pipeline["Python Data Pipeline<br/>수집 / 전처리 / 분석"]
-  end
-
-  External["외부 API<br/>Google Trends / Naver News<br/>Naver DataLab / OpenAI API"]
-
-  User -->|"웹 접속"| Web
-  Admin -->|"관리자 화면 접속"| Web
-  Web -->|"API 요청"| Api
-  Api -->|"조회 / 저장"| DB
-
-  Scheduler -->|"서버 시작 / 배치 실행 / 서버 종료"| Pipeline
-  Pipeline -->|"데이터 수집 / 요약 요청"| External
-  Pipeline -->|"수집 및 분석 결과 저장"| DB
-
-  classDef actor fill:#EAF2FF,stroke:#4C78A8,color:#1F2937,stroke-width:1.5px
-  classDef app fill:#E9F7EF,stroke:#3E8E5A,color:#1F2937,stroke-width:1.5px
-  classDef api fill:#FFF3CD,stroke:#C69026,color:#1F2937,stroke-width:1.5px
-  classDef db fill:#FCE8E6,stroke:#C5221F,color:#1F2937,stroke-width:1.5px
-  classDef batch fill:#F2E7FE,stroke:#7E57C2,color:#1F2937,stroke-width:1.5px
-  classDef external fill:#F8F9FA,stroke:#6B7280,color:#1F2937,stroke-width:1.5px
-  class User,Admin actor
-  class Web app
-  class Api api
-  class DB db
-  class Scheduler,Pipeline batch
-  class External external
-  style AppServer fill:#F8FAFC,stroke:#64748B,stroke-width:1.5px
-  style BatchServer fill:#FAF5FF,stroke:#7E57C2,stroke-width:1.5px
-```
-
-## 5. 키워드 상세 조회 흐름
+## 4. 키워드 상세 조회 흐름
 
 ```mermaid
 sequenceDiagram
@@ -255,7 +210,7 @@ sequenceDiagram
   end
 ```
 
-## 6. 인증 흐름
+## 5. 인증 흐름
 
 ```mermaid
 sequenceDiagram
