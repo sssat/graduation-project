@@ -135,7 +135,7 @@ class Settings:
     news_base_date: str = _get_str("NEWS_BASE_DATE", "")
     news_press_codes: tuple[int, ...] = _get_csv_ints(
         "NEWS_PRESS_CODES",
-        (1023, 1025, 1020, 1028, 1032, 1002, 1469, 1081, 1001),
+        (1023, 1025, 1020, 1028, 1032, 1047, 1469, 1081, 1001),
     )
     news_days_back: int = _get_int("NEWS_DAYS_BACK", 30)
     news_start_page: int = _get_int("NEWS_START_PAGE", 1)
@@ -366,7 +366,7 @@ class Settings:
 
         pcs = list(self.news_press_codes or ())
         if not pcs:
-            pcs = [1023, 1025, 1020, 1028, 1032, 1002, 1469, 1081, 1001]
+            pcs = [1023, 1025, 1020, 1028, 1032, 1047, 1469, 1081, 1001]
         seen_press_codes: set[int] = set()
         deduped_press_codes: list[int] = []
         for x in pcs:

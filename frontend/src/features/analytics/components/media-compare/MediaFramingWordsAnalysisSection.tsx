@@ -17,8 +17,8 @@ function getMediaMark(label: string) {
   if (compact === "한겨레") {
     return { text: "한겨레", isWide: false, isStacked: false };
   }
-  if (compact === "프레시안") {
-    return { text: "프레\n시안", isWide: false, isStacked: true };
+  if (compact === "오마이뉴스") {
+    return { text: "오마이\n뉴스", isWide: false, isStacked: true };
   }
 
   return { text: compact.slice(0, 2) || "NS", isWide: false, isStacked: false };
