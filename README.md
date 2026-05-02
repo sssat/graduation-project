@@ -272,6 +272,14 @@ pip install -r requirements.txt
 python -m src.jobs.run_all
 ```
 
+중간 단계에서 실패한 최신 미공개 run을 SQL 조회 없이 이어서 실행하려면:
+
+```bash
+python -m src.jobs.run_all --resume-latest-unpublished --from-step wordcloud
+```
+
+`--resume-latest-unpublished`는 최신 `IN_PROGRESS`/`FAILED` run을 자동으로 선택하고, 지정한 단계부터 끝까지 성공하면 해당 run을 `PUBLISHED`로 전환합니다.
+
 ## 개별 배치 수동 실행
 
 예시:

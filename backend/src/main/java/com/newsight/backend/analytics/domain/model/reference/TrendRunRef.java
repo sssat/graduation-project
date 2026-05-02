@@ -14,7 +14,7 @@ import lombok.*;
 @AllArgsConstructor
 @Builder
 @EqualsAndHashCode(of = "trendRunSeq")
-@ToString(of = {"trendRunSeq", "baseDate", "runAt"})
+@ToString(of = {"trendRunSeq", "baseDate", "runAt", "runStatus"})
 public class TrendRunRef {
 
     @Id
@@ -30,4 +30,13 @@ public class TrendRunRef {
 
     @Column(name = "TOP_N")
     private Integer topN;
+
+    @Column(name = "RUN_STATUS", nullable = false, length = 20)
+    private String runStatus;
+
+    @Column(name = "COMPLETED_AT")
+    private LocalDateTime completedAt;
+
+    @Column(name = "PUBLISHED_AT")
+    private LocalDateTime publishedAt;
 }

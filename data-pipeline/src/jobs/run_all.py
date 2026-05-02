@@ -1,6 +1,7 @@
 # data-pipeline/src/jobs/run_all.py
 from __future__ import annotations
 
+import argparse
 import os
 import subprocess
 import sys
@@ -8,6 +9,7 @@ from datetime import datetime
 from typing import Dict, List
 from zoneinfo import ZoneInfo
 
+from src.common.db import get_conn
 from src.config.settings import settings
 
 
@@ -19,7 +21,147 @@ def _parse_steps(raw: str) -> List[str]:
     return [s.strip().lower() for s in (raw or "").split(",") if s.strip()]
 
 
+def _slice_steps_from(steps: List[str], from_step: str | None) -> List[str]:
+    if not from_step:
+        return steps
+
+    target = from_step.strip().lower()
+    if target not in steps:
+        raise ValueError(f"RUN_ALL_STEPS에 없는 시작 단계입니다: {from_step}")
+
+    return steps[steps.index(target):]
+
+
+def _fetch_latest_trend_run_seq(
+    *,
+    started_after: datetime | None = None,
+    allow_fallback: bool = True,
+) -> int:
+    conn = get_conn(autocommit=True)
+    try:
+        with conn.cursor() as cur:
+            if started_after is not None:
+                cur.execute(
+                    """
+                    SELECT TREND_RUN_SEQ AS trend_run_seq
+                    FROM T_TREND_RUN
+                    WHERE RUN_AT >= %s
+                    ORDER BY TREND_RUN_SEQ DESC
+                    LIMIT 1
+                    """,
+                    (started_after.replace(tzinfo=None),),
+                )
+                row = cur.fetchone()
+                if row and row.get("trend_run_seq"):
+                    return int(row["trend_run_seq"])
+                if not allow_fallback:
+                    raise RuntimeError("이번 배치에서 생성된 TREND_RUN_SEQ를 찾을 수 없습니다.")
+
+            cur.execute(
+                """
+                SELECT TREND_RUN_SEQ AS trend_run_seq
+                FROM T_TREND_RUN
+                ORDER BY TREND_RUN_SEQ DESC
+                LIMIT 1
+                """
+            )
+            row = cur.fetchone()
+            if not row or not row.get("trend_run_seq"):
+                raise RuntimeError("T_TREND_RUN이 비어 있어 TREND_RUN_SEQ를 찾을 수 없습니다.")
+            return int(row["trend_run_seq"])
+    finally:
+        conn.close()
+
+
+def _fetch_latest_unpublished_trend_run_seq() -> int:
+    conn = get_conn(autocommit=True)
+    try:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                SELECT TREND_RUN_SEQ AS trend_run_seq, RUN_STATUS AS run_status
+                FROM T_TREND_RUN
+                WHERE RUN_STATUS IN ('IN_PROGRESS', 'FAILED')
+                ORDER BY TREND_RUN_SEQ DESC
+                LIMIT 1
+                """
+            )
+            row = cur.fetchone()
+            if not row or not row.get("trend_run_seq"):
+                raise RuntimeError("복구할 미공개 TREND_RUN_SEQ(IN_PROGRESS/FAILED)를 찾지 못했습니다.")
+            return int(row["trend_run_seq"])
+    finally:
+        conn.close()
+
+
+def _mark_run_failed(trend_run_seq: int) -> None:
+    conn = get_conn(autocommit=False)
+    try:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                UPDATE T_TREND_RUN
+                SET RUN_STATUS = 'FAILED',
+                    COMPLETED_AT = COALESCE(COMPLETED_AT, NOW())
+                WHERE TREND_RUN_SEQ = %s
+                """,
+                (int(trend_run_seq),),
+            )
+        conn.commit()
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        conn.close()
+
+
+def _publish_run(trend_run_seq: int) -> None:
+    conn = get_conn(autocommit=False)
+    try:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                UPDATE T_TREND_RUN
+                SET RUN_STATUS = 'PUBLISHED',
+                    COMPLETED_AT = COALESCE(COMPLETED_AT, NOW()),
+                    PUBLISHED_AT = NOW()
+                WHERE TREND_RUN_SEQ = %s
+                """,
+                (int(trend_run_seq),),
+            )
+        conn.commit()
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        conn.close()
+
+
+def _parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description="전체 데이터 파이프라인 실행")
+    parser.add_argument(
+        "--steps",
+        type=str,
+        default=None,
+        help="실행 단계 목록(콤마 구분). 미지정 시 RUN_ALL_STEPS 사용",
+    )
+    parser.add_argument(
+        "--from-step",
+        type=str,
+        default=None,
+        help="지정한 단계부터 실행. 예: --from-step wordcloud",
+    )
+    parser.add_argument(
+        "--resume-latest-unpublished",
+        action="store_true",
+        help="최신 IN_PROGRESS/FAILED run을 자동 선택해 복구 실행",
+    )
+    return parser.parse_args()
+
+
 def main() -> None:
+    args = _parse_args()
+
     # 스텝 키 -> 실제 실행할 모듈 경로 매핑
     step_to_module: Dict[str, str] = {
         "trend": "src.crawler.trend.jobs.run_trend",
@@ -37,8 +179,21 @@ def main() -> None:
         "search_timeline": "src.analyzer.search_timeline.jobs.run_search_timeline",
     }
 
-    steps = _parse_steps(getattr(settings, "run_all_steps", ""))
+    steps_raw = args.steps if args.steps is not None else getattr(settings, "run_all_steps", "")
+    steps = _slice_steps_from(_parse_steps(steps_raw), args.from_step)
     fail_fast = bool(getattr(settings, "run_all_fail_fast", True))
+    trend_run_steps = set(step_to_module) - {"trend"}
+    selected_trend_run_seq: int | None = (
+        _fetch_latest_unpublished_trend_run_seq()
+        if bool(args.resume_latest_unpublished)
+        else None
+    )
+    should_publish_selected_run = bool(args.resume_latest_unpublished)
+    failed_steps: List[str] = []
+
+    if args.resume_latest_unpublished and "trend" in steps:
+        steps = [step for step in steps if step != "trend"]
+        print("[run_all] resume mode: removed trend step", flush=True)
 
     started_at = _now()
     batch_started_at = started_at.isoformat()
@@ -49,6 +204,8 @@ def main() -> None:
         "[run_all] "
         f"env={settings.app_env} tz={settings.tz} "
         f"fail_fast={int(fail_fast)} steps={steps} "
+        f"resume_latest_unpublished={int(bool(args.resume_latest_unpublished))} "
+        f"selected_trend_run_seq={selected_trend_run_seq or '-'} "
         f"started_at={batch_started_at}",
         flush=True,
     )
@@ -57,6 +214,9 @@ def main() -> None:
         module = step_to_module.get(step)
         if not module:
             msg = f"[run_all] ({idx}/{len(steps)}) unknown step: {step}"
+            failed_steps.append(step)
+            if selected_trend_run_seq is not None and should_publish_selected_run:
+                _mark_run_failed(selected_trend_run_seq)
             if fail_fast:
                 raise RuntimeError(msg)
             print(msg, flush=True)
@@ -64,16 +224,48 @@ def main() -> None:
 
         print(f"[run_all] ({idx}/{len(steps)}) start: {step} -> python -m {module}", flush=True)
 
-        # 각 job이 settings(.env)를 읽어서 동작하 ensures:
+        # 각 job은 settings(.env)를 읽어서 동작한다.
         # - run_all은 추가 로그 파일 생성 X
         # - job별 logs 폴더에 기존대로 로그 생성
+        cmd = [sys.executable, "-m", module]
+        if step in trend_run_steps:
+            if selected_trend_run_seq is None:
+                selected_trend_run_seq = _fetch_latest_trend_run_seq(started_after=started_at)
+                print(
+                    f"[run_all] selected trend_run_seq={selected_trend_run_seq}",
+                    flush=True,
+                )
+            cmd.extend(["--trend-run-seq", str(int(selected_trend_run_seq))])
+
         try:
-            subprocess.run([sys.executable, "-m", module], check=True, env=child_env)
+            subprocess.run(cmd, check=True, env=child_env)
+            if step == "trend":
+                selected_trend_run_seq = _fetch_latest_trend_run_seq(
+                    started_after=started_at,
+                    allow_fallback=False,
+                )
+                should_publish_selected_run = True
+                print(
+                    f"[run_all] selected trend_run_seq={selected_trend_run_seq}",
+                    flush=True,
+                )
             print(f"[run_all] ({idx}/{len(steps)}) done: {step}", flush=True)
         except subprocess.CalledProcessError as e:
+            failed_steps.append(step)
             print(f"[run_all] ({idx}/{len(steps)}) FAIL: {step} (exit={e.returncode})", flush=True)
+            if selected_trend_run_seq is not None and should_publish_selected_run:
+                _mark_run_failed(selected_trend_run_seq)
             if fail_fast:
                 raise
+
+    if selected_trend_run_seq is not None and should_publish_selected_run and not failed_steps:
+        _publish_run(selected_trend_run_seq)
+        print(f"[run_all] published trend_run_seq={selected_trend_run_seq}", flush=True)
+    elif selected_trend_run_seq is not None and should_publish_selected_run:
+        print(
+            f"[run_all] not published trend_run_seq={selected_trend_run_seq} failed_steps={failed_steps}",
+            flush=True,
+        )
 
     ended_at = _now()
     print(f"[run_all] knows: started_at={started_at.isoformat()} ended_at={ended_at.isoformat()}", flush=True)

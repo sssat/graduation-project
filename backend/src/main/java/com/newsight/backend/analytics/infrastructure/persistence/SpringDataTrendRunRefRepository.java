@@ -3,6 +3,7 @@ package com.newsight.backend.analytics.infrastructure.persistence;
 
 import com.newsight.backend.analytics.domain.model.reference.TrendRunRef;
 import java.time.LocalDate;
+import java.util.List;
 import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -16,6 +17,8 @@ public interface SpringDataTrendRunRefRepository extends JpaRepository<TrendRunR
      * 최신 트렌드 run 1건
      */
     Optional<TrendRunRef> findFirstByOrderByTrendRunSeqDesc();
+
+    List<TrendRunRef> findByRunStatusOrderByTrendRunSeqDesc(String runStatus);
 
     /**
      * 특정 baseDate의 최신 run 1건

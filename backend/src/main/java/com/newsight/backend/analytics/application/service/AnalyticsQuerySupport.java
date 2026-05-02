@@ -26,7 +26,6 @@ import java.util.Map;
 import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Component;
 
 @Component
@@ -37,6 +36,7 @@ class AnalyticsQuerySupport {
     static final int DEFAULT_LIMIT = 10;
     static final int DEFAULT_TOP_N = 5;
     static final int ALL_MEDIA_CODE = 0;
+    static final String PUBLISHED_RUN_STATUS = "PUBLISHED";
     static final long SEARCH_TIMELINE_LOOKBACK_MONTHS = 3L;
     static final String SEARCH_TIMELINE_DATA_SOURCE = "NAVER_DATALAB";
 
@@ -60,9 +60,9 @@ class AnalyticsQuerySupport {
     }
 
     TrendRunRef getConfiguredTrendRunOrThrow() {
-        List<TrendRunRef> candidates = trendRunRefRepository.findAll(Sort.by(Sort.Direction.DESC, "trendRunSeq"));
+        List<TrendRunRef> candidates = trendRunRefRepository.findByRunStatusOrderByTrendRunSeqDesc(PUBLISHED_RUN_STATUS);
         if (candidates.isEmpty()) {
-            throw new NotFoundException("최신 트렌드 run이 없습니다.");
+            throw new NotFoundException("공개된 트렌드 run이 없습니다.");
         }
 
         int offset = Math.max(0, analyticsTrendRunOffset);
@@ -83,10 +83,13 @@ class AnalyticsQuerySupport {
 
     TrendRunRef findComparableTrendRunWithData(LocalDate baseDate, PeriodFilter pf) {
         List<TrendRunRef> candidates = em.createQuery(
-                        "select tr from TrendRunRef tr where tr.baseDate = :baseDate order by tr.trendRunSeq desc",
+                        "select tr from TrendRunRef tr " +
+                                "where tr.baseDate = :baseDate and tr.runStatus = :runStatus " +
+                                "order by tr.trendRunSeq desc",
                         TrendRunRef.class
                 )
                 .setParameter("baseDate", baseDate)
+                .setParameter("runStatus", PUBLISHED_RUN_STATUS)
                 .getResultList();
 
         for (TrendRunRef candidate : candidates) {
