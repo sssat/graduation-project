@@ -142,6 +142,9 @@ export default function KeywordDetailPage() {
     return null;
   }
 
+  const hasTitleWordcloud = viewData.titleWordcloud.length > 0;
+  const hasCommentWordcloud = viewData.commentWordcloud.length > 0;
+
   return (
     <main className={styles.pageRoot}>
       <section className={styles.keywordHeader}>
@@ -201,14 +204,16 @@ export default function KeywordDetailPage() {
       </section>
 
       <section className={styles.grid2}>
-        <KeywordWordCloudAnalysisSection
-          title="제목 워드 클라우드"
-          subtitle="수집된 기사 제목에서 자주 등장한 단어를 시각화한 결과입니다."
-          badgeText="제목 기반"
-          items={viewData.titleWordcloud}
-          height={460}
-          seed={`${displayKeyword}-${period}-title`}
-        />
+        {hasTitleWordcloud ? (
+          <KeywordWordCloudAnalysisSection
+            title="제목 워드 클라우드"
+            subtitle="수집된 기사 제목에서 자주 등장한 단어를 시각화한 결과입니다."
+            badgeText="제목 기반"
+            items={viewData.titleWordcloud}
+            height={460}
+            seed={`${displayKeyword}-${period}-title`}
+          />
+        ) : null}
 
         <KeywordSentimentAnalysisSection sentiment={viewData.sentiment} />
       </section>
@@ -223,16 +228,18 @@ export default function KeywordDetailPage() {
         />
       </section>
 
-      <section className={styles.grid2Bottom}>
-        <KeywordWordCloudAnalysisSection
-          title="댓글 반응 워드 클라우드"
-          subtitle="댓글 반응에서 자주 등장한 단어를 시각화한 결과입니다."
-          badgeText="댓글 기반"
-          items={viewData.commentWordcloud}
-          height={460}
-          seed={`${displayKeyword}-${period}-comment`}
-        />
-      </section>
+      {hasCommentWordcloud ? (
+        <section className={styles.grid2Bottom}>
+          <KeywordWordCloudAnalysisSection
+            title="댓글 반응 워드 클라우드"
+            subtitle="댓글 반응에서 자주 등장한 단어를 시각화한 결과입니다."
+            badgeText="댓글 기반"
+            items={viewData.commentWordcloud}
+            height={460}
+            seed={`${displayKeyword}-${period}-comment`}
+          />
+        </section>
+      ) : null}
     </main>
   );
 }

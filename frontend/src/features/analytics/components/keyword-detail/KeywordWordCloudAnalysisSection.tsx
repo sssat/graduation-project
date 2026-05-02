@@ -218,6 +218,10 @@ export default function KeywordWordCloudAnalysisSection({
     };
   }, [height, items, layoutKey, seed, width]);
 
+  if (!items.length) {
+    return null;
+  }
+
   return (
     <article className={styles.card}>
       <div className={styles.cardHeader}>
@@ -228,61 +232,49 @@ export default function KeywordWordCloudAnalysisSection({
         <span className={styles.badgeSoft}>{badgeText}</span>
       </div>
 
-      {!items.length ? (
-        <div ref={wrapRef} className={styles.wordcloudClassic}>
-          <div className={styles.wordcloudStageHost}>
-            <div className={styles.wordcloudStage}>
-              <div className={`${styles.emptyBox} ${styles.wordcloudEmptyBox}`}>
-                워드 클라우드 데이터가 없습니다.
-              </div>
-            </div>
-          </div>
-        </div>
-      ) : (
-        <div
-          ref={wrapRef}
-          className={styles.wordcloudClassic}
-          style={{ height }}
-          aria-label="워드 클라우드"
-        >
-          <div className={styles.wordcloudStageHost}>
-            <div className={styles.wordcloudStage}>
-              <svg
-                className={styles.wordcloudSvg}
-                width={width}
-                height={height}
-                viewBox={`0 0 ${width} ${height}`}
-                role="img"
-                aria-label="워드 클라우드"
-              >
-                <g transform={`translate(${width / 2}, ${height / 2})`}>
-                  {words.map((word, index) => {
-                    const color = palette[hashInt(`${seed}-${word.text}-${index}`) % palette.length];
+      <div
+        ref={wrapRef}
+        className={styles.wordcloudClassic}
+        style={{ height }}
+        aria-label="워드 클라우드"
+      >
+        <div className={styles.wordcloudStageHost}>
+          <div className={styles.wordcloudStage}>
+            <svg
+              className={styles.wordcloudSvg}
+              width={width}
+              height={height}
+              viewBox={`0 0 ${width} ${height}`}
+              role="img"
+              aria-label="워드 클라우드"
+            >
+              <g transform={`translate(${width / 2}, ${height / 2})`}>
+                {words.map((word, index) => {
+                  const color = palette[hashInt(`${seed}-${word.text}-${index}`) % palette.length];
 
-                    return (
-                      <text
-                        key={`${word.text}-${index}`}
-                        textAnchor="middle"
-                        dominantBaseline="central"
-                        transform={`translate(${word.x}, ${word.y})`}
-                        style={{
-                          fill: color,
-                          fontSize: word.size,
-                          fontFamily: WORDCLOUD_FONT_FAMILY,
-                          fontWeight: WORDCLOUD_FONT_WEIGHT,
-                          letterSpacing: "-0.02em",
-                        }}
-                      >
-                        {word.text}
-                      </text>
-                    );
-                  })}
-                </g>
-              </svg>
-            </div>
+                  return (
+                    <text
+                      key={`${word.text}-${index}`}
+                      textAnchor="middle"
+                      dominantBaseline="central"
+                      transform={`translate(${word.x}, ${word.y})`}
+                      style={{
+                        fill: color,
+                        fontSize: word.size,
+                        fontFamily: WORDCLOUD_FONT_FAMILY,
+                        fontWeight: WORDCLOUD_FONT_WEIGHT,
+                        letterSpacing: "-0.02em",
+                      }}
+                    >
+                      {word.text}
+                    </text>
+                  );
+                })}
+              </g>
+            </svg>
           </div>
         </div>
-      )}
+      </div>
     </article>
   );
 }
