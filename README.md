@@ -76,6 +76,7 @@ Newsight는 트렌드 키워드와 뉴스 데이터를 수집하고, 이를 바�
 - Spring Validation
 - Spring Mail
 - Spring Boot Actuator
+- Springdoc OpenAPI
 - Flyway
 - Lombok
 - Gradle
@@ -151,6 +152,7 @@ Newsight는 트렌드 키워드와 뉴스 데이터를 수집하고, 이를 바�
 | Backend | Spring Validation | 회원가입, 로그인, 문의 작성 등 요청 데이터의 유효성을 검증하기 위해 사용합니다. |
 | Backend | Spring Mail | 임시 비밀번호 발급 등 메일 전송 기능을 구현하기 위해 사용합니다. |
 | Backend | Spring Boot Actuator | 서버 상태 확인과 운영 모니터링을 위한 엔드포인트를 제공하기 위해 사용합니다. |
+| Backend | Springdoc OpenAPI | 백엔드 REST API 명세와 Swagger UI 문서를 제공하기 위해 사용합니다. |
 | Backend | Flyway | 데이터베이스 스키마 변경 이력을 코드로 관리하기 위해 사용합니다. |
 | Backend | Lombok | 반복적인 getter, builder, 생성자 코드를 줄이기 위해 사용합니다. |
 | Backend | MySQL Connector/J | Spring Boot 서버에서 MySQL 데이터베이스에 연결하기 위해 사용하는 JDBC 드라이버입니다. |
@@ -181,7 +183,7 @@ Newsight는 트렌드 키워드와 뉴스 데이터를 수집하고, 이를 바�
 | 외부 데이터 | Naver News | 키워드 관련 뉴스 기사와 댓글 데이터를 수집하기 위한 외부 데이터 출처입니다. |
 | 외부 데이터 | Naver DataLab Open API | 키워드별 검색 관심도 흐름 데이터를 수집하기 위해 사용합니다. |
 | Infra / Tools | Ubuntu EC2 | 프로젝트 서버와 배치 작업을 실행하기 위한 클라우드 서버 환경입니다. |
-| Infra / Tools | Docker Compose | MySQL 등 실행 환경을 컨테이너 기반으로 구성하기 위해 사용합니다. |
+| Infra / Tools | Docker Compose | MySQL 데이터베이스 실행 환경을 컨테이너 기반으로 구성하기 위해 사용합니다. |
 | Infra / Tools | Gradle | Spring Boot 백엔드 프로젝트의 빌드와 의존성 관리를 위해 사용합니다. |
 | Infra / Tools | npm | 프론트엔드 패키지 설치와 실행 스크립트 관리를 위해 사용합니다. |
 | Infra / Tools | pip | Python 패키지 설치와 의존성 관리를 위해 사용합니다. |
@@ -426,11 +428,3 @@ NAVER_DATALAB_CLIENT_SECRET=
 - 뉴스 수집은 Naver 뉴스 검색 결과 기반입니다.
 - 검색 관심도 흐름은 Naver 데이터 랩 검색 관심도 API 기반입니다.
 - frontend에서 표시하는 타임라인 기간은 최근 3개월 고정입니다.
-
-## 향후 개선 과제
-
-- API 문서 정리
-- 테스트 보강
-- 배치 운영 가이드 보강
-- 배포 환경 마이그레이션 자동화
-- 분석 결과 설명 문구 개선
