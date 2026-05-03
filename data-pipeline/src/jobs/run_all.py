@@ -32,31 +32,10 @@ def _slice_steps_from(steps: List[str], from_step: str | None) -> List[str]:
     return steps[steps.index(target):]
 
 
-def _fetch_latest_trend_run_seq(
-    *,
-    started_after: datetime | None = None,
-    allow_fallback: bool = True,
-) -> int:
+def _fetch_latest_trend_run_seq() -> int:
     conn = get_conn(autocommit=True)
     try:
         with conn.cursor() as cur:
-            if started_after is not None:
-                cur.execute(
-                    """
-                    SELECT TREND_RUN_SEQ AS trend_run_seq
-                    FROM T_TREND_RUN
-                    WHERE RUN_AT >= %s
-                    ORDER BY TREND_RUN_SEQ DESC
-                    LIMIT 1
-                    """,
-                    (started_after.replace(tzinfo=None),),
-                )
-                row = cur.fetchone()
-                if row and row.get("trend_run_seq"):
-                    return int(row["trend_run_seq"])
-                if not allow_fallback:
-                    raise RuntimeError("이번 배치에서 생성된 TREND_RUN_SEQ를 찾을 수 없습니다.")
-
             cur.execute(
                 """
                 SELECT TREND_RUN_SEQ AS trend_run_seq
@@ -73,22 +52,88 @@ def _fetch_latest_trend_run_seq(
         conn.close()
 
 
-def _fetch_latest_unpublished_trend_run_seq() -> int:
+def _fetch_created_trend_run_seq(previous_latest_seq: int | None) -> int:
+    conn = get_conn(autocommit=True)
+    try:
+        with conn.cursor() as cur:
+            if previous_latest_seq is None:
+                cur.execute(
+                    """
+                    SELECT TREND_RUN_SEQ AS trend_run_seq
+                    FROM T_TREND_RUN
+                    ORDER BY TREND_RUN_SEQ DESC
+                    LIMIT 1
+                    """
+                )
+            else:
+                cur.execute(
+                    """
+                    SELECT TREND_RUN_SEQ AS trend_run_seq
+                    FROM T_TREND_RUN
+                    WHERE TREND_RUN_SEQ > %s
+                    ORDER BY TREND_RUN_SEQ DESC
+                    LIMIT 1
+                    """,
+                    (int(previous_latest_seq),),
+                )
+
+            row = cur.fetchone()
+            if not row or not row.get("trend_run_seq"):
+                raise RuntimeError("이번 배치에서 생성된 TREND_RUN_SEQ를 찾을 수 없습니다.")
+            return int(row["trend_run_seq"])
+    finally:
+        conn.close()
+
+
+def _fetch_optional_latest_trend_run_seq() -> int | None:
     conn = get_conn(autocommit=True)
     try:
         with conn.cursor() as cur:
             cur.execute(
                 """
-                SELECT TREND_RUN_SEQ AS trend_run_seq, RUN_STATUS AS run_status
+                SELECT TREND_RUN_SEQ AS trend_run_seq
                 FROM T_TREND_RUN
-                WHERE RUN_STATUS IN ('IN_PROGRESS', 'FAILED')
                 ORDER BY TREND_RUN_SEQ DESC
                 LIMIT 1
                 """
             )
             row = cur.fetchone()
             if not row or not row.get("trend_run_seq"):
-                raise RuntimeError("복구할 미공개 TREND_RUN_SEQ(IN_PROGRESS/FAILED)를 찾지 못했습니다.")
+                return None
+            return int(row["trend_run_seq"])
+    finally:
+        conn.close()
+
+
+def _parse_resume_base_date(raw: str | None):
+    if raw is None or not raw.strip():
+        return _now().date()
+    try:
+        return datetime.strptime(raw.strip(), "%Y-%m-%d").date()
+    except ValueError as exc:
+        raise ValueError("--resume-base-date는 YYYY-MM-DD 형식이어야 합니다.") from exc
+
+
+def _fetch_latest_unpublished_trend_run_seq(*, base_date) -> int:
+    conn = get_conn(autocommit=True)
+    try:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                SELECT TREND_RUN_SEQ AS trend_run_seq, RUN_STATUS AS run_status, BASE_DATE AS base_date
+                FROM T_TREND_RUN
+                WHERE RUN_STATUS IN ('IN_PROGRESS', 'FAILED')
+                  AND BASE_DATE = %s
+                ORDER BY TREND_RUN_SEQ DESC
+                LIMIT 1
+                """,
+                (base_date,),
+            )
+            row = cur.fetchone()
+            if not row or not row.get("trend_run_seq"):
+                raise RuntimeError(
+                    f"복구할 미공개 TREND_RUN_SEQ(IN_PROGRESS/FAILED)를 찾지 못했습니다. base_date={base_date}"
+                )
             return int(row["trend_run_seq"])
     finally:
         conn.close()
@@ -154,7 +199,13 @@ def _parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--resume-latest-unpublished",
         action="store_true",
-        help="최신 IN_PROGRESS/FAILED run을 자동 선택해 복구 실행",
+        help="복구 대상 날짜의 최신 IN_PROGRESS/FAILED run을 자동 선택해 실행",
+    )
+    parser.add_argument(
+        "--resume-base-date",
+        type=str,
+        default=None,
+        help="복구 대상 BASE_DATE(YYYY-MM-DD). 미지정 시 오늘 날짜 사용",
     )
     return parser.parse_args()
 
@@ -183,13 +234,15 @@ def main() -> None:
     steps = _slice_steps_from(_parse_steps(steps_raw), args.from_step)
     fail_fast = bool(getattr(settings, "run_all_fail_fast", True))
     trend_run_steps = set(step_to_module) - {"trend"}
+    resume_base_date = _parse_resume_base_date(args.resume_base_date)
     selected_trend_run_seq: int | None = (
-        _fetch_latest_unpublished_trend_run_seq()
+        _fetch_latest_unpublished_trend_run_seq(base_date=resume_base_date)
         if bool(args.resume_latest_unpublished)
         else None
     )
     should_publish_selected_run = bool(args.resume_latest_unpublished)
     failed_steps: List[str] = []
+    latest_trend_run_seq_before_trend: int | None = None
 
     if args.resume_latest_unpublished and "trend" in steps:
         steps = [step for step in steps if step != "trend"]
@@ -205,6 +258,7 @@ def main() -> None:
         f"env={settings.app_env} tz={settings.tz} "
         f"fail_fast={int(fail_fast)} steps={steps} "
         f"resume_latest_unpublished={int(bool(args.resume_latest_unpublished))} "
+        f"resume_base_date={resume_base_date} "
         f"selected_trend_run_seq={selected_trend_run_seq or '-'} "
         f"started_at={batch_started_at}",
         flush=True,
@@ -230,20 +284,19 @@ def main() -> None:
         cmd = [sys.executable, "-m", module]
         if step in trend_run_steps:
             if selected_trend_run_seq is None:
-                selected_trend_run_seq = _fetch_latest_trend_run_seq(started_after=started_at)
+                selected_trend_run_seq = _fetch_latest_trend_run_seq()
                 print(
                     f"[run_all] selected trend_run_seq={selected_trend_run_seq}",
                     flush=True,
                 )
             cmd.extend(["--trend-run-seq", str(int(selected_trend_run_seq))])
+        elif step == "trend":
+            latest_trend_run_seq_before_trend = _fetch_optional_latest_trend_run_seq()
 
         try:
             subprocess.run(cmd, check=True, env=child_env)
             if step == "trend":
-                selected_trend_run_seq = _fetch_latest_trend_run_seq(
-                    started_after=started_at,
-                    allow_fallback=False,
-                )
+                selected_trend_run_seq = _fetch_created_trend_run_seq(latest_trend_run_seq_before_trend)
                 should_publish_selected_run = True
                 print(
                     f"[run_all] selected trend_run_seq={selected_trend_run_seq}",
