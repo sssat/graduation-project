@@ -51,7 +51,6 @@ type LoginLogRowVm = {
 
 type VisitLogRowVm = {
   visitorDailySeq: number;
-  visitDate: string;
   firstVisitedAt: string;
   lastVisitedAt: string;
   pageViewCount: number;
@@ -138,6 +137,13 @@ function formatNullableText(value: string | null | undefined): string {
 function formatScreenSize(width: number | null | undefined, height: number | null | undefined): string {
   if (!width || !height) return "-";
   return `${width}x${height}`;
+}
+
+function formatVisitEnvironment(row: VisitLogRowVm): string {
+  return [row.clientTimeZone, row.acceptLanguage, row.screenSize]
+    .map(formatNullableText)
+    .filter((value) => value !== "-")
+    .join(" / ") || "-";
 }
 
 function formatDeltaRate(value: number | null, label: string): string {
@@ -229,7 +235,6 @@ function mapLoginRow(item: {
 function mapVisitRow(item: AdminDashboardVisitItem): VisitLogRowVm {
   return {
     visitorDailySeq: item.visitor_daily_seq,
-    visitDate: item.visit_date,
     firstVisitedAt: formatDisplayDateTime(item.first_visited_at),
     lastVisitedAt: formatDisplayDateTime(item.last_visited_at),
     pageViewCount: item.page_view_count,
@@ -778,14 +783,13 @@ export default function AdminDashboardPage() {
                 <thead>
                   <tr>
                     <th style={{ width: 90 }}>번호</th>
-                    <th style={{ width: 110 }}>방문일</th>
                     <th style={{ width: 140 }}>첫 방문</th>
                     <th style={{ width: 140 }}>최근 방문</th>
-                    <th style={{ width: 90 }}>PV</th>
+                    <th style={{ width: 110 }}>Page View</th>
                     <th style={{ width: 140 }}>IP 주소</th>
-                    <th style={{ width: 170 }}>환경</th>
+                    <th style={{ width: 260 }}>환경</th>
                     <th style={{ width: 280 }}>경로</th>
-                    <th style={{ width: 240 }}>Referrer</th>
+                    <th style={{ width: 240 }}>유입 경로</th>
                     <th style={{ width: 520 }}>User-Agent</th>
                   </tr>
                 </thead>
@@ -793,40 +797,35 @@ export default function AdminDashboardPage() {
                   {visitRows.map((row) => (
                     <tr key={row.visitorDailySeq}>
                       <td data-label="번호">{row.visitorDailySeq}</td>
-                      <td data-label="방문일">{row.visitDate}</td>
                       <td data-label="첫 방문">{row.firstVisitedAt}</td>
                       <td data-label="최근 방문">{row.lastVisitedAt}</td>
-                      <td data-label="PV">{formatInteger(row.pageViewCount)}</td>
+                      <td data-label="Page View">{formatInteger(row.pageViewCount)}</td>
                       <td data-label="IP 주소">{row.ipAddress}</td>
                       <td data-label="환경" className={styles.cellWrap}>
-                        {formatNullableText(row.clientTimeZone)}
-                        <br />
-                        {formatNullableText(row.acceptLanguage)}
-                        <br />
-                        {row.screenSize}
+                        {formatVisitEnvironment(row)}
                       </td>
                       <td data-label="경로" className={styles.cellWrap}>
                         첫: {formatNullableText(row.firstPath)}
                         <br />
                         최근: {formatNullableText(row.lastPath)}
                       </td>
-                      <td data-label="Referrer" className={styles.cellWrap}>{formatNullableText(row.referrer)}</td>
+                      <td data-label="유입 경로" className={styles.cellWrap}>{formatNullableText(row.referrer)}</td>
                       <td data-label="User-Agent" className={styles.cellWrap}>{formatNullableText(row.userAgent)}</td>
                     </tr>
                   ))}
                   {visitError ? (
                     <tr>
-                      <td colSpan={10} className={styles.emptyRow}>{visitError}</td>
+                      <td colSpan={9} className={styles.emptyRow}>{visitError}</td>
                     </tr>
                   ) : null}
                   {!visitError && visitLoading && visitRows.length === 0 ? (
                     <tr>
-                      <td colSpan={10} className={styles.emptyRow}>방문자 기록을 불러오는 중입니다.</td>
+                      <td colSpan={9} className={styles.emptyRow}>방문자 기록을 불러오는 중입니다.</td>
                     </tr>
                   ) : null}
                   {!visitError && !visitLoading && visitRows.length === 0 ? (
                     <tr>
-                      <td colSpan={10} className={styles.emptyRow}>표시할 방문자 기록이 없습니다.</td>
+                      <td colSpan={9} className={styles.emptyRow}>표시할 방문자 기록이 없습니다.</td>
                     </tr>
                   ) : null}
                 </tbody>

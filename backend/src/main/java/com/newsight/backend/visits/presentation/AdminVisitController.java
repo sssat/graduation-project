@@ -47,7 +47,6 @@ public class AdminVisitController {
         List<VisitItemDto> items = r.items().stream()
                 .map(x -> new VisitItemDto(
                         x.visitorDailySeq(),
-                        x.visitDate(),
                         x.firstVisitedAt(),
                         x.lastVisitedAt(),
                         x.pageViewCount(),

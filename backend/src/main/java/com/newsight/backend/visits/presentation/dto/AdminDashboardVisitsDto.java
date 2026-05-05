@@ -2,7 +2,6 @@ package com.newsight.backend.visits.presentation.dto;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -40,9 +39,6 @@ public final class AdminDashboardVisitsDto {
     public record VisitItemDto(
             @JsonProperty("visitor_daily_seq")
             Long visitorDailySeq,
-
-            @JsonProperty("visit_date")
-            LocalDate visitDate,
 
             @JsonProperty("first_visited_at")
             LocalDateTime firstVisitedAt,

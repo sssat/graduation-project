@@ -492,7 +492,6 @@ export interface AdminDashboardVisitsParams {
 
 export interface AdminDashboardVisitItem {
   visitor_daily_seq: number;
-  visit_date: IsoDateString;
   first_visited_at: string;
   last_visited_at: string;
   page_view_count: number;
