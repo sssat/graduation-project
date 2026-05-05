@@ -430,6 +430,8 @@ export async function getMediaCompareTitleTopWords(
 export interface AdminDashboardSummaryResponse {
   today_joined_count: number;
   today_joined_delta_rate: number | null;
+  today_visitor_count: number;
+  today_visitor_delta_rate: number | null;
   today_collected_article_count: number;
   today_collected_article_delta_rate: number | null;
   processing_inquiry_count: number;
@@ -442,6 +444,87 @@ export async function getAdminDashboardSummary(
   const response = await http.get<AdminDashboardSummaryResponse>(
     '/admins/dashboard/summary',
     config as HttpRequestConfig<undefined> | undefined,
+  );
+  return response.data;
+}
+
+/* =========================================================
+ * 14) Anonymous visit tracking - public
+ * POST /public/visits
+ * ======================================================= */
+
+export interface VisitTrackRequest {
+  client_visitor_id: string;
+  path?: string;
+  referrer?: string;
+  language?: string;
+  client_time_zone?: string;
+  screen_width?: number;
+  screen_height?: number;
+}
+
+export interface VisitTrackResponse {
+  visit_date: string;
+  tracked: boolean;
+}
+
+export async function trackVisit(
+  payload: VisitTrackRequest,
+  config?: HttpRequestConfig<VisitTrackRequest>,
+): Promise<VisitTrackResponse> {
+  const response = await http.post<VisitTrackResponse>(
+    '/public/visits',
+    payload,
+    publicConfig(config) as HttpRequestConfig<VisitTrackRequest>,
+  );
+  return response.data;
+}
+
+/* =========================================================
+ * 15) Admin visitor logs - authenticated
+ * GET /admins/dashboard/visits
+ * ======================================================= */
+
+export interface AdminDashboardVisitsParams {
+  page?: number;
+  size?: number;
+}
+
+export interface AdminDashboardVisitItem {
+  visitor_daily_seq: number;
+  visit_date: IsoDateString;
+  first_visited_at: string;
+  last_visited_at: string;
+  page_view_count: number;
+  ip_address?: string | null;
+  user_agent?: string | null;
+  referrer?: string | null;
+  accept_language?: string | null;
+  client_time_zone?: string | null;
+  screen_width?: number | null;
+  screen_height?: number | null;
+  first_path?: string | null;
+  last_path?: string | null;
+}
+
+export interface AdminDashboardVisitsResponse {
+  items: AdminDashboardVisitItem[];
+  page: number;
+  size: number;
+  total_count: number;
+  total_pages: number;
+}
+
+export async function listAdminDashboardVisits(
+  params?: AdminDashboardVisitsParams,
+  config?: HttpRequestConfig<undefined>,
+): Promise<AdminDashboardVisitsResponse> {
+  const response = await http.get<AdminDashboardVisitsResponse>(
+    '/admins/dashboard/visits',
+    {
+      ...config,
+      params,
+    } as HttpRequestConfig<undefined>,
   );
   return response.data;
 }
@@ -465,6 +548,8 @@ export const analyticsApi = {
   getMediaCompareContentSentiment,
   getMediaCompareTitleTopWords,
   getAdminDashboardSummary,
+  trackVisit,
+  listAdminDashboardVisits,
 };
 
 export default analyticsApi;

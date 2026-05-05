@@ -35,6 +35,8 @@ public class AdminDashboardController {
         return ResponseEntity.ok(new AdminDashboardSummaryDto.AdminDashboardSummaryResponseDto(
                 r.todayJoinedCount(),
                 r.todayJoinedDeltaRate(),
+                r.todayVisitorCount(),
+                r.todayVisitorDeltaRate(),
                 r.todayCollectedArticleCount(),
                 r.todayCollectedArticleDeltaRate(),
                 r.processingInquiryCount(),

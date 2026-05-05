@@ -180,6 +180,7 @@ public class SecurityConfig {
 
                 // public read endpoints
                 .requestMatchers(HttpMethod.GET, "/api/public/**").permitAll()
+                .requestMatchers(HttpMethod.POST, "/api/public/visits").permitAll()
 
                 // analytics (public read)
                 .requestMatchers(HttpMethod.GET, "/api/analytics/**").permitAll()

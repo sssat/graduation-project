@@ -44,6 +44,10 @@ class AdminDashboardAnalyticsService {
         long past7JoinedTotal = countUsersJoinedBetween(startOfToday.minusDays(7), startOfToday);
         Double todayJoinedDeltaRate = support.calcDeltaRateVsAvg(todayJoinedCount, past7JoinedTotal, 7);
 
+        long todayVisitorCount = countVisitorsBetween(today, today.plusDays(1));
+        long past7VisitorTotal = countVisitorsBetween(today.minusDays(7), today);
+        Double todayVisitorDeltaRate = support.calcDeltaRateVsAvg(todayVisitorCount, past7VisitorTotal, 7);
+
         TrendRunRef selectedRun = support.getConfiguredTrendRunOrThrow();
         long todayCollectedArticleCount = support.sumAllKeywordArticleCount(selectedRun.getTrendRunSeq(), PeriodFilter.D14);
 
@@ -64,6 +68,8 @@ class AdminDashboardAnalyticsService {
         return new AnalyticsService.AdminDashboardSummaryResult(
                 todayJoinedCount,
                 todayJoinedDeltaRate,
+                todayVisitorCount,
+                todayVisitorDeltaRate,
                 todayCollectedArticleCount,
                 todayCollectedArticleDeltaRate,
                 processingInquiryCount,
@@ -74,6 +80,18 @@ class AdminDashboardAnalyticsService {
     private long countUsersJoinedBetween(LocalDateTime startInclusive, LocalDateTime endExclusive) {
         Long cnt = em.createQuery(
                         "select count(u) from User u where u.joinedAt >= :start and u.joinedAt < :end",
+                        Long.class
+                )
+                .setParameter("start", startInclusive)
+                .setParameter("end", endExclusive)
+                .getSingleResult();
+
+        return cnt == null ? 0L : cnt;
+    }
+
+    private long countVisitorsBetween(LocalDate startInclusive, LocalDate endExclusive) {
+        Long cnt = em.createQuery(
+                        "select count(v) from DailyVisitor v where v.visitDate >= :start and v.visitDate < :end",
                         Long.class
                 )
                 .setParameter("start", startInclusive)

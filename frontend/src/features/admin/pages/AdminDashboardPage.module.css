@@ -117,7 +117,7 @@
 /* 상단 요약 카드 */
 .summaryGrid {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 16px;
   margin-bottom: 18px;
 }

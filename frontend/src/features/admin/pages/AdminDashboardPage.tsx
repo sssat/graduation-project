@@ -5,6 +5,8 @@ import styles from "./AdminDashboardPage.module.css";
 import { listAdminDashboardLoginLogs } from "../../../api/accounts";
 import {
   getAdminDashboardSummary,
+  listAdminDashboardVisits,
+  type AdminDashboardVisitItem,
   type AdminDashboardSummaryResponse,
 } from "../../../api/analytics";
 import {
@@ -19,6 +21,7 @@ import { getErrorMessage } from "../../../api/types";
 
 const PAGE_SIZE = 10;
 const LOGIN_PAGE_SIZE = 10;
+const VISIT_PAGE_SIZE = 10;
 
 type LogStatus = "success" | "fail";
 type InquiryTypeKey = "bug" | "idea" | "data" | "account" | "etc";
@@ -28,6 +31,8 @@ type InquiryPanelMode = "view" | "edit";
 type DashboardSummaryVm = {
   signupsToday: number;
   signupsMeta: string;
+  visitorsToday: number;
+  visitorsMeta: string;
   articlesToday: number;
   articlesMeta: string;
   inquiriesInProgress: number;
@@ -42,6 +47,22 @@ type LoginLogRowVm = {
   ipAddress: string;
   userAgent: string | null;
   userSeq: number | null;
+};
+
+type VisitLogRowVm = {
+  visitorDailySeq: number;
+  visitDate: string;
+  firstVisitedAt: string;
+  lastVisitedAt: string;
+  pageViewCount: number;
+  ipAddress: string;
+  userAgent: string | null;
+  referrer: string | null;
+  acceptLanguage: string | null;
+  clientTimeZone: string | null;
+  screenSize: string;
+  firstPath: string | null;
+  lastPath: string | null;
 };
 
 type InquiryListRowVm = {
@@ -73,6 +94,8 @@ type SelectedInquiryVm = {
 const DEFAULT_SUMMARY: DashboardSummaryVm = {
   signupsToday: 0,
   signupsMeta: "-",
+  visitorsToday: 0,
+  visitorsMeta: "-",
   articlesToday: 0,
   articlesMeta: "-",
   inquiriesInProgress: 0,
@@ -105,6 +128,16 @@ function formatIpAddress(value: string | null | undefined): string {
   if (ip === "::1" || ip === "0:0:0:0:0:0:0:1") return "localhost";
   if (ip.startsWith("::ffff:")) return ip.slice("::ffff:".length);
   return ip;
+}
+
+function formatNullableText(value: string | null | undefined): string {
+  const text = value?.trim();
+  return text ? text : "-";
+}
+
+function formatScreenSize(width: number | null | undefined, height: number | null | undefined): string {
+  if (!width || !height) return "-";
+  return `${width}x${height}`;
 }
 
 function formatDeltaRate(value: number | null, label: string): string {
@@ -193,6 +226,24 @@ function mapLoginRow(item: {
   };
 }
 
+function mapVisitRow(item: AdminDashboardVisitItem): VisitLogRowVm {
+  return {
+    visitorDailySeq: item.visitor_daily_seq,
+    visitDate: item.visit_date,
+    firstVisitedAt: formatDisplayDateTime(item.first_visited_at),
+    lastVisitedAt: formatDisplayDateTime(item.last_visited_at),
+    pageViewCount: item.page_view_count,
+    ipAddress: formatIpAddress(item.ip_address),
+    userAgent: item.user_agent ?? null,
+    referrer: item.referrer ?? null,
+    acceptLanguage: item.accept_language ?? null,
+    clientTimeZone: item.client_time_zone ?? null,
+    screenSize: formatScreenSize(item.screen_width, item.screen_height),
+    firstPath: item.first_path ?? null,
+    lastPath: item.last_path ?? null,
+  };
+}
+
 function mapAdminDetailToVm(detail: AdminInquiryDetail): SelectedInquiryVm {
   const typeUi = mapTypeCodeToUi(detail.type_code);
   const status = normalizeStatus(detail.status);
@@ -238,6 +289,12 @@ function mapSummaryResponse(raw: AdminDashboardSummaryResponse, fallbackProcessi
     "articles_delta_rate",
   ]);
 
+  const visitorsDeltaRate = getNumberByKeys(source, [
+    "today_visitor_delta_rate",
+    "visitor_delta_rate",
+    "visitors_delta_rate",
+  ]);
+
   const inquiriesAvgElapsedDays = getNumberByKeys(source, [
     "processing_inquiry_avg_elapsed_days",
     "inquiries_avg_elapsed_days",
@@ -258,6 +315,16 @@ function mapSummaryResponse(raw: AdminDashboardSummaryResponse, fallbackProcessi
     signupsMeta:
       getStringByKeys(source, ["signups_meta", "signups_delta_text", "signups_summary"]) ??
       formatDeltaRate(signupsDeltaRate, "최근 7일 평균 대비"),
+    visitorsToday:
+      getNumberByKeys(source, [
+        "visitors_today",
+        "today_visitors",
+        "today_visitor_count",
+        "daily_visitor_count",
+      ]) ?? 0,
+    visitorsMeta:
+      getStringByKeys(source, ["visitors_meta", "visitors_delta_text", "visitors_summary"]) ??
+      formatDeltaRate(visitorsDeltaRate, "최근 7일 평균 대비"),
     articlesToday:
       getNumberByKeys(source, [
         "articles_today",
@@ -293,6 +360,13 @@ export default function AdminDashboardPage() {
   const [summary, setSummary] = useState<DashboardSummaryVm>(DEFAULT_SUMMARY);
   const [summaryLoading, setSummaryLoading] = useState(false);
   const [summaryError, setSummaryError] = useState<string | null>(null);
+
+  const [visitPage, setVisitPage] = useState(1);
+  const [visitRows, setVisitRows] = useState<VisitLogRowVm[]>([]);
+  const [visitTotalPages, setVisitTotalPages] = useState(1);
+  const [visitTotalCount, setVisitTotalCount] = useState(0);
+  const [visitLoading, setVisitLoading] = useState(false);
+  const [visitError, setVisitError] = useState<string | null>(null);
 
   const [loginPage, setLoginPage] = useState(1);
   const [loginRows, setLoginRows] = useState<LoginLogRowVm[]>([]);
@@ -332,6 +406,26 @@ export default function AdminDashboardPage() {
       setSummaryError(getErrorMessage(error, "대시보드 요약을 불러오지 못했습니다."));
     } finally {
       setSummaryLoading(false);
+    }
+  }, []);
+
+  const loadVisitLogs = useCallback(async (page: number) => {
+    setVisitLoading(true);
+    setVisitError(null);
+    try {
+      const data = await listAdminDashboardVisits({ page, size: VISIT_PAGE_SIZE });
+      const totalPages = Math.max(1, data.total_pages || 1);
+      setVisitRows(data.items.map(mapVisitRow));
+      setVisitTotalPages(totalPages);
+      setVisitTotalCount(data.total_count || 0);
+      if (page > totalPages) setVisitPage(totalPages);
+    } catch (error) {
+      setVisitRows([]);
+      setVisitTotalPages(1);
+      setVisitTotalCount(0);
+      setVisitError(getErrorMessage(error, "방문자 기록을 불러오지 못했습니다."));
+    } finally {
+      setVisitLoading(false);
     }
   }, []);
 
@@ -395,6 +489,10 @@ export default function AdminDashboardPage() {
   }, []);
 
   useEffect(() => {
+    void loadVisitLogs(visitPage);
+  }, [visitPage, loadVisitLogs]);
+
+  useEffect(() => {
     void loadLoginLogs(loginPage);
   }, [loginPage, loadLoginLogs]);
 
@@ -435,6 +533,8 @@ export default function AdminDashboardPage() {
 
   const canPrev = activePage > 1;
   const canNext = activePage < inquiryTotalPages;
+  const visitCanPrev = visitPage > 1;
+  const visitCanNext = visitPage < visitTotalPages;
   const loginCanPrev = loginPage > 1;
   const loginCanNext = loginPage < loginTotalPages;
 
@@ -459,6 +559,17 @@ export default function AdminDashboardPage() {
     for (let p = start; p <= end; p += 1) arr.push(p);
     return arr;
   }, [loginPage, loginTotalPages]);
+
+  const visitPageButtons = useMemo(() => {
+    const maxButtons = 7;
+    const half = Math.floor(maxButtons / 2);
+    let start = Math.max(1, visitPage - half);
+    const end = Math.min(visitTotalPages, start + maxButtons - 1);
+    start = Math.max(1, end - maxButtons + 1);
+    const arr: number[] = [];
+    for (let p = start; p <= end; p += 1) arr.push(p);
+    return arr;
+  }, [visitPage, visitTotalPages]);
 
   const panelTitle = useMemo(() => {
     if (!selectedInquiry) return "선택한 문의 상세";
@@ -587,6 +698,17 @@ export default function AdminDashboardPage() {
         </article>
 
         <article className={styles.summaryCard}>
+          <div className={styles.summaryLabel}>오늘 방문자</div>
+          <div className={styles.summaryMain}>
+            <div>
+              <span className={styles.summaryValue}>{formatInteger(summary.visitorsToday)}</span>
+              <span className={styles.summaryUnit}>명</span>
+            </div>
+          </div>
+          <div className={styles.summaryMeta}>{summary.visitorsMeta}</div>
+        </article>
+
+        <article className={styles.summaryCard}>
           <div className={styles.summaryLabel}>오늘 수집된 기사 수</div>
           <div className={styles.summaryMain}>
             <div>
@@ -625,7 +747,116 @@ export default function AdminDashboardPage() {
         </section>
       ) : null}
 
-      <section>
+      <section className={styles.sectionGap}>
+        <article className={styles.card}>
+          <div className={styles.cardHeader}>
+            <div className={styles.cardHeaderMain}>
+              <div className={styles.cardTitle}>방문자 기록</div>
+              <div className={styles.cardSub}>
+                하루 고유 방문자 기준으로 IP, 접속 경로, referrer, 브라우저/화면 정보를 확인합니다.
+              </div>
+            </div>
+
+            <div className={styles.cardHeaderRight}>
+              <div className={styles.tableMetaTop}>
+                전체 <strong>{formatInteger(visitTotalCount)}</strong>건
+              </div>
+              <button
+                type="button"
+                className={styles.btnSecondary}
+                onClick={() => void loadVisitLogs(visitPage)}
+                disabled={visitLoading}
+              >
+                {visitLoading ? "불러오는 중..." : "방문자 새로고침"}
+              </button>
+            </div>
+          </div>
+
+          <div className={styles.logTableFrame} aria-label="방문자 기록 목록">
+            <div className={styles.logTableScrollInner}>
+              <table className={styles.logTable}>
+                <thead>
+                  <tr>
+                    <th style={{ width: 90 }}>번호</th>
+                    <th style={{ width: 110 }}>방문일</th>
+                    <th style={{ width: 140 }}>첫 방문</th>
+                    <th style={{ width: 140 }}>최근 방문</th>
+                    <th style={{ width: 90 }}>PV</th>
+                    <th style={{ width: 140 }}>IP 주소</th>
+                    <th style={{ width: 170 }}>환경</th>
+                    <th style={{ width: 280 }}>경로</th>
+                    <th style={{ width: 240 }}>Referrer</th>
+                    <th style={{ width: 520 }}>User-Agent</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {visitRows.map((row) => (
+                    <tr key={row.visitorDailySeq}>
+                      <td data-label="번호">{row.visitorDailySeq}</td>
+                      <td data-label="방문일">{row.visitDate}</td>
+                      <td data-label="첫 방문">{row.firstVisitedAt}</td>
+                      <td data-label="최근 방문">{row.lastVisitedAt}</td>
+                      <td data-label="PV">{formatInteger(row.pageViewCount)}</td>
+                      <td data-label="IP 주소">{row.ipAddress}</td>
+                      <td data-label="환경" className={styles.cellWrap}>
+                        {formatNullableText(row.clientTimeZone)}
+                        <br />
+                        {formatNullableText(row.acceptLanguage)}
+                        <br />
+                        {row.screenSize}
+                      </td>
+                      <td data-label="경로" className={styles.cellWrap}>
+                        첫: {formatNullableText(row.firstPath)}
+                        <br />
+                        최근: {formatNullableText(row.lastPath)}
+                      </td>
+                      <td data-label="Referrer" className={styles.cellWrap}>{formatNullableText(row.referrer)}</td>
+                      <td data-label="User-Agent" className={styles.cellWrap}>{formatNullableText(row.userAgent)}</td>
+                    </tr>
+                  ))}
+                  {visitError ? (
+                    <tr>
+                      <td colSpan={10} className={styles.emptyRow}>{visitError}</td>
+                    </tr>
+                  ) : null}
+                  {!visitError && visitLoading && visitRows.length === 0 ? (
+                    <tr>
+                      <td colSpan={10} className={styles.emptyRow}>방문자 기록을 불러오는 중입니다.</td>
+                    </tr>
+                  ) : null}
+                  {!visitError && !visitLoading && visitRows.length === 0 ? (
+                    <tr>
+                      <td colSpan={10} className={styles.emptyRow}>표시할 방문자 기록이 없습니다.</td>
+                    </tr>
+                  ) : null}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <div className={styles.inquiryPagination} aria-label="방문자 기록 페이지 이동">
+            <button className={styles.pageBtn} type="button" onClick={() => visitCanPrev && setVisitPage(1)} disabled={!visitCanPrev} aria-label="첫 페이지">
+              {"<<"}
+            </button>
+            <button className={styles.pageBtn} type="button" onClick={() => visitCanPrev && setVisitPage((p) => Math.max(1, p - 1))} disabled={!visitCanPrev} aria-label="이전 페이지">
+              {"<"}
+            </button>
+            {visitPageButtons.map((p) => (
+              <button key={p} className={`${styles.pageBtn} ${visitPage === p ? styles.pageActive : ""}`} type="button" onClick={() => setVisitPage(p)}>
+                {p}
+              </button>
+            ))}
+            <button className={styles.pageBtn} type="button" onClick={() => visitCanNext && setVisitPage((p) => Math.min(visitTotalPages, p + 1))} disabled={!visitCanNext} aria-label="다음 페이지">
+              {">"}
+            </button>
+            <button className={styles.pageBtn} type="button" onClick={() => visitCanNext && setVisitPage(visitTotalPages)} disabled={!visitCanNext} aria-label="마지막 페이지">
+              {">>"}
+            </button>
+          </div>
+        </article>
+      </section>
+
+      <section className={styles.sectionGap}>
         <article className={styles.card}>
           <div className={styles.cardHeader}>
             <div className={styles.cardHeaderMain}>

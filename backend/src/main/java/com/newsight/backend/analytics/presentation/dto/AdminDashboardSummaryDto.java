@@ -20,6 +20,12 @@ public final class AdminDashboardSummaryDto {
             @JsonProperty("today_joined_delta_rate")
             Double todayJoinedDeltaRate,
 
+            @JsonProperty("today_visitor_count")
+            long todayVisitorCount,
+
+            @JsonProperty("today_visitor_delta_rate")
+            Double todayVisitorDeltaRate,
+
             @JsonProperty("today_collected_article_count")
             long todayCollectedArticleCount,
 

@@ -72,6 +72,8 @@ public class AnalyticsService {
     public record AdminDashboardSummaryResult(
             long todayJoinedCount,
             Double todayJoinedDeltaRate,
+            long todayVisitorCount,
+            Double todayVisitorDeltaRate,
             long todayCollectedArticleCount,
             Double todayCollectedArticleDeltaRate,
             long processingInquiryCount,
