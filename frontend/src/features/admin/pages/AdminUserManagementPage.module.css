@@ -1,0 +1,483 @@
+/* frontend/src/pages/AdminUserManagementPage.module.css */
+
+:global(:root) {
+  --bg-body: #f4f7fb;
+  --accent-yellow: #f59e0b;
+  --accent-blue: #2563eb;
+  --accent-purple: #0ea5e9;
+  --accent-pink: #14b8a6;
+  --border-soft: rgba(148, 163, 184, 0.22);
+  --text-muted: #64748b;
+}
+
+.pageRoot {
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 28px 32px 40px;
+  animation: fadeSlideUp 0.5s ease-out;
+}
+
+@keyframes fadeSlideUp {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.hero {
+  display: flex;
+  justify-content: space-between;
+  gap: 14px;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+}
+
+.heroMain {
+  max-width: 780px;
+}
+
+.heroKicker {
+  font-size: 11px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin-bottom: 4px;
+}
+
+.heroTitle {
+  margin: 0;
+  font-size: 26px;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.heroSub {
+  margin-top: 6px;
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+.card {
+  border-radius: 20px;
+  background: #ffffff;
+  border: 1px solid var(--border-soft);
+  box-shadow: 0 18px 40px rgba(15, 23, 42, 0.08);
+  padding: 18px 20px 20px;
+}
+
+.cardHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.cardTitle {
+  font-size: 14px;
+  font-weight: 600;
+  color: #0f172a;
+}
+
+.cardMeta {
+  font-size: 11px;
+  color: var(--text-muted);
+  text-align: right;
+  line-height: 1.35;
+}
+
+.controls {
+  margin-bottom: 12px;
+}
+
+.ctrlLabel {
+  display: block;
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-bottom: 6px;
+}
+
+.searchForm {
+  display: flex;
+  gap: 12px;
+  align-items: flex-end;
+  width: 100%;
+}
+
+.searchBox {
+  flex: 1 1 auto;
+  min-width: 280px;
+}
+
+.filterBox {
+  width: 220px;
+  flex: 0 0 220px;
+}
+
+.searchActionBox {
+  width: 120px;
+  flex: 0 0 120px;
+  margin-left: auto;
+}
+
+.input,
+.select {
+  width: 100%;
+  background: #ffffff;
+  border: 1px solid rgba(203, 213, 225, 0.95);
+  border-radius: 12px;
+  padding: 10px 12px;
+  color: #0f172a;
+  font-family: inherit;
+  font-size: 12px;
+}
+
+.input:focus,
+.select:focus {
+  outline: none;
+  border-color: rgba(129, 140, 248, 0.9);
+  box-shadow: 0 0 0 1px rgba(129, 140, 248, 0.4);
+}
+
+.searchButton {
+  width: 100%;
+  height: 38px;
+  border-radius: 12px;
+  border: 1px solid rgba(148, 163, 184, 0.32);
+  background: #ffffff;
+  color: #334155;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: transform 0.08s ease, box-shadow 0.15s ease, border-color 0.15s ease, background 0.15s ease;
+}
+
+.searchButton:hover:not(:disabled) {
+  border-color: rgba(37, 99, 235, 0.35);
+  background: #f8fbff;
+  box-shadow: 0 14px 28px rgba(37, 99, 235, 0.08);
+}
+
+.searchButton:active:not(:disabled) {
+  transform: translateY(1px);
+}
+
+.searchButton:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.tableScroll {
+  max-height: 520px;
+  overflow: auto;
+  border: 1px solid rgba(226, 232, 240, 0.95);
+  border-radius: 14px;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+  table-layout: fixed;
+}
+
+.table th,
+.table td {
+  padding: 8px 10px;
+  border-bottom: 1px solid rgba(226, 232, 240, 0.95);
+  vertical-align: middle;
+  text-align: left;
+}
+
+.table th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: #f8fbff;
+  color: var(--text-muted);
+  font-weight: 500;
+}
+
+.cellWrap {
+  white-space: normal;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+  line-height: 1.45;
+}
+
+.cellStrong {
+  font-weight: 600;
+  color: #0f172a;
+}
+
+.emptyRow {
+  padding: 18px 8px;
+  color: var(--text-muted);
+  text-align: center;
+}
+
+.rolePill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 11px;
+  border: 1px solid rgba(148, 163, 184, 0.32);
+  background: #ffffff;
+  white-space: nowrap;
+}
+
+.roleUser {
+  border-color: rgba(148, 163, 184, 0.32);
+  color: #334155;
+}
+
+.roleAdmin {
+  border-color: rgba(37, 99, 235, 0.24);
+  color: #1d4ed8;
+  background: rgba(37, 99, 235, 0.08);
+}
+
+.roleSuper {
+  border-color: rgba(14, 165, 233, 0.24);
+  color: #0369a1;
+  background: rgba(14, 165, 233, 0.08);
+}
+
+.btnTable {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(148, 163, 184, 0.32);
+  background: #ffffff;
+  color: #334155;
+  font-size: 11px;
+  cursor: pointer;
+  line-height: 1;
+  white-space: nowrap;
+  width: 100%;
+  transition: transform 0.08s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+}
+
+.btnTable:hover:not(:disabled) {
+  border-color: rgba(37, 99, 235, 0.35);
+  box-shadow: 0 14px 28px rgba(37, 99, 235, 0.08);
+}
+
+.btnTable:active:not(:disabled) {
+  transform: translateY(1px);
+}
+
+.btnTable:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.btnPromote {
+  border-color: rgba(34, 197, 94, 0.28);
+  color: #15803d;
+  background: #ffffff;
+  font-weight: 700;
+}
+
+.btnPromote:hover:not(:disabled) {
+  background: rgba(34, 197, 94, 0.08);
+  border-color: rgba(34, 197, 94, 0.4);
+  box-shadow: none;
+}
+
+.btnDemote {
+  border-color: rgba(245, 158, 11, 0.28);
+  color: #a16207;
+  background: #ffffff;
+  font-weight: 700;
+}
+
+.btnDemote:hover:not(:disabled) {
+  background: rgba(250, 204, 21, 0.08);
+  border-color: rgba(245, 158, 11, 0.4);
+  box-shadow: none;
+}
+
+.btnDanger {
+  border-color: rgba(248, 113, 113, 0.32);
+  color: #b91c1c;
+}
+
+.pagination {
+  margin-top: 12px;
+  display: flex;
+  justify-content: center;
+  gap: 4px;
+  font-size: 12px;
+  flex-wrap: wrap;
+}
+
+.pageBtn {
+  min-width: 28px;
+  height: 26px;
+  border-radius: 999px;
+  border: 1px solid rgba(148, 163, 184, 0.32);
+  background: #ffffff;
+  color: #334155;
+  cursor: pointer;
+}
+
+.pageActive {
+  background: linear-gradient(135deg, #2563eb, #38bdf8);
+  border-color: transparent;
+  color: #ffffff;
+}
+
+.pageBtn:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+@media (max-width: 900px) {
+  .pageRoot {
+    padding: 22px 18px 32px;
+  }
+
+  .searchForm {
+    flex-wrap: wrap;
+  }
+
+  .searchBox,
+  .filterBox,
+  .searchActionBox {
+    width: 100%;
+    flex: 1 1 100%;
+    margin-left: 0;
+  }
+
+  .btnTable {
+    width: auto;
+  }
+}
+
+
+@media (max-width: 768px) {
+  .heroTitle {
+    font-size: 22px;
+  }
+
+  .heroSub {
+    line-height: 1.6;
+    word-break: keep-all;
+  }
+
+  .card {
+    padding: 16px 14px 18px;
+    border-radius: 18px;
+  }
+
+  .cardHeader {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .cardMeta {
+    text-align: left;
+  }
+
+  .tableScroll {
+    max-height: none;
+    overflow: visible;
+    border: none;
+    border-radius: 0;
+  }
+
+  .table,
+  .table thead,
+  .table tbody,
+  .table tr,
+  .table td {
+    display: block;
+    width: 100%;
+  }
+
+  .table thead {
+    display: none;
+  }
+
+  .table tbody {
+    display: grid;
+    gap: 12px;
+  }
+
+  .table tr {
+    border: 1px solid rgba(148, 163, 184, 0.22);
+    border-radius: 16px;
+    overflow: hidden;
+    background: #ffffff;
+  }
+
+  .table td {
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+    justify-content: space-between;
+    padding: 10px 12px;
+    text-align: right;
+    border-bottom: 1px solid rgba(31, 41, 55, 0.85);
+    white-space: normal;
+    word-break: break-word;
+    overflow-wrap: anywhere;
+  }
+
+  .table td:last-child {
+    border-bottom: none;
+  }
+
+  .table td::before {
+    content: attr(data-label);
+    flex: 0 0 112px;
+    max-width: 112px;
+    text-align: left;
+    color: var(--text-muted);
+    font-size: 11px;
+    font-weight: 600;
+    line-height: 1.45;
+  }
+
+  .cellStrong {
+    text-align: right;
+  }
+
+  .btnTable {
+    width: 100%;
+  }
+
+  .pagination {
+    margin-top: 16px;
+  }
+}
+
+@media (max-width: 420px) {
+  .pageRoot {
+    padding: 18px 14px 28px;
+  }
+
+  .table td {
+    flex-direction: column;
+    gap: 6px;
+    align-items: stretch;
+    text-align: left;
+  }
+
+  .table td::before {
+    flex: 0 0 auto;
+    max-width: none;
+  }
+}

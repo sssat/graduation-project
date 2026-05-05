@@ -1,0 +1,22 @@
+# data-pipelne/docker-compose.yml
+# MySQL 데이터베이스를 도커로 띄우는 설정 파일
+
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: newsight-mysql
+    restart: unless-stopped
+    command: --default-authentication-plugin=mysql_native_password
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpass
+      MYSQL_DATABASE: newsight
+      MYSQL_USER: newsight
+      MYSQL_PASSWORD: newspass
+      TZ: Asia/Seoul
+    ports:
+    - "3307:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+
+volumes:
+  mysql_data:

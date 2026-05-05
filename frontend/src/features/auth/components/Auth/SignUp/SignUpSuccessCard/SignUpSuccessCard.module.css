@@ -1,0 +1,140 @@
+/* frontend/src/components/Auth/SignUp/SignUpSuccessCard/SignUpSuccessCard.module.css */
+
+.section {
+  min-height: calc(100vh - 120px);
+  min-height: calc(100dvh - 120px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: linear-gradient(180deg, #f8fbff 0%, #eef5ff 100%);
+}
+
+.wrap {
+  --card-width: 420px;
+  width: min(var(--card-width), 100%);
+  max-width: 100%;
+}
+
+.card {
+  width: 100%;
+  background: #ffffff;
+  border: 1px solid #eef2f7;
+  border-radius: 12px;
+  box-shadow: 0 10px 30px rgba(16, 24, 40, 0.12);
+  padding: 24px;
+  text-align: center;
+  color: #111827;
+  color-scheme: light;
+}
+
+.card,
+.card * {
+  box-sizing: border-box;
+}
+
+.logo {
+  display: block;
+  margin: 0 auto 4px;
+  height: 76px;
+  width: auto;
+  max-width: 100%;
+  object-fit: contain;
+}
+
+.title {
+  margin: 6px 0 4px;
+  font-size: 18px;
+  font-weight: 700;
+  color: #111827;
+  line-height: 1.45;
+}
+
+.sub {
+  margin: 0 0 14px;
+  font-size: 14px;
+  color: #374151;
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+}
+
+.hr {
+  border: 0;
+  height: 1px;
+  background: #a7a9ad;
+  margin: 10px 0 18px;
+}
+
+.btnRow {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+  height: 44px;
+  padding: 0 18px;
+  border-radius: 10px;
+  text-decoration: none;
+  font-weight: 800;
+  font-size: 13px;
+  transition: transform 0.12s ease, box-shadow 0.2s ease, filter 0.12s ease;
+  text-align: center;
+}
+
+.btn:active {
+  transform: translateY(1px);
+}
+
+.btnPrimary {
+  color: #ffffff;
+  background: linear-gradient(135deg, #0ea5e9, #6366f1);
+  box-shadow: 0 14px 26px rgba(37, 99, 235, 0.35);
+  border: none;
+}
+
+.btnPrimary:hover {
+  filter: brightness(0.98);
+  box-shadow: 0 16px 30px rgba(37, 99, 235, 0.45);
+}
+
+.btnSecondary {
+  color: #111827;
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  box-shadow: 0 10px 22px rgba(16, 24, 40, 0.06);
+}
+
+.btnSecondary:hover {
+  border-color: #cbd5e1;
+  box-shadow: 0 12px 26px rgba(16, 24, 40, 0.09);
+}
+
+@media (max-width: 520px) {
+  .section {
+    align-items: flex-start;
+    padding: 20px 14px 28px;
+  }
+
+  .card {
+    padding: 20px 16px;
+  }
+
+  .logo {
+    height: 68px;
+  }
+
+  .btnRow {
+    width: 100%;
+    flex-direction: column;
+  }
+
+  .btn {
+    width: 100%;
+  }
+}

@@ -1,0 +1,213 @@
+.card {
+  composes: card from "../shared/AnalysisCard.module.css";
+}
+
+.cardHeader {
+  composes: cardHeader from "../shared/AnalysisCard.module.css";
+}
+
+.cardTitle {
+  composes: cardTitle from "../shared/AnalysisCard.module.css";
+}
+
+.cardSub {
+  composes: cardSub from "../shared/AnalysisCard.module.css";
+}
+
+.badgeSoft {
+  composes: badgeSoft from "../shared/AnalysisCard.module.css";
+}
+
+.summaryStrip {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 8px;
+  margin-bottom: 16px;
+}
+
+.summaryPanel {
+  min-width: 0;
+  padding: 14px 16px;
+  border-radius: 18px;
+  background:
+    radial-gradient(circle at top right, rgba(37, 99, 235, 0.1), transparent 34%),
+    linear-gradient(135deg, rgba(248, 250, 252, 0.98), rgba(255, 255, 255, 0.96));
+  border: 1px solid rgba(191, 219, 254, 0.78);
+}
+
+.summaryPanelLead {
+  background:
+    radial-gradient(circle at top right, rgba(14, 165, 233, 0.16), transparent 36%),
+    linear-gradient(135deg, rgba(239, 246, 255, 0.98), rgba(255, 255, 255, 0.96));
+}
+
+.summaryPanelLead .summaryValue {
+  margin-left: -2px;
+}
+
+.summaryPanelLow {
+  background:
+    radial-gradient(circle at top right, rgba(100, 116, 139, 0.12), transparent 36%),
+    linear-gradient(135deg, rgba(248, 250, 252, 0.98), rgba(255, 255, 255, 0.96));
+  border-color: rgba(203, 213, 225, 0.9);
+}
+
+.summaryLabel {
+  font-size: 11px;
+  line-height: 1.3;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  color: #64748b;
+}
+
+.summaryValue {
+  margin-top: 8px;
+  font-size: 24px;
+  line-height: 1.15;
+  font-weight: 900;
+  color: #0f172a;
+  word-break: keep-all;
+}
+
+.summarySub {
+  margin-top: 6px;
+  font-size: 12px;
+  line-height: 1.5;
+  color: #64748b;
+}
+
+.rankList {
+  display: grid;
+  gap: 10px;
+  padding: 14px;
+  border-radius: 20px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(248, 250, 252, 0.96));
+  border: 1px solid rgba(226, 232, 240, 0.92);
+}
+
+.rankRow {
+  display: grid;
+  grid-template-columns: minmax(320px, 0.62fr) minmax(240px, 2.55fr);
+  align-items: center;
+  gap: 14px;
+  min-height: 40px;
+}
+
+.rankMeta {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.rankNo {
+  flex: 0 0 auto;
+  width: 28px;
+  height: 28px;
+  border-radius: 10px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: #eff6ff;
+  color: #2563eb;
+  font-size: 11px;
+  font-weight: 900;
+}
+
+.rankTextGroup {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: minmax(76px, 96px) minmax(80px, auto);
+  align-items: baseline;
+  gap: 12px;
+}
+
+.rankLabel {
+  min-width: 0;
+  color: #0f172a;
+  font-size: 13px;
+  font-weight: 800;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.rankBarCell {
+  min-width: 0;
+}
+
+.rankTrack {
+  height: 14px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgba(226, 232, 240, 0.9);
+}
+
+.rankFill {
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #2563eb, #38bdf8);
+  box-shadow: 0 6px 14px rgba(37, 99, 235, 0.2);
+}
+
+.rankRowTop .rankNo {
+  background: linear-gradient(135deg, #2563eb, #38bdf8);
+  color: #ffffff;
+}
+
+.rankRowTop .rankFill {
+  background: linear-gradient(90deg, #1d4ed8, #06b6d4);
+}
+
+.rankValue {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  flex: 0 0 auto;
+  white-space: nowrap;
+}
+
+.rankValue strong {
+  font-size: 16px;
+  line-height: 1;
+  color: #0f172a;
+}
+
+.rankValue span {
+  font-size: 13px;
+  font-weight: 800;
+  color: #64748b;
+}
+
+.biasCaption {
+  composes: biasCaption from "../shared/AnalysisCard.module.css";
+}
+
+.statusText {
+  composes: statusText from "../shared/AnalysisCard.module.css";
+}
+
+.statusError {
+  composes: statusError from "../shared/AnalysisCard.module.css";
+}
+
+@media (max-width: 720px) {
+  .summaryStrip {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .rankRow {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 7px;
+    padding: 4px 0;
+  }
+
+  .rankTextGroup {
+    width: 100%;
+    grid-template-columns: minmax(0, 1fr) auto;
+    justify-content: space-between;
+    gap: 8px;
+  }
+}

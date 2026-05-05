@@ -1,0 +1,399 @@
+/* frontend/src/pages/InquiryDetailPage.module.css */
+
+:global(:root) {
+  --ns-accent-yellow: #f59e0b;
+  --ns-accent-blue: #2563eb;
+  --ns-accent-purple: #0ea5e9;
+  --ns-accent-pink: #14b8a6;
+
+  --ns-border-soft: rgba(148, 163, 184, 0.22);
+  --ns-text-muted: #64748b;
+  --ns-text-main: #0f172a;
+}
+
+.pageRoot {
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 28px 32px 40px;
+  background: transparent;
+  animation: fadeSlideUp 0.5s ease-out;
+}
+
+@keyframes fadeSlideUp {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.breadcrumb {
+  font-size: 12px;
+  color: var(--ns-text-muted);
+  margin-bottom: 10px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.breadcrumb a {
+  color: var(--ns-text-muted);
+  text-decoration: none;
+}
+
+.breadcrumb a:hover {
+  text-decoration: underline;
+}
+
+.breadcrumbSep {
+  opacity: 0.9;
+}
+
+.backLink {
+  margin-top: 4px;
+  font-size: 12px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: #2563eb;
+  text-decoration: none;
+}
+
+.arrow {
+  font-size: 13px;
+}
+
+.backLink:hover {
+  text-decoration: underline;
+}
+
+.detailHero {
+  margin-top: 10px;
+  margin-bottom: 20px;
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  align-items: flex-end;
+}
+
+.detailTitleBlock {
+  max-width: 680px;
+}
+
+.detailTitle {
+  margin: 0;
+  font-size: 28px;
+  font-weight: 700;
+}
+
+/* 레이아웃 */
+.detailLayout {
+  width: 100%;
+  max-width: 100%;
+  margin-top: 4px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* 카드 */
+.card {
+  border-radius: 20px;
+  background: #ffffff;
+  border: 1px solid rgba(226, 232, 240, 0.95);
+  box-shadow: 0 18px 40px rgba(15, 23, 42, 0.08);
+  padding: 18px 20px 20px;
+}
+
+.cardHeader {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  align-items: flex-start;
+  margin-bottom: 12px;
+}
+
+.cardTitle {
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 1.5;
+  word-break: keep-all;
+  overflow-wrap: anywhere;
+}
+
+.badgeSoft {
+  font-size: 11px;
+  padding: 4px 9px;
+  border-radius: 999px;
+  background: #eff6ff;
+  color: #1d4ed8;
+  white-space: nowrap;
+}
+
+/* 상단 메타 */
+.metaRowTop {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.inquiryTypePill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px 9px;
+  border-radius: 999px;
+  font-size: 11px;
+  background: rgba(37, 99, 235, 0.1);
+  color: #1d4ed8;
+}
+
+.bug {
+  background: rgba(248, 113, 113, 0.12);
+  color: #b91c1c;
+}
+
+.idea {
+  background: rgba(99, 102, 241, 0.12);
+  color: #4338ca;
+}
+
+.data {
+  background: rgba(20, 184, 166, 0.12);
+  color: #0f766e;
+}
+
+.account {
+  background: rgba(245, 158, 11, 0.14);
+  color: #a16207;
+}
+
+.etc {
+  background: rgba(148, 163, 184, 0.14);
+  color: #475569;
+}
+
+.myPill {
+  font-size: 10px;
+  padding: 3px 7px;
+  border-radius: 999px;
+  background: rgba(34, 197, 94, 0.12);
+  border: 1px solid rgba(34, 197, 94, 0.22);
+  color: #15803d;
+  white-space: nowrap;
+}
+
+.lockPill {
+  font-size: 10px;
+  padding: 3px 7px;
+  border-radius: 999px;
+  background: #ffffff;
+  border: 1px solid rgba(148, 163, 184, 0.32);
+  color: var(--ns-text-muted);
+  display: inline-flex;
+  align-items: center;
+  white-space: nowrap;
+}
+
+.statusBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  padding: 4px 8px;
+  border-radius: 999px;
+  border: 1px solid rgba(148, 163, 184, 0.32);
+  background: #ffffff;
+  color: var(--ns-text-muted);
+}
+
+.statusDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+}
+
+.dotProcessing {
+  background: #f97316;
+}
+
+.dotDone {
+  background: #22c55e;
+}
+
+.metaRowBottom {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  margin-bottom: 12px;
+  font-size: 12px;
+  color: var(--ns-text-muted);
+}
+
+.metaItemLabel {
+  color: #9ca3af;
+}
+
+.metaItemValue {
+  color: #0f172a;
+  margin-left: 6px;
+  word-break: break-word;
+}
+
+.dividerLine {
+  border-top: 1px solid rgba(226, 232, 240, 0.95);
+  margin: 10px 0 16px;
+}
+
+/* 본문 */
+.inquiryBody {
+  font-size: 13px;
+  color: #334155;
+  line-height: 1.8;
+}
+
+.inquiryBody p {
+  margin: 0 0 10px;
+}
+
+.inquiryBody p:last-child {
+  margin-bottom: 0;
+}
+
+/* 답변 */
+.answerMeta {
+  font-size: 11px;
+  color: var(--ns-text-muted);
+  margin-bottom: 10px;
+}
+
+.answerBody {
+  font-size: 13px;
+  line-height: 1.7;
+  color: #334155;
+}
+
+.answerBody p {
+  margin: 0 0 10px;
+}
+
+.answerBody p:last-child {
+  margin-bottom: 0;
+}
+
+.bodyText {
+  font-size: 13px;
+  color: #334155;
+  line-height: 1.8;
+}
+
+@media (max-width: 900px) {
+  .pageRoot {
+    padding: 22px 18px 32px;
+  }
+
+  .detailTitle {
+    font-size: 24px;
+  }
+
+  .cardHeader {
+    flex-wrap: wrap;
+  }
+
+  .metaRowBottom {
+    gap: 10px 14px;
+  }
+}
+
+@media (max-width: 768px) {
+  .pageRoot {
+    padding: 18px 14px 28px;
+  }
+
+  .breadcrumb {
+    flex-wrap: wrap;
+    row-gap: 4px;
+  }
+
+  .backLink {
+    margin-top: 2px;
+    flex-wrap: wrap;
+  }
+
+  .detailHero {
+    margin-top: 8px;
+    margin-bottom: 16px;
+  }
+
+  .detailTitle {
+    font-size: 22px;
+    line-height: 1.4;
+    word-break: keep-all;
+    overflow-wrap: anywhere;
+  }
+
+  .detailLayout {
+    gap: 14px;
+  }
+
+  .card {
+    padding: 16px;
+    border-radius: 18px;
+  }
+
+  .cardHeader {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+
+  .badgeSoft {
+    align-self: flex-start;
+  }
+
+  .metaRowTop {
+    gap: 6px;
+  }
+
+  .metaRowBottom {
+    flex-direction: column;
+    gap: 8px;
+    margin-bottom: 10px;
+  }
+
+  .metaRowBottom > div {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+  }
+
+  .metaItemValue {
+    margin-left: 0;
+  }
+
+  .dividerLine {
+    margin: 10px 0 14px;
+  }
+
+  .inquiryBody,
+  .answerBody,
+  .bodyText {
+    font-size: 14px;
+    line-height: 1.75;
+    word-break: keep-all;
+    overflow-wrap: anywhere;
+  }
+
+  .answerMeta {
+    line-height: 1.6;
+    word-break: keep-all;
+    overflow-wrap: anywhere;
+  }
+}

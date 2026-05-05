@@ -1,0 +1,221 @@
+.card {
+  composes: card from "../shared/AnalysisCard.module.css";
+}
+
+.cardHeader {
+  composes: cardHeader from "../shared/AnalysisCard.module.css";
+}
+
+.cardTitle {
+  composes: cardTitle from "../shared/AnalysisCard.module.css";
+}
+
+.cardSub {
+  composes: cardSub from "../shared/AnalysisCard.module.css";
+}
+
+.badgeSoft {
+  composes: badgeSoft from "../shared/AnalysisCard.module.css";
+}
+
+.chartWrapper {
+  composes: chartWrapper from "../shared/AnalysisCard.module.css";
+}
+
+.sentimentLayout {
+  display: grid;
+  grid-template-columns: minmax(280px, 0.9fr) minmax(320px, 1.1fr);
+  gap: 20px;
+  align-items: stretch;
+}
+
+.sentimentSummary {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  height: 100%;
+}
+
+.sentimentMetric {
+  position: relative;
+  flex: 1 1 0;
+  min-height: 84px;
+  padding: 14px 18px 12px 20px;
+  border-radius: 24px;
+  border: 1px solid rgba(226, 232, 240, 0.92);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  overflow: hidden;
+  box-shadow:
+    0 18px 28px rgba(148, 163, 184, 0.12),
+    inset 0 1px 0 rgba(255, 255, 255, 0.88);
+}
+
+.sentimentMetric::before {
+  content: "";
+  position: absolute;
+  inset: 14px auto 14px 0;
+  width: 4px;
+  border-radius: 999px;
+  background: var(--metric-accent, #94a3b8);
+}
+
+.sentimentMetric::after {
+  content: "";
+  position: absolute;
+  inset: auto -28px -36px auto;
+  width: 140px;
+  height: 140px;
+  border-radius: 999px;
+  background: var(--metric-glow, rgba(148, 163, 184, 0.12));
+  pointer-events: none;
+}
+
+.sentimentMetricPositive {
+  --metric-accent: #22c55e;
+  --metric-glow: rgba(34, 197, 94, 0.14);
+  background: linear-gradient(135deg, rgba(240, 253, 244, 0.98), rgba(255, 255, 255, 0.96) 68%);
+}
+
+.sentimentMetricNeutral {
+  --metric-accent: #3b82f6;
+  --metric-glow: rgba(59, 130, 246, 0.14);
+  background: linear-gradient(135deg, rgba(239, 246, 255, 0.98), rgba(255, 255, 255, 0.96) 68%);
+}
+
+.sentimentMetricNegative {
+  --metric-accent: #ef4444;
+  --metric-glow: rgba(239, 68, 68, 0.16);
+  background: linear-gradient(135deg, rgba(254, 242, 242, 0.98), rgba(255, 255, 255, 0.96) 68%);
+}
+
+.sentimentMetricHeader {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  position: relative;
+  z-index: 1;
+}
+
+.sentimentMetricLabel {
+  font-size: 15px;
+  font-weight: 700;
+  color: #1e293b;
+}
+
+.sentimentMetricSwatch {
+  width: 14px;
+  height: 14px;
+  border-radius: 999px;
+  box-shadow: 0 0 0 6px rgba(255, 255, 255, 0.72);
+}
+
+.swatchPositive {
+  background: var(--ns-sent-pos, #22c55e);
+}
+
+.swatchNeutral {
+  background: var(--ns-sent-neu, #3b82f6);
+}
+
+.swatchNegative {
+  background: var(--ns-sent-neg, #ef4444);
+}
+
+.sentimentMetricValueRow {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: flex-end;
+  gap: 6px;
+  margin-top: 10px;
+}
+
+.sentimentMetricValue {
+  font-size: clamp(1.45rem, 2.35vw, 1.9rem);
+  line-height: 0.92;
+  font-weight: 800;
+  letter-spacing: -0.06em;
+  color: #0f172a;
+}
+
+.sentimentMetricUnit {
+  font-size: clamp(0.8rem, 1vw, 0.95rem);
+  line-height: 1.1;
+  font-weight: 700;
+  color: #475569;
+  transform: translateY(-2px);
+}
+
+.sentimentChartWrapper {
+  min-width: 0;
+  height: 340px;
+  min-height: 340px;
+  padding: 12px 14px 16px;
+  border-radius: 28px;
+  border: 1px solid rgba(226, 232, 240, 0.92);
+  background:
+    radial-gradient(circle at 26% 22%, rgba(191, 219, 254, 0.32), transparent 30%),
+    radial-gradient(circle at 74% 78%, rgba(226, 232, 240, 0.5), transparent 34%),
+    linear-gradient(160deg, rgba(255, 255, 255, 0.98), rgba(248, 250, 252, 0.96));
+  box-shadow:
+    0 20px 32px rgba(148, 163, 184, 0.12),
+    inset 0 1px 0 rgba(255, 255, 255, 0.92);
+  box-sizing: border-box;
+}
+
+@media (max-width: 900px) {
+  .sentimentLayout {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 16px;
+  }
+
+  .sentimentSummary {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 12px;
+    height: auto;
+  }
+
+  .sentimentMetric {
+    flex: initial;
+    min-height: 0;
+    padding: 12px 12px 10px 14px;
+    border-radius: 20px;
+  }
+
+  .sentimentMetricLabel {
+    font-size: 13px;
+  }
+
+  .sentimentMetricValue {
+    margin-top: 8px;
+    font-size: clamp(1.22rem, 3.8vw, 1.5rem);
+  }
+
+  .sentimentChartWrapper {
+    height: 282px;
+    min-height: 282px;
+    padding: 10px 10px 14px;
+    border-radius: 24px;
+  }
+}
+
+@media (max-width: 640px) {
+  .sentimentSummary {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .sentimentMetric {
+    padding: 16px 16px 14px 18px;
+  }
+
+  .sentimentMetricValue {
+    font-size: 1.45rem;
+  }
+
+  .sentimentMetricUnit {
+    transform: translateY(-4px);
+  }
+}
