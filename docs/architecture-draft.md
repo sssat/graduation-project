@@ -7,34 +7,37 @@ flowchart LR
   User["일반 사용자"]
   Admin["관리자 / 최고 관리자"]
 
-  subgraph AppServer["EC2 t3.small<br/>프론트엔드 / 백엔드 / DB 공용 서버"]
-    Frontend["프론트엔드<br/>React, Vite, TypeScript<br/>분석 화면 / 문의 게시판 / 관리자 화면"]
-    Backend["백엔드 API<br/>Spring Boot<br/>인증, 계정, 문의, 분석 조회 API"]
-    DB[("MySQL<br/>회원 / 문의 / 뉴스 / 분석 결과")]
+  subgraph AppServer["EC2 t3.small<br/>프론트 / 백엔드 / DB 공용 서버"]
+    Nginx["Nginx"]
+    Frontend["프론트엔드"]
+    Backend["백엔드"]
+    DB[("MySQL")]
   end
 
   subgraph BatchServer["EC2 m6i.xlarge<br/>크롤링 및 분석 전용 서버"]
-    Scheduler["자동 스케줄러<br/>하루 약 90분 실행"]
-    Pipeline["데이터 파이프라인<br/>Python<br/>뉴스 / 트렌드 수집 및 분석 배치"]
+    Scheduler["자동 스케줄러"]
+    Pipeline["데이터 파이프라인"]
   end
 
   subgraph External["외부 데이터 / AI 서비스"]
     GoogleTrends["Google Trends"]
     NaverNews["Naver News"]
     NaverDataLab["Naver DataLab Open API"]
-    OpenAI["OpenAI API<br/>뉴스 요약 생성"]
+    OpenAI["OpenAI API"]
   end
 
-  Mail["메일 서버<br/>임시 비밀번호 등"]
+  Mail["메일 서버"]
 
-  User -->|"웹 화면 이용"| Frontend
-  Admin -->|"관리자 화면 이용"| Frontend
+  User -->|"웹 접속"| Nginx
+  Admin -->|"관리자 화면 접속"| Nginx
+  Nginx -->|"화면 파일 제공"| Frontend
+  Nginx -->|"API 요청 전달"| Backend
   Frontend -->|"HTTP REST / JWT Access Token"| Backend
   Backend -->|"JPA / JDBC"| DB
   Backend -->|"메일 발송"| Mail
 
   Scheduler -->|"서버 시작 / 배치 실행 / 서버 종료"| Pipeline
-  Pipeline -->|"크롤링"| GoogleTrends
+  Pipeline -->|"트렌드 키워드 수집"| GoogleTrends
   Pipeline -->|"기사 / 댓글 수집"| NaverNews
   Pipeline -->|"검색 관심도 조회"| NaverDataLab
   Pipeline -->|"AI 요약 요청"| OpenAI
@@ -49,7 +52,7 @@ flowchart LR
   classDef db fill:#FCE8E6,stroke:#C5221F,color:#1F2937,stroke-width:1.5px
   classDef external fill:#F8F9FA,stroke:#6B7280,color:#1F2937,stroke-width:1.5px
   class User,Admin actor
-  class Frontend app
+  class Nginx,Frontend app
   class Backend api
   class Scheduler,Pipeline batch
   class DB db
@@ -59,7 +62,7 @@ flowchart LR
   style External fill:#F9FAFB,stroke:#9CA3AF,stroke-width:1.5px
 ```
 
-## 2. 백엔드 레이어드 아키텍처
+## 2. 백엔드 아키텍처
 
 ```mermaid
 flowchart TB
@@ -67,14 +70,15 @@ flowchart TB
 
   subgraph Backend["백엔드: Spring Boot"]
     subgraph FeatureModules["기능 모듈"]
-      Accounts["accounts<br/>계정 / 인증 / 관리자"]
-      Analytics["analytics<br/>뉴스 분석 조회 / 대시보드"]
+      Accounts["accounts<br/>계정 / 인증"]
+      Analytics["analytics<br/>뉴스 분석 조회"]
       Inquiries["inquiries<br/>문의 게시판 / 관리자 답변"]
+      Admins["admin<br/>관리자 / 방문자 기록"]
     end
 
     Presentation["Presentation Layer<br/>Controller<br/>Request / Response DTO"]
-    Application["Application Layer<br/>Service<br/>유스케이스 처리"]
-    Domain["Domain Layer<br/>Entity / Domain Model<br/>비즈니스 규칙"]
+    Application["Application Layer<br/>Service<br/>"]
+    Domain["Domain Layer<br/>Entity / Domain Model<br/>"]
     Infrastructure["Infrastructure Layer<br/>Repository / JPA / JDBC<br/>Security / Mail"]
     Common["Common<br/>공통 예외 처리 / 웹 설정"]
   end
@@ -104,7 +108,7 @@ flowchart TB
   classDef infra fill:#E8F0FE,stroke:#3F51B5,color:#1F2937,stroke-width:1.5px
   classDef external fill:#F8F9FA,stroke:#6B7280,color:#1F2937,stroke-width:1.5px
   class Client client
-  class Accounts,Analytics,Inquiries module
+  class Accounts,Analytics,Inquiries,Admins module
   class Presentation presentation
   class Application application
   class Domain domain
@@ -136,19 +140,14 @@ flowchart LR
     Sentiment["sentiment<br/>제목/본문 감성 분석"]
     Bias["bias<br/>제목/본문 편향 분석"]
     Wordcloud["wordcloud<br/>제목/댓글 주요 단어"]
-    Cooc["cooc_network<br/>공동언급 네트워크"]
+    Cooc["cooc_network<br/>관계도 분석"]
     SearchTimeline["search_timeline<br/>Naver DataLab 검색 관심도"]
   end
 
   DB[("MySQL 분석 테이블")]
 
   Start --> Trend --> News --> Preprocess --> Aggregate --> FinalRank
-  FinalRank --> Summary
-  FinalRank --> Sentiment
-  FinalRank --> Bias
-  FinalRank --> Wordcloud
-  FinalRank --> Cooc
-  FinalRank --> SearchTimeline
+  FinalRank --> Summary --> Sentiment --> Bias --> Wordcloud --> Cooc --> SearchTimeline
 
   Trend --> DB
   News --> DB
@@ -183,29 +182,19 @@ flowchart LR
 sequenceDiagram
   autonumber
   actor U as 사용자
+  participant N as Nginx
   participant F as 프론트엔드
-  participant B as 백엔드 API
+  participant B as 백엔드
   participant D as MySQL
-  participant P as 데이터 파이프라인
-  participant E as 외부 API
-
-  rect rgb(242, 231, 254)
-  P->>E: Google Trends / Naver News / Naver DataLab / OpenAI 호출
-  E-->>P: 트렌드, 기사, 댓글, 검색량, 요약 결과
-  P->>D: 수집 데이터와 분석 결과 저장
-  end
 
   rect rgb(233, 247, 239)
   U->>F: 키워드 상세 페이지 진입
-  F->>B: GET /analytics/keywords/{keyword_seq}
-  B->>D: 키워드 메타 조회
-  D-->>B: 기간, 기사 수, 언론사 수
-  B-->>F: 키워드 메타 반환
-
-  F->>B: 요약/감성/워드클라우드/네트워크/검색량 API 요청
+  F->>N: GET /api/analytics/keywords/{keyword_seq}/...
+  N->>B: 요청 전달
   B->>D: 분석 결과 조회
   D-->>B: 저장된 분석 결과
-  B-->>F: JSON 응답
+  B-->>N: 분석 결과 JSON 응답
+  N-->>F: 응답 전달
   F-->>U: 차트, 워드클라우드, 네트워크로 시각화
   end
 ```
@@ -216,26 +205,33 @@ sequenceDiagram
 sequenceDiagram
   autonumber
   actor U as 사용자
+  participant N as Nginx
   participant F as 프론트엔드
-  participant B as 백엔드 인증 API
+  participant B as 백엔드
   participant D as MySQL
 
   rect rgb(234, 242, 255)
   U->>F: 로그인 정보 입력
-  F->>B: POST /auth/login
+  F->>N: POST /api/auth/login
+  N->>B: 로그인 요청 전달
   B->>D: 사용자 조회 및 비밀번호 검증
   D-->>B: 사용자/권한 정보
-  B-->>F: Access Token 반환 + HttpOnly Refresh Cookie 설정
+  B-->>N: Access Token 반환 + HttpOnly Refresh Cookie 설정
+  N-->>F: 로그인 응답 전달
   F->>F: Access Token 저장
   end
 
   rect rgb(233, 247, 239)
-  F->>B: 보호 API 요청<br/>Authorization: Bearer access
-  B-->>F: API 응답
+  F->>N: 보호 API 요청<br/>Authorization: Bearer access
+  N->>B: /api 요청 전달
+  B-->>N: API 응답
+  N-->>F: API 응답
   end
 
   rect rgb(255, 243, 205)
-  F->>B: Access Token 만료 시 POST /auth/refresh
-  B-->>F: 새 Access Token 반환
+  F->>N: Access Token 만료 시 POST /api/auth/refresh
+  N->>B: Refresh Cookie 기반 갱신 요청
+  B-->>N: 새 Access Token 반환
+  N-->>F: 새 Access Token 반환
   end
 ```
