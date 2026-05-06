@@ -1,10 +1,10 @@
-package com.newsight.backend.visits.presentation;
+package com.newsight.backend.admin.presentation;
 
+import com.newsight.backend.admin.application.service.AdminService;
+import com.newsight.backend.admin.presentation.dto.AdminDashboardVisitsDto.AdminDashboardVisitsRequestDto;
+import com.newsight.backend.admin.presentation.dto.AdminDashboardVisitsDto.AdminDashboardVisitsResponseDto;
+import com.newsight.backend.admin.presentation.dto.AdminDashboardVisitsDto.VisitItemDto;
 import com.newsight.backend.common.security.CurrentUserExtractor;
-import com.newsight.backend.visits.application.service.VisitTrackingService;
-import com.newsight.backend.visits.presentation.dto.AdminDashboardVisitsDto.AdminDashboardVisitsRequestDto;
-import com.newsight.backend.visits.presentation.dto.AdminDashboardVisitsDto.AdminDashboardVisitsResponseDto;
-import com.newsight.backend.visits.presentation.dto.AdminDashboardVisitsDto.VisitItemDto;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
@@ -26,7 +26,7 @@ import org.springframework.web.bind.annotation.RestController;
 @SecurityRequirement(name = "bearerAuth")
 public class AdminVisitController {
 
-    private final VisitTrackingService visitTrackingService;
+    private final AdminService adminService;
 
     @GetMapping("/visits")
     @Operation(summary = "List daily visitor records")
@@ -38,7 +38,7 @@ public class AdminVisitController {
         Long actorUserSeq = CurrentUserExtractor.requireUserSeq(jwt);
         AdminDashboardVisitsRequestDto req = new AdminDashboardVisitsRequestDto(page, size);
 
-        VisitTrackingService.AdminVisitListResult r = visitTrackingService.listAdminDashboardVisits(
+        var r = adminService.listAdminDashboardVisits(
                 actorUserSeq,
                 req.pageOrDefault(),
                 req.sizeOrDefault()

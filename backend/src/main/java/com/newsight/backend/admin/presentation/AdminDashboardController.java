@@ -1,7 +1,7 @@
-package com.newsight.backend.analytics.presentation;
+package com.newsight.backend.admin.presentation;
 
-import com.newsight.backend.analytics.application.service.AnalyticsService;
-import com.newsight.backend.analytics.presentation.dto.AdminDashboardSummaryDto;
+import com.newsight.backend.admin.application.service.AdminService;
+import com.newsight.backend.admin.presentation.dto.AdminDashboardSummaryDto;
 import com.newsight.backend.common.security.CurrentUserExtractor;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -22,7 +22,7 @@ import org.springframework.web.bind.annotation.RestController;
 @SecurityRequirement(name = "bearerAuth")
 public class AdminDashboardController {
 
-    private final AnalyticsService analyticsService;
+    private final AdminService adminService;
 
     @GetMapping("/summary")
     @Operation(summary = "Get dashboard summary")
@@ -30,7 +30,7 @@ public class AdminDashboardController {
             @Parameter(hidden = true) @AuthenticationPrincipal Jwt jwt
     ) {
         Long actorUserSeq = CurrentUserExtractor.requireUserSeq(jwt);
-        AnalyticsService.AdminDashboardSummaryResult r = analyticsService.getAdminDashboardSummary(actorUserSeq);
+        AdminService.AdminDashboardSummaryResult r = adminService.getAdminDashboardSummary(actorUserSeq);
 
         return ResponseEntity.ok(new AdminDashboardSummaryDto.AdminDashboardSummaryResponseDto(
                 r.todayJoinedCount(),

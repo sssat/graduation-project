@@ -11,7 +11,6 @@ public class AnalyticsService {
     private final AnalyticsOverviewService overviewService;
     private final KeywordAnalyticsService keywordAnalyticsService;
     private final MediaCompareAnalyticsService mediaCompareAnalyticsService;
-    private final AdminDashboardAnalyticsService adminDashboardAnalyticsService;
 
     public OverviewResult getOverview() {
         return overviewService.getOverview();
@@ -64,21 +63,6 @@ public class AnalyticsService {
     public MediaTopWordsResult getMediaCompareTitleTopWords(Long keywordSeq, String period, Integer topN) {
         return mediaCompareAnalyticsService.getMediaCompareTitleTopWords(keywordSeq, period, topN);
     }
-
-    public AdminDashboardSummaryResult getAdminDashboardSummary(Long actorUserSeq) {
-        return adminDashboardAnalyticsService.getAdminDashboardSummary(actorUserSeq);
-    }
-
-    public record AdminDashboardSummaryResult(
-            long todayJoinedCount,
-            Double todayJoinedDeltaRate,
-            long todayVisitorCount,
-            Double todayVisitorDeltaRate,
-            long todayCollectedArticleCount,
-            Double todayCollectedArticleDeltaRate,
-            long processingInquiryCount,
-            Double processingInquiryAvgElapsedDays
-    ) {}
 
     public record OverviewResult(
             long collectedArticleCount,

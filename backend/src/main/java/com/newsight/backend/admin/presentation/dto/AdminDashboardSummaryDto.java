@@ -1,5 +1,5 @@
-// backend/src/main/java/com/newsight/backend/analytics/presentation/dto/AdminDashboardSummaryDto.java
-package com.newsight.backend.analytics.presentation.dto;
+// backend/src/main/java/com/newsight/backend/admin/presentation/dto/AdminDashboardSummaryDto.java
+package com.newsight.backend.admin.presentation.dto;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;

@@ -1,8 +1,8 @@
-package com.newsight.backend.visits.application.service;
+package com.newsight.backend.admin.application.service;
 
 import com.newsight.backend.accounts.domain.model.User;
 import com.newsight.backend.accounts.infrastructure.persistence.SpringDataUserRepository;
-import com.newsight.backend.visits.domain.model.DailyVisitor;
+import com.newsight.backend.admin.domain.model.DailyVisitor;
 import jakarta.persistence.EntityManager;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
@@ -156,12 +156,7 @@ public class VisitTrackingService {
         User actor = userRepository.findByUserSeq(actorUserSeq)
                 .orElseThrow(() -> new AuthenticationCredentialsNotFoundException("Login is required."));
 
-        int gradeCode = 0;
-        if (actor.getUserLevel() != null && actor.getUserLevel().getGradeCode() != null) {
-            gradeCode = actor.getUserLevel().getGradeCode().intValue();
-        }
-
-        if (gradeCode < 1) {
+        if (AdminSupport.levelCode(actor) < 1) {
             throw new SecurityException("Only admins can access this resource.");
         }
     }

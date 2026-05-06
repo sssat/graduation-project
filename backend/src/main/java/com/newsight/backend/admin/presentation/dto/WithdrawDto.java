@@ -1,5 +1,5 @@
-// backend/src/main/java/com/newsight/backend/accounts/presentation/dto/WithdrawDto.java
-package com.newsight.backend.accounts.presentation.dto;
+// backend/src/main/java/com/newsight/backend/admin/presentation/dto/WithdrawDto.java
+package com.newsight.backend.admin.presentation.dto;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.validation.constraints.NotNull;

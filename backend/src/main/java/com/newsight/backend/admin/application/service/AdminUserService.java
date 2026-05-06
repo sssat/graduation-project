@@ -1,4 +1,4 @@
-package com.newsight.backend.accounts.application.service;
+package com.newsight.backend.admin.application.service;
 
 import com.newsight.backend.accounts.domain.model.LoginLog;
 import com.newsight.backend.accounts.domain.model.User;
@@ -28,19 +28,19 @@ class AdminUserService {
     private final Clock clock;
 
     @Transactional(readOnly = true)
-    AccountsService.UserListResult listUsers(AccountsService.UserListQuery query) {
+    AdminService.UserListResult listUsers(AdminService.UserListQuery query) {
         Objects.requireNonNull(query, "query");
         if (query.actorUserSeq() == null) throw new AuthenticationCredentialsNotFoundException("Login is required.");
 
         User actor = userRepository.findByUserSeq(query.actorUserSeq())
                 .orElseThrow(() -> new AuthenticationCredentialsNotFoundException("Login is required."));
-        if (AccountSupport.levelCode(actor) != 2) throw new SecurityException("Only super admins can access this resource.");
+        if (AdminSupport.levelCode(actor) != 2) throw new SecurityException("Only super admins can access this resource.");
 
         int page = Math.max(1, query.page());
         int size = Math.max(1, Math.min(100, query.size()));
         int offset = (page - 1) * size;
 
-        List<String> filteredTerms = AccountSupport.splitTerms(AccountSupport.safe(query.q()));
+        List<String> filteredTerms = AdminSupport.splitTerms(AdminSupport.safe(query.q()));
         StringBuilder where = new StringBuilder(" where 1=1 ");
 
         for (int i = 0; i < filteredTerms.size(); i++) {
@@ -69,7 +69,7 @@ class AdminUserService {
         List<User> rows = dataQuery.setFirstResult(offset).setMaxResults(size).getResultList();
         int totalPages = (total == 0) ? 0 : (int) Math.ceil((double) total / size);
 
-        List<AccountsService.UserListItem> items = new ArrayList<>(rows.size());
+        List<AdminService.UserListItem> items = new ArrayList<>(rows.size());
         for (User u : rows) {
             int code = (u.getUserLevel() != null && u.getUserLevel().getGradeCode() != null)
                     ? u.getUserLevel().getGradeCode().intValue()
@@ -77,15 +77,15 @@ class AdminUserService {
 
             String gradeName = (u.getUserLevel() != null && u.getUserLevel().getGradeName() != null)
                     ? u.getUserLevel().getGradeName()
-                    : AccountSupport.defaultGradeName(code);
+                    : AdminSupport.defaultGradeName(code);
 
-            items.add(new AccountsService.UserListItem(
+            items.add(new AdminService.UserListItem(
                     u.getUserSeq(),
-                    AccountSupport.safe(u.getUserId()),
-                    AccountSupport.safe(u.getUserName()),
+                    AdminSupport.safe(u.getUserId()),
+                    AdminSupport.safe(u.getUserName()),
                     code,
                     gradeName,
-                    AccountSupport.safe(u.getEmail()),
+                    AdminSupport.safe(u.getEmail()),
                     u.getBirthDate(),
                     (u.getGender() == null ? null : u.getGender().name()),
                     u.getLastLoginAt(),
@@ -95,11 +95,11 @@ class AdminUserService {
             ));
         }
 
-        return new AccountsService.UserListResult(items, page, size, total, totalPages);
+        return new AdminService.UserListResult(items, page, size, total, totalPages);
     }
 
     @Transactional(readOnly = true)
-    AccountsService.AdminLoginLogListResult listAdminDashboardLoginLogs(AccountsService.AdminLoginLogListQuery query) {
+    AdminService.AdminLoginLogListResult listAdminDashboardLoginLogs(AdminService.AdminLoginLogListQuery query) {
         Objects.requireNonNull(query, "query");
         if (query.actorUserSeq() == null) {
             throw new AuthenticationCredentialsNotFoundException("Login is required.");
@@ -107,7 +107,7 @@ class AdminUserService {
 
         User actor = userRepository.findByUserSeq(query.actorUserSeq())
                 .orElseThrow(() -> new AuthenticationCredentialsNotFoundException("Login is required."));
-        if (AccountSupport.levelCode(actor) < 1) {
+        if (AdminSupport.levelCode(actor) < 1) {
             throw new SecurityException("Only admins can access this resource.");
         }
 
@@ -128,38 +128,38 @@ class AdminUserService {
 
         int totalPages = (total == 0) ? 0 : (int) Math.ceil((double) total / size);
 
-        List<AccountsService.AdminLoginLogItem> items = new ArrayList<>(rows.size());
+        List<AdminService.AdminLoginLogItem> items = new ArrayList<>(rows.size());
         for (LoginLog l : rows) {
             Long userSeq = (l.getUser() == null ? null : l.getUser().getUserSeq());
 
-            items.add(new AccountsService.AdminLoginLogItem(
+            items.add(new AdminService.AdminLoginLogItem(
                     l.getLoginLogSeq(),
-                    AccountSupport.safe(l.getInputId()),
+                    AdminSupport.safe(l.getInputId()),
                     l.getAttemptedAt(),
                     userSeq,
                     Boolean.TRUE.equals(l.getIsSuccess()),
-                    AccountSupport.safe(l.getIpAddress()),
-                    AccountSupport.safe(l.getUserAgent())
+                    AdminSupport.safe(l.getIpAddress()),
+                    AdminSupport.safe(l.getUserAgent())
             ));
         }
 
-        return new AccountsService.AdminLoginLogListResult(items, page, size, total, totalPages);
+        return new AdminService.AdminLoginLogListResult(items, page, size, total, totalPages);
     }
 
-    AccountsService.PromoteResult promoteToAdmin(Long targetUserSeq, Long operatorUserSeq) {
+    AdminService.PromoteResult promoteToAdmin(Long targetUserSeq, Long operatorUserSeq) {
         Objects.requireNonNull(targetUserSeq, "targetUserSeq");
         Objects.requireNonNull(operatorUserSeq, "operatorUserSeq");
 
         User operator = userRepository.findByUserSeq(operatorUserSeq)
                 .orElseThrow(() -> new AuthenticationCredentialsNotFoundException("Login is required."));
-        if (AccountSupport.levelCode(operator) != 2) throw new SecurityException("Permission denied.");
+        if (AdminSupport.levelCode(operator) != 2) throw new SecurityException("Permission denied.");
         if (operator.getUserSeq().equals(targetUserSeq)) {
             throw new IllegalArgumentException("Cannot promote yourself.");
         }
 
         User target = userRepository.findByUserSeq(targetUserSeq)
                 .orElseThrow(() -> new IllegalArgumentException("Target user not found."));
-        if (AccountSupport.levelCode(target) != 0) {
+        if (AdminSupport.levelCode(target) != 0) {
             throw new IllegalArgumentException("Only USER grade accounts can be promoted.");
         }
 
@@ -171,20 +171,20 @@ class AdminUserService {
         target.setGrantedAt(grantedAt);
         userRepository.save(target);
 
-        return new AccountsService.PromoteResult(target.getUserSeq(), operator.getUserSeq(), "ADMIN", grantedAt);
+        return new AdminService.PromoteResult(target.getUserSeq(), operator.getUserSeq(), "ADMIN", grantedAt);
     }
 
-    AccountsService.DemoteResult demoteToUser(Long targetUserSeq, Long operatorUserSeq) {
+    AdminService.DemoteResult demoteToUser(Long targetUserSeq, Long operatorUserSeq) {
         Objects.requireNonNull(targetUserSeq, "targetUserSeq");
         Objects.requireNonNull(operatorUserSeq, "operatorUserSeq");
 
         User operator = userRepository.findByUserSeq(operatorUserSeq)
                 .orElseThrow(() -> new AuthenticationCredentialsNotFoundException("Login is required."));
-        if (AccountSupport.levelCode(operator) != 2) throw new SecurityException("Permission denied.");
+        if (AdminSupport.levelCode(operator) != 2) throw new SecurityException("Permission denied.");
 
         User target = userRepository.findByUserSeq(targetUserSeq)
                 .orElseThrow(() -> new IllegalArgumentException("Invalid request."));
-        if (AccountSupport.levelCode(target) != 1) {
+        if (AdminSupport.levelCode(target) != 1) {
             throw new IllegalArgumentException("Only ADMIN grade accounts can be demoted.");
         }
 
@@ -196,16 +196,16 @@ class AdminUserService {
         target.setGrantedAt(null);
         userRepository.save(target);
 
-        return new AccountsService.DemoteResult(target.getUserSeq(), operator.getUserSeq(), demotedAt);
+        return new AdminService.DemoteResult(target.getUserSeq(), operator.getUserSeq(), demotedAt);
     }
 
-    AccountsService.WithdrawResult withdrawUser(Long targetUserSeq, Long operatorUserSeq) {
+    AdminService.WithdrawResult withdrawUser(Long targetUserSeq, Long operatorUserSeq) {
         Objects.requireNonNull(targetUserSeq, "targetUserSeq");
         Objects.requireNonNull(operatorUserSeq, "operatorUserSeq");
 
         User operator = userRepository.findByUserSeq(operatorUserSeq)
                 .orElseThrow(() -> new AuthenticationCredentialsNotFoundException("Login is required."));
-        if (AccountSupport.levelCode(operator) != 2) throw new SecurityException("Permission denied.");
+        if (AdminSupport.levelCode(operator) != 2) throw new SecurityException("Permission denied.");
         if (operator.getUserSeq().equals(targetUserSeq)) {
             throw new IllegalArgumentException("Cannot withdraw yourself.");
         }
@@ -215,6 +215,7 @@ class AdminUserService {
 
         userRepository.delete(target);
 
-        return new AccountsService.WithdrawResult(targetUserSeq, LocalDateTime.now(clock), operatorUserSeq);
+        return new AdminService.WithdrawResult(targetUserSeq, LocalDateTime.now(clock), operatorUserSeq);
     }
 }
+

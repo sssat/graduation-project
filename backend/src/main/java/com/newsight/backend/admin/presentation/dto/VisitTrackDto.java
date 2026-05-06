@@ -1,4 +1,4 @@
-package com.newsight.backend.visits.presentation.dto;
+package com.newsight.backend.admin.presentation.dto;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 

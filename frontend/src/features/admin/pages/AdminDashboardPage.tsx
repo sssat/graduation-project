@@ -794,25 +794,28 @@ export default function AdminDashboardPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {visitRows.map((row) => (
-                    <tr key={row.visitorDailySeq}>
-                      <td data-label="번호">{row.visitorDailySeq}</td>
-                      <td data-label="첫 방문">{row.firstVisitedAt}</td>
-                      <td data-label="최근 방문">{row.lastVisitedAt}</td>
-                      <td data-label="Page View">{formatInteger(row.pageViewCount)}</td>
-                      <td data-label="IP 주소">{row.ipAddress}</td>
-                      <td data-label="환경" className={styles.cellWrap}>
-                        {formatVisitEnvironment(row)}
-                      </td>
-                      <td data-label="경로" className={styles.cellWrap}>
-                        첫: {formatNullableText(row.firstPath)}
-                        <br />
-                        최근: {formatNullableText(row.lastPath)}
-                      </td>
-                      <td data-label="유입 경로" className={styles.cellWrap}>{formatNullableText(row.referrer)}</td>
-                      <td data-label="User-Agent" className={styles.cellWrap}>{formatNullableText(row.userAgent)}</td>
-                    </tr>
-                  ))}
+                  {visitRows.map((row, index) => {
+                    const rowNumber = Math.max(1, visitTotalCount - ((visitPage - 1) * VISIT_PAGE_SIZE + index));
+                    return (
+                      <tr key={row.visitorDailySeq}>
+                        <td data-label="번호">{formatInteger(rowNumber)}</td>
+                        <td data-label="첫 방문">{row.firstVisitedAt}</td>
+                        <td data-label="최근 방문">{row.lastVisitedAt}</td>
+                        <td data-label="Page View">{formatInteger(row.pageViewCount)}</td>
+                        <td data-label="IP 주소">{row.ipAddress}</td>
+                        <td data-label="환경" className={styles.cellWrap}>
+                          {formatVisitEnvironment(row)}
+                        </td>
+                        <td data-label="경로" className={styles.cellWrap}>
+                          첫: {formatNullableText(row.firstPath)}
+                          <br />
+                          최근: {formatNullableText(row.lastPath)}
+                        </td>
+                        <td data-label="유입 경로" className={styles.cellWrap}>{formatNullableText(row.referrer)}</td>
+                        <td data-label="User-Agent" className={styles.cellWrap}>{formatNullableText(row.userAgent)}</td>
+                      </tr>
+                    );
+                  })}
                   {visitError ? (
                     <tr>
                       <td colSpan={9} className={styles.emptyRow}>{visitError}</td>

@@ -3,7 +3,6 @@ package com.newsight.backend.accounts.application.service;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -15,7 +14,6 @@ public class AccountsService {
     private final AccountAuthService authService;
     private final AccountRecoveryService recoveryService;
     private final AccountPasswordService passwordService;
-    private final AdminUserService adminUserService;
 
     public IdPrecheckResult precheckUserId(String userId) {
         return registrationService.precheckUserId(userId);
@@ -53,26 +51,6 @@ public class AccountsService {
         return passwordService.changePassword(cmd);
     }
 
-    public UserListResult listUsers(UserListQuery query) {
-        return adminUserService.listUsers(query);
-    }
-
-    public AdminLoginLogListResult listAdminDashboardLoginLogs(AdminLoginLogListQuery query) {
-        return adminUserService.listAdminDashboardLoginLogs(query);
-    }
-
-    public PromoteResult promoteToAdmin(Long targetUserSeq, Long operatorUserSeq) {
-        return adminUserService.promoteToAdmin(targetUserSeq, operatorUserSeq);
-    }
-
-    public DemoteResult demoteToUser(Long targetUserSeq, Long operatorUserSeq) {
-        return adminUserService.demoteToUser(targetUserSeq, operatorUserSeq);
-    }
-
-    public WithdrawResult withdrawUser(Long targetUserSeq, Long operatorUserSeq) {
-        return adminUserService.withdrawUser(targetUserSeq, operatorUserSeq);
-    }
-
     public record UserIdInfo(boolean valid, String status) {}
     public record IdPrecheckResult(UserIdInfo user_id, String id_check_token, Integer expires_in) {}
 
@@ -97,49 +75,6 @@ public class AccountsService {
 
     public record ChangePasswordCommand(Long actorUserSeq, String currentPassword, String newPassword, String newPasswordConfirm) {}
     public record ChangePasswordResult(String message, boolean clearRefreshCookie) {}
-
-    public record PromoteResult(Long user_seq, Long acted_seq, String admin_level, LocalDateTime granted_at) {}
-    public record DemoteResult(Long user_seq, Long acted_seq, LocalDateTime demoted_at) {}
-    public record WithdrawResult(Long user_seq, LocalDateTime deleted_at, Long acted_seq) {}
-
-    public record UserListItem(
-            Long user_seq,
-            String user_id,
-            String user_name,
-            int grade_code,
-            String grade_name,
-            String email,
-            LocalDate birth_date,
-            String gender,
-            LocalDateTime last_login_at,
-            LocalDateTime joined_at,
-            LocalDateTime granted_at,
-            LocalDateTime password_changed_at
-    ) {}
-
-    public record UserListResult(List<UserListItem> items, int page, int size, long total_count, int total_pages) {}
-
-    public record AdminLoginLogItem(
-            Long login_log_seq,
-            String input_id,
-            LocalDateTime attempted_at,
-            Long user_seq,
-            boolean is_success,
-            String ip_address,
-            String user_agent
-    ) {}
-
-    public record AdminLoginLogListResult(
-            List<AdminLoginLogItem> items,
-            int page,
-            int size,
-            long total_count,
-            int total_pages
-    ) {}
-
-    public record AdminLoginLogListQuery(Long actorUserSeq, int page, int size) {}
-
-    public record UserListQuery(Long actorUserSeq, int page, int size, String q) {}
 
     public record SignUpCommand(
             String userId,

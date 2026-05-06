@@ -1,15 +1,15 @@
-package com.newsight.backend.accounts.presentation;
+package com.newsight.backend.admin.presentation;
 
-import com.newsight.backend.accounts.application.service.AccountsService;
-import com.newsight.backend.accounts.presentation.dto.AdminDemoteDto.AdminDemoteRequestDto;
-import com.newsight.backend.accounts.presentation.dto.AdminDemoteDto.AdminDemoteResponseDto;
-import com.newsight.backend.accounts.presentation.dto.AdminPromoteDto.AdminPromoteRequestDto;
-import com.newsight.backend.accounts.presentation.dto.AdminPromoteDto.AdminPromoteResponseDto;
-import com.newsight.backend.accounts.presentation.dto.UserListDto.UserListItemDto;
-import com.newsight.backend.accounts.presentation.dto.UserListDto.UserListRequestDto;
-import com.newsight.backend.accounts.presentation.dto.UserListDto.UserListResponseDto;
-import com.newsight.backend.accounts.presentation.dto.WithdrawDto.WithdrawRequestDto;
-import com.newsight.backend.accounts.presentation.dto.WithdrawDto.WithdrawResponseDto;
+import com.newsight.backend.admin.application.service.AdminService;
+import com.newsight.backend.admin.presentation.dto.AdminDemoteDto.AdminDemoteRequestDto;
+import com.newsight.backend.admin.presentation.dto.AdminDemoteDto.AdminDemoteResponseDto;
+import com.newsight.backend.admin.presentation.dto.AdminPromoteDto.AdminPromoteRequestDto;
+import com.newsight.backend.admin.presentation.dto.AdminPromoteDto.AdminPromoteResponseDto;
+import com.newsight.backend.admin.presentation.dto.UserListDto.UserListItemDto;
+import com.newsight.backend.admin.presentation.dto.UserListDto.UserListRequestDto;
+import com.newsight.backend.admin.presentation.dto.UserListDto.UserListResponseDto;
+import com.newsight.backend.admin.presentation.dto.WithdrawDto.WithdrawRequestDto;
+import com.newsight.backend.admin.presentation.dto.WithdrawDto.WithdrawResponseDto;
 import com.newsight.backend.common.security.CurrentUserExtractor;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -35,7 +35,7 @@ import org.springframework.web.bind.annotation.RestController;
 @SecurityRequirement(name = "bearerAuth")
 public class AdminUserController {
 
-    private final AccountsService accountsService;
+    private final AdminService adminService;
 
     @GetMapping("/users")
     @Operation(summary = "List users")
@@ -49,8 +49,8 @@ public class AdminUserController {
 
         UserListRequestDto req = new UserListRequestDto(page, size, q);
 
-        AccountsService.UserListResult r = accountsService.listUsers(
-                new AccountsService.UserListQuery(actorUserSeq, req.pageOrDefault(), req.sizeOrDefault(), req.q())
+        AdminService.UserListResult r = adminService.listUsers(
+                new AdminService.UserListQuery(actorUserSeq, req.pageOrDefault(), req.sizeOrDefault(), req.q())
         );
 
         List<UserListItemDto> items = r.items().stream()
@@ -88,7 +88,7 @@ public class AdminUserController {
     ) {
         Long actorUserSeq = CurrentUserExtractor.requireUserSeq(jwt);
 
-        AccountsService.PromoteResult r = accountsService.promoteToAdmin(body.userSeq(), actorUserSeq);
+        AdminService.PromoteResult r = adminService.promoteToAdmin(body.userSeq(), actorUserSeq);
 
         return ResponseEntity.ok(AdminPromoteResponseDto.success(
                 r.user_seq(),
@@ -107,7 +107,7 @@ public class AdminUserController {
     ) {
         Long actorUserSeq = CurrentUserExtractor.requireUserSeq(jwt);
 
-        AccountsService.DemoteResult r = accountsService.demoteToUser(body.userSeq(), actorUserSeq);
+        AdminService.DemoteResult r = adminService.demoteToUser(body.userSeq(), actorUserSeq);
 
         return ResponseEntity.ok(AdminDemoteResponseDto.success(
                 r.user_seq(),
@@ -125,7 +125,7 @@ public class AdminUserController {
     ) {
         Long actorUserSeq = CurrentUserExtractor.requireUserSeq(jwt);
 
-        AccountsService.WithdrawResult r = accountsService.withdrawUser(body.userSeq(), actorUserSeq);
+        AdminService.WithdrawResult r = adminService.withdrawUser(body.userSeq(), actorUserSeq);
 
         return ResponseEntity.ok(new WithdrawResponseDto(
                 r.user_seq(),

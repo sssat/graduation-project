@@ -30,7 +30,7 @@ import org.springframework.stereotype.Component;
 
 @Component
 @RequiredArgsConstructor
-class AnalyticsQuerySupport {
+public class AnalyticsQuerySupport {
 
     static final int ANALYZABLE_MIN_ARTICLE_COUNT = 10;
     static final int DEFAULT_LIMIT = 10;
@@ -59,7 +59,7 @@ class AnalyticsQuerySupport {
         return getConfiguredTrendRunOrThrow().getTrendRunSeq();
     }
 
-    TrendRunRef getConfiguredTrendRunOrThrow() {
+    public TrendRunRef getConfiguredTrendRunOrThrow() {
         List<TrendRunRef> candidates = trendRunRefRepository.findByRunStatusOrderByTrendRunSeqDesc(PUBLISHED_RUN_STATUS);
         if (candidates.isEmpty()) {
             throw new NotFoundException("공개된 트렌드 run이 없습니다.");
@@ -81,7 +81,7 @@ class AnalyticsQuerySupport {
         return fallbackRunAt == null ? null : fallbackRunAt.format(KST_RUN_AT_FORMATTER);
     }
 
-    TrendRunRef findComparableTrendRunWithData(LocalDate baseDate, PeriodFilter pf) {
+    public TrendRunRef findComparableTrendRunWithData(LocalDate baseDate, PeriodFilter pf) {
         List<TrendRunRef> candidates = em.createQuery(
                         "select tr from TrendRunRef tr " +
                                 "where tr.baseDate = :baseDate and tr.runStatus = :runStatus " +
@@ -106,7 +106,7 @@ class AnalyticsQuerySupport {
         return trendKeywordFinalRankRepository.findByTrendRunSeqAndPeriodFilterOrderByFinalRankAsc(trendRunSeq, pf);
     }
 
-    long sumAllKeywordArticleCount(Long trendRunSeq, PeriodFilter pf) {
+    public long sumAllKeywordArticleCount(Long trendRunSeq, PeriodFilter pf) {
         return findFinalRanksByRunAndPeriod(trendRunSeq, pf)
                 .stream()
                 .mapToLong(r -> r.getArticleCount() == null ? 0L : r.getArticleCount())
@@ -209,7 +209,7 @@ class AnalyticsQuerySupport {
         return user.getUserLevel().getGradeCode().intValue();
     }
 
-    Double calcDeltaRateVsAvg(long todayValue, long pastTotal, int days) {
+    public Double calcDeltaRateVsAvg(long todayValue, long pastTotal, int days) {
         if (days <= 0) return null;
         double avg = pastTotal / (double) days;
         return calcDeltaRate(todayValue, avg);
@@ -220,7 +220,7 @@ class AnalyticsQuerySupport {
         return round1(((current - base) / base) * 100.0);
     }
 
-    Double calcDeltaRate(long current, long base) {
+    public Double calcDeltaRate(long current, long base) {
         if (base <= 0L) return null;
         return round1(((current - (double) base) / (double) base) * 100.0);
     }
@@ -241,7 +241,7 @@ class AnalyticsQuerySupport {
                 .orElse(fallback);
     }
 
-    Double round1(double v) {
+    public Double round1(double v) {
         return Math.round(v * 10.0) / 10.0;
     }
 

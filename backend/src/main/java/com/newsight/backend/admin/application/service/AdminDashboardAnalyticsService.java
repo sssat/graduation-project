@@ -1,7 +1,8 @@
-package com.newsight.backend.analytics.application.service;
+package com.newsight.backend.admin.application.service;
 
 import com.newsight.backend.accounts.domain.model.User;
 import com.newsight.backend.accounts.infrastructure.persistence.SpringDataUserRepository;
+import com.newsight.backend.analytics.application.service.AnalyticsQuerySupport;
 import com.newsight.backend.analytics.domain.model.PeriodFilter;
 import com.newsight.backend.analytics.domain.model.reference.TrendRunRef;
 import jakarta.persistence.EntityManager;
@@ -25,14 +26,14 @@ class AdminDashboardAnalyticsService {
     private final EntityManager em;
     private final Clock clock;
 
-    AnalyticsService.AdminDashboardSummaryResult getAdminDashboardSummary(Long actorUserSeq) {
+    AdminService.AdminDashboardSummaryResult getAdminDashboardSummary(Long actorUserSeq) {
         if (actorUserSeq == null) {
             throw new AuthenticationCredentialsNotFoundException("로그인이 필요합니다.");
         }
 
         User actor = userRepository.findByUserSeq(actorUserSeq)
                 .orElseThrow(() -> new AuthenticationCredentialsNotFoundException("로그인이 필요합니다."));
-        if (support.levelCode(actor) < 1) {
+        if (AdminSupport.levelCode(actor) < 1) {
             throw new SecurityException("관리자만 접근할 수 있습니다.");
         }
 
@@ -65,7 +66,7 @@ class AdminDashboardAnalyticsService {
         long processingInquiryCount = countProcessingInquiries();
         Double processingInquiryAvgElapsedDays = calcProcessingInquiryAvgElapsedDays();
 
-        return new AnalyticsService.AdminDashboardSummaryResult(
+        return new AdminService.AdminDashboardSummaryResult(
                 todayJoinedCount,
                 todayJoinedDeltaRate,
                 todayVisitorCount,

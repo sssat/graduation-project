@@ -1,9 +1,9 @@
-package com.newsight.backend.accounts.presentation;
+package com.newsight.backend.admin.presentation;
 
-import com.newsight.backend.accounts.application.service.AccountsService;
-import com.newsight.backend.accounts.presentation.dto.AdminDashboardLoginLogsDto.AdminDashboardLoginLogsRequestDto;
-import com.newsight.backend.accounts.presentation.dto.AdminDashboardLoginLogsDto.AdminDashboardLoginLogsResponseDto;
-import com.newsight.backend.accounts.presentation.dto.AdminDashboardLoginLogsDto.LoginLogItemDto;
+import com.newsight.backend.admin.application.service.AdminService;
+import com.newsight.backend.admin.presentation.dto.AdminDashboardLoginLogsDto.AdminDashboardLoginLogsRequestDto;
+import com.newsight.backend.admin.presentation.dto.AdminDashboardLoginLogsDto.AdminDashboardLoginLogsResponseDto;
+import com.newsight.backend.admin.presentation.dto.AdminDashboardLoginLogsDto.LoginLogItemDto;
 import com.newsight.backend.common.security.CurrentUserExtractor;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -26,7 +26,7 @@ import org.springframework.web.bind.annotation.RestController;
 @SecurityRequirement(name = "bearerAuth")
 public class AdminLoginLogController {
 
-    private final AccountsService accountsService;
+    private final AdminService adminService;
 
     @GetMapping("/login-logs")
     @Operation(summary = "List login logs")
@@ -39,8 +39,8 @@ public class AdminLoginLogController {
 
         AdminDashboardLoginLogsRequestDto req = new AdminDashboardLoginLogsRequestDto(page, size);
 
-        AccountsService.AdminLoginLogListResult r = accountsService.listAdminDashboardLoginLogs(
-                new AccountsService.AdminLoginLogListQuery(actorUserSeq, req.pageOrDefault(), req.sizeOrDefault())
+        AdminService.AdminLoginLogListResult r = adminService.listAdminDashboardLoginLogs(
+                new AdminService.AdminLoginLogListQuery(actorUserSeq, req.pageOrDefault(), req.sizeOrDefault())
         );
 
         List<LoginLogItemDto> items = r.items().stream()

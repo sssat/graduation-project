@@ -1,7 +1,7 @@
-package com.newsight.backend.visits.presentation;
+package com.newsight.backend.admin.presentation;
 
-import com.newsight.backend.visits.application.service.VisitTrackingService;
-import com.newsight.backend.visits.presentation.dto.VisitTrackDto;
+import com.newsight.backend.admin.application.service.VisitTrackingService;
+import com.newsight.backend.admin.presentation.dto.VisitTrackDto;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
