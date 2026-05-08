@@ -73,4 +73,4 @@ def tokenize_for_cooc(
         drop_numeric_only=bool(opt.drop_numeric_only),
     )
 
-    return tokenize_text(text, opt=tok_opt, stopwords=stopwords)
+    return tokenize_text(text, opt=tok_opt, stopwords=stopwords, strict=False)

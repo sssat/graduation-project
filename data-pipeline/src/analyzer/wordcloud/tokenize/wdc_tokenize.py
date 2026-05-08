@@ -9,10 +9,11 @@
 from __future__ import annotations
 
 import re
+import unicodedata
 from dataclasses import dataclass
 from functools import lru_cache
 from pathlib import Path
-from typing import Iterable, Optional, Sequence, Set
+from typing import Any, Iterable, Optional, Sequence, Set
 
 from src.config.settings import settings
 
@@ -21,6 +22,43 @@ _TOKEN_ALLOWED_RE = re.compile(r"^[가-힣A-Za-z0-9\u4E00-\u9FFF]+$")
 
 # 숫자만으로 이뤄진 토큰
 _NUMERIC_ONLY_RE = re.compile(r"^[0-9]+$")
+
+_WHITESPACE_RE = re.compile(r"\s+")
+
+
+class KomoranTokenizeError(RuntimeError):
+    """Raised when Komoran cannot analyze one specific input text."""
+
+
+def _is_unicode_noncharacter(codepoint: int) -> bool:
+    return 0xFDD0 <= codepoint <= 0xFDEF or (codepoint & 0xFFFE) == 0xFFFE
+
+
+def _prepare_text_for_komoran(text: str) -> str:
+    """
+    Remove codepoints that are known to be risky for the Java Komoran analyzer.
+    Dependency/JVM failures still surface separately; this only normalizes input.
+    """
+    chars: list[str] = []
+    for ch in str(text or ""):
+        codepoint = ord(ch)
+        category = unicodedata.category(ch)
+        if category == "Cs" or _is_unicode_noncharacter(codepoint):
+            chars.append(" ")
+            continue
+        if category == "Cc" and ch not in "\t\n\r":
+            chars.append(" ")
+            continue
+        chars.append(ch)
+
+    return _WHITESPACE_RE.sub(" ", "".join(chars)).strip()
+
+
+def _sample_text_for_error(text: object, *, limit: int = 120) -> str:
+    s = _prepare_text_for_komoran(str(text or ""))
+    if len(s) <= limit:
+        return s
+    return f"{s[:limit]}..."
 
 
 @dataclass(frozen=True)
@@ -242,12 +280,26 @@ def _extract_protected_terms(text: str, protected_terms: Sequence[str]) -> tuple
     return masked_text, found
 
 
+def _komoran_nouns(komoran: Any, text: str) -> list[str]:
+    try:
+        return list(komoran.nouns(text))
+    except Exception as first_error:
+        safe_text = _prepare_text_for_komoran(text)
+        if safe_text and safe_text != text:
+            try:
+                return list(komoran.nouns(safe_text))
+            except Exception as retry_error:
+                raise KomoranTokenizeError(f"Komoran failed to analyze text: {retry_error!r}") from retry_error
+        raise KomoranTokenizeError(f"Komoran failed to analyze text: {first_error!r}") from first_error
+
+
 def tokenize_text(
     text: str,
     *,
     opt: Optional[TokenizeOptions] = None,
     stopwords: Optional[Set[str]] = None,
     protected_terms: Optional[Sequence[str]] = None,
+    strict: bool = True,
 ) -> list[str]:
     """
     Komoran 기반 명사 추출 + 필터링.
@@ -278,7 +330,12 @@ def tokenize_text(
     masked_text, preserved_tokens = _extract_protected_terms(s, protected_terms)
 
     komoran = _get_komoran()
-    nouns = komoran.nouns(masked_text)
+    try:
+        nouns = _komoran_nouns(komoran, masked_text)
+    except KomoranTokenizeError:
+        if strict:
+            raise
+        return list(preserved_tokens)
 
     tokens: list[str] = list(preserved_tokens)
     for noun in nouns:
@@ -296,6 +353,8 @@ def tokenize_many(
     opt: Optional[TokenizeOptions] = None,
     stopwords: Optional[Set[str]] = None,
     protected_terms: Optional[Sequence[str]] = None,
+    strict: bool = True,
+    errors: Optional[list[dict[str, object]]] = None,
 ) -> list[str]:
     """
     복수 텍스트를 토큰화해서 하나의 토큰 리스트로 합친다.
@@ -306,6 +365,19 @@ def tokenize_many(
     protected_terms = protected_terms if protected_terms is not None else default_protected_terms_from_settings()
 
     out: list[str] = []
-    for s in texts:
-        out.extend(tokenize_text(s, opt=opt, stopwords=stopwords, protected_terms=protected_terms))
+    for idx, s in enumerate(texts):
+        try:
+            out.extend(tokenize_text(s, opt=opt, stopwords=stopwords, protected_terms=protected_terms))
+        except KomoranTokenizeError as e:
+            if strict:
+                raise
+            if errors is not None:
+                errors.append(
+                    {
+                        "index": int(idx),
+                        "error": repr(e),
+                        "text_len": len(str(s or "")),
+                        "text_sample": _sample_text_for_error(s),
+                    }
+                )
     return out

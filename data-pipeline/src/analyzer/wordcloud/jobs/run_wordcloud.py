@@ -323,6 +323,7 @@ def main() -> None:
         total_skipped = 0
         total_empty = 0
         total_errors = 0
+        total_tokenize_errors = 0
 
         for keyword_seq in keyword_seqs:
             keyword_name = select_keyword_name(conn=conn, keyword_seq=keyword_seq)
@@ -386,12 +387,23 @@ def main() -> None:
 
                         raw_texts = [r.text for r in rows]
                         pre_texts = preprocess_many_for_wordcloud(raw_texts)
+                        tokenize_errors: list[dict[str, object]] = []
                         tokens = tokenize_many(
                             pre_texts,
                             opt=tok_opt,
                             stopwords=stopwords,
                             protected_terms=protected_terms,
+                            strict=False,
+                            errors=tokenize_errors,
                         )
+                        total_tokenize_errors += len(tokenize_errors)
+                        if tokenize_errors:
+                            print(
+                                "[wordcloud] WARN tokenize skipped "
+                                f"{len(tokenize_errors)} texts "
+                                f"keyword_seq={keyword_seq} media_code={media_code} "
+                                f"period={period} type={wc_type}"
+                            )
 
                         # 토큰이 없고 refresh=0이면 DB 건드리지 않고 스킵
                         if not tokens and not refresh:
@@ -408,6 +420,8 @@ def main() -> None:
                                     "input_rows": len(rows),
                                     "kept_texts": len(pre_texts),
                                     "tokens": 0,
+                                    "tokenize_error_count": len(tokenize_errors),
+                                    "tokenize_errors": tokenize_errors[:5],
                                 }
                             )
                             continue
@@ -449,6 +463,8 @@ def main() -> None:
                                     "input_rows": len(rows),
                                     "kept_texts": len(pre_texts),
                                     "tokens": len(tokens),
+                                    "tokenize_error_count": len(tokenize_errors),
+                                    "tokenize_errors": tokenize_errors[:5],
                                     "items": len(db_items),
                                     "db": write_result,
                                 }
@@ -480,6 +496,7 @@ def main() -> None:
             "skipped": total_skipped,
             "empty": total_empty,
             "errors": total_errors,
+            "tokenize_errors": total_tokenize_errors,
             "duration_seconds": int((finished_at - run_started_at).total_seconds()),
         }
 
