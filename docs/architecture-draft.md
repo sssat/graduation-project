@@ -72,8 +72,8 @@ flowchart TB
     subgraph FeatureModules["기능 모듈"]
       Accounts["accounts<br/>계정 / 인증"]
       Analytics["analytics<br/>뉴스 분석 조회"]
-      Inquiries["inquiries<br/>문의 게시판 / 관리자 답변"]
-      Admins["admin<br/>관리자 / 방문자 기록"]
+      Inquiries["inquiries<br/>문의 기능"]
+      Admins["admin<br/>관리자 기능"]
     end
 
     Presentation["Presentation Layer<br/>Controller<br/>Request / Response DTO"]
