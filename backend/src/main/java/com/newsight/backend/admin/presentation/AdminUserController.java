@@ -95,7 +95,7 @@ public class AdminUserController {
                 r.acted_seq(),
                 r.admin_level(),
                 r.granted_at(),
-                "愿由ъ옄 沅뚰븳??遺?щ릺?덉뒿?덈떎."
+                "관리자 권한이 부여되었습니다."
         ));
     }
 
@@ -113,7 +113,7 @@ public class AdminUserController {
                 r.user_seq(),
                 r.acted_seq(),
                 r.demoted_at(),
-                "愿由ъ옄 沅뚰븳???댁젣?섏뿀?듬땲??"
+                "관리자 권한이 해제되었습니다."
         ));
     }
 
