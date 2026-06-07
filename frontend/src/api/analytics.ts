@@ -254,6 +254,21 @@ export async function getTitleBiasByMedia(
   return response.data;
 }
 
+export async function getContentBiasByMedia(
+  keywordSeq: number,
+  params?: AnalyticsPeriodParams,
+  config?: HttpRequestConfig<undefined>,
+): Promise<TitleBiasByMediaResponse> {
+  const response = await http.get<TitleBiasByMediaResponse>(
+    `/analytics/keywords/${keywordSeq}/bias/content`,
+    {
+      ...publicConfig(config),
+      params,
+    } as HttpRequestConfig<undefined>,
+  );
+  return response.data;
+}
+
 /* =========================================================
  * 9) 동시언급 네트워크 - 공개
  * GET /analytics/keywords/{keyword_seq}/cooc-network?period=D7|D14
@@ -541,6 +556,7 @@ export const analyticsApi = {
   getSearchTimeline,
   getContentSentiment,
   getTitleBiasByMedia,
+  getContentBiasByMedia,
   getCoocNetwork,
   getMediaCompareTopKeywords,
   getMediaArticleCounts,

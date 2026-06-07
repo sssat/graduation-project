@@ -44,6 +44,10 @@ public class AnalyticsService {
         return keywordAnalyticsService.getTitleBiasByMedia(keywordSeq, period);
     }
 
+    public BiasByMediaResult getContentBiasByMedia(Long keywordSeq, String period) {
+        return keywordAnalyticsService.getContentBiasByMedia(keywordSeq, period);
+    }
+
     public CoocNetworkResult getCoocNetwork(Long keywordSeq, String period) {
         return keywordAnalyticsService.getCoocNetwork(keywordSeq, period);
     }

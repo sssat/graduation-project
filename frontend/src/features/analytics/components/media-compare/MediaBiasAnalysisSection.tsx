@@ -54,7 +54,7 @@ export default function MediaBiasAnalysisSection({
         <div>
           <div className={styles.cardTitle}>언론사별 편향도 지수</div>
           <div className={styles.cardSub}>
-            선택 키워드 기사들의 제목 톤을 기반으로 산출한 지표입니다 (0에 가까울수록 중립).
+            선택 키워드 기사들의 본문 감성 흐름을 기반으로 산출한 지표입니다 (0에 가까울수록 중립).
           </div>
         </div>
         <span className={styles.badgeSoft}>편향도 분석</span>
@@ -130,7 +130,7 @@ export default function MediaBiasAnalysisSection({
       )}
 
       <div className={styles.biasCaption}>
-        편향도 지수는 감성 분석을 바탕으로 계산되지만, 단순 감성 비율이 아니라 보도 표현이
+        편향도 지수는 본문 감성 분석을 바탕으로 계산되지만, 단순 감성 비율이 아니라 보도 흐름이
         어느 방향의 경향을 보이는지를 보여줍니다. 점수의 <strong>절대값이 클수록</strong>{" "}
         특정 방향성이 더 뚜렷하며, <strong>0에 가까울수록</strong> 상대적으로 균형적인 해석이
         가능합니다.

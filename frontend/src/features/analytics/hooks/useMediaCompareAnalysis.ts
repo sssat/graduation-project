@@ -7,7 +7,7 @@ import {
   getMediaCompareContentSentiment,
   getMediaCompareTitleTopWords,
   getMediaCompareTopKeywords,
-  getTitleBiasByMedia,
+  getContentBiasByMedia,
   type ContentSentimentResponse,
   type KeywordMetaResponse,
   type MediaArticleCountsResponse,
@@ -330,7 +330,7 @@ export default function useMediaCompareAnalysis(): UseMediaCompareAnalysisResult
         const [articleCounts, biasByMedia, sentiments, framingWords, overallSentimentResponse] =
           await Promise.all([
             getMediaArticleCounts(keywordSeq, { period: apiPeriod }),
-            getTitleBiasByMedia(keywordSeq, { period: apiPeriod }),
+            getContentBiasByMedia(keywordSeq, { period: apiPeriod }),
             getMediaCompareContentSentiment(keywordSeq, { period: apiPeriod }),
             getMediaCompareTitleTopWords(keywordSeq, { period: apiPeriod, top_n: 5 }),
             getContentSentiment(keywordSeq, { period: apiPeriod }),

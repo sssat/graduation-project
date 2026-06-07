@@ -217,6 +217,35 @@ class KeywordAnalyticsService {
         return new AnalyticsService.BiasByMediaResult(items);
     }
 
+    AnalyticsService.BiasByMediaResult getContentBiasByMedia(Long keywordSeq, String period) {
+        PeriodFilter pf = support.parsePeriodFilter(period);
+        Long selectedRunSeq = support.getConfiguredTrendRunSeq();
+
+        support.requireAnalyzable(selectedRunSeq, keywordSeq);
+        support.getKeywordOrThrow(keywordSeq);
+
+        List<AnalyzeMediaBias> rows = analyzeMediaBiasRepository
+                .findByTrendRunSeqAndKeywordSeqAndPeriodFilterAndMediaCodeNotOrderByMediaCodeAsc(
+                        selectedRunSeq,
+                        keywordSeq,
+                        pf,
+                        AnalyticsQuerySupport.ALL_MEDIA_CODE
+                );
+
+        Map<Integer, String> mediaNameMap = support.loadMediaNameMap(
+                rows.stream().map(AnalyzeMediaBias::getMediaCode).distinct().toList()
+        );
+
+        List<AnalyticsService.BiasByMediaItem> items = rows.stream()
+                .map(r -> new AnalyticsService.BiasByMediaItem(
+                        mediaNameMap.getOrDefault(r.getMediaCode(), "unknown"),
+                        support.toDouble(r.getBiasScoreContent())
+                ))
+                .toList();
+
+        return new AnalyticsService.BiasByMediaResult(items);
+    }
+
     AnalyticsService.CoocNetworkResult getCoocNetwork(Long keywordSeq, String period) {
         PeriodFilter pf = support.parsePeriodFilter(period);
         Long selectedRunSeq = support.getConfiguredTrendRunSeq();

@@ -143,6 +143,21 @@ public class KeywordAnalyticsController {
         return ResponseEntity.ok(new TitleBiasByMediaDto.TitleBiasByMediaResponseDto(items));
     }
 
+    @GetMapping("/keywords/{keyword_seq}/bias/content")
+    @Operation(summary = "Get content bias by media")
+    public ResponseEntity<TitleBiasByMediaDto.TitleBiasByMediaResponseDto> getContentBiasByMedia(
+            @PathVariable("keyword_seq") Long keywordSeq,
+            @RequestParam(value = "period", required = false) String period
+    ) {
+        AnalyticsService.BiasByMediaResult result = analyticsService.getContentBiasByMedia(keywordSeq, period);
+
+        List<TitleBiasByMediaDto.BiasByMediaItemDto> items = result.items().stream()
+                .map(i -> new TitleBiasByMediaDto.BiasByMediaItemDto(i.mediaName(), i.biasScore()))
+                .toList();
+
+        return ResponseEntity.ok(new TitleBiasByMediaDto.TitleBiasByMediaResponseDto(items));
+    }
+
     @GetMapping("/keywords/{keyword_seq}/cooc-network")
     @Operation(summary = "Get co-occurrence network")
     public ResponseEntity<CoocNetworkDto.CoocNetworkResponseDto> getCoocNetwork(
